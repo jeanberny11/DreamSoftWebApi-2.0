@@ -1,15 +1,14 @@
+using DreamSoft.Domain.Common;
 using DreamSoft.Domain.ValueObjects;
 
 namespace DreamSoft.Domain.Entities;
 
-public class IdType : BaseEntity<int>
+public class IdType : LookupEntity
 {
     public int CountryId { get; private set; }
     public string Code { get; private set; } = null!;
-    public string Name { get; private set; } = null!;
     public string? Description { get; private set; }
     public string? ValidationPattern { get; private set; }
-    public TranslatedString? Translations { get; private set; }
 
     // Navigation property
     public ICollection<User> Users { get; private set; } = new List<User>();
@@ -39,17 +38,19 @@ public class IdType : BaseEntity<int>
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Name is required", nameof(name));
 
-        return new IdType
+        var idType = new IdType
         {
             CountryId = countryId,
             Code = code.ToUpper().Trim(),
             Name = name.Trim(),
             Description = description?.Trim(),
             ValidationPattern = validationPattern?.Trim(),
-            Translations = translations,
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow
+            Translations = translations
         };
+
+        idType.InitializeAudit(); // Initialize base audit fields
+
+        return idType;
     }
 
     /// <summary>
@@ -67,7 +68,7 @@ public class IdType : BaseEntity<int>
         Name = name.Trim();
         Description = description?.Trim();
         ValidationPattern = validationPattern?.Trim();
-        Translations = translations;
+        UpdateTranslations(translations);
     }
 
     /// <summary>
@@ -82,21 +83,5 @@ public class IdType : BaseEntity<int>
             return false;
 
         return System.Text.RegularExpressions.Regex.IsMatch(idNumber, ValidationPattern);
-    }
-
-    /// <summary>
-    /// Activates the ID type
-    /// </summary>
-    public void Activate()
-    {
-        IsActive = true;
-    }
-
-    /// <summary>
-    /// Deactivates the ID type
-    /// </summary>
-    public void Deactivate()
-    {
-        IsActive = false;
     }
 }

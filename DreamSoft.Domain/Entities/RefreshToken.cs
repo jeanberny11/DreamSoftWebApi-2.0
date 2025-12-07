@@ -1,9 +1,11 @@
-﻿namespace DreamSoft.Domain.Entities;
+﻿using DreamSoft.Domain.Common;
+
+namespace DreamSoft.Domain.Entities;
 
 /// <summary>
 /// Represents a refresh token for maintaining user sessions
 /// </summary>
-public class RefreshToken : BaseEntity<int>
+public class RefreshToken : TenantEntity
 {
     public int UserId { get; private set; }
     public string Token { get; private set; } = null!;
@@ -13,9 +15,11 @@ public class RefreshToken : BaseEntity<int>
     public string? RevokedByIp { get; private set; }
     public bool IsExpired => DateTime.UtcNow >= ExpiresAt;
     public bool IsRevoked => RevokedAt.HasValue;
+
+    // Note: Hides the base IsActive property - this entity's active state is based on revocation/expiration
     public new bool IsActive => !IsRevoked && !IsExpired;
 
-    // Navigation properties
+    // Navigation properties - Note: Tenant is inherited from TenantEntity
     public User User { get; private set; } = null!;
 
     // Private constructor for EF Core
@@ -25,6 +29,7 @@ public class RefreshToken : BaseEntity<int>
     /// Creates a new refresh token
     /// </summary>
     public static RefreshToken Create(
+        int tenantId,
         int userId,
         string token,
         DateTime expiresAt,
@@ -39,14 +44,17 @@ public class RefreshToken : BaseEntity<int>
         if (expiresAt <= DateTime.UtcNow)
             throw new ArgumentException("Expiration date must be in the future", nameof(expiresAt));
 
-        return new RefreshToken
+        var refreshToken = new RefreshToken
         {
             UserId = userId,
             Token = token,
             ExpiresAt = expiresAt,
-            CreatedAt = DateTime.UtcNow,
             CreatedByIp = createdByIp
         };
+
+        refreshToken.InitializeTenantEntity(tenantId, userId); // Initialize tenant + audit fields
+
+        return refreshToken;
     }
 
     /// <summary>
@@ -59,5 +67,7 @@ public class RefreshToken : BaseEntity<int>
 
         RevokedAt = DateTime.UtcNow;
         RevokedByIp = revokedByIp;
+
+        MarkAsUpdated(); // Note: UpdatedBy remains null for refresh tokens
     }
 }

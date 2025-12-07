@@ -1,11 +1,11 @@
+using DreamSoft.Domain.Common;
 using DreamSoft.Domain.ValueObjects;
 
 namespace DreamSoft.Domain.Entities;
 
-public class TenantStatus:BaseEntity<int>
+public class TenantStatus : LookupEntity
 {
     public string Code { get; private set; } = null!;
-    public TranslatedString Name { get; private set; } = null!;
     public int DisplayOrder { get; private set; }
 
     // Navigation property
@@ -19,31 +19,37 @@ public class TenantStatus:BaseEntity<int>
     /// <summary>
     /// Creates a new tenant status (typically only used for seeding)
     /// </summary>
-    public static TenantStatus Create(string code, TranslatedString name, int displayOrder)
+    public static TenantStatus Create(string code, string name, TranslatedString? translations, int displayOrder)
     {
         if (string.IsNullOrWhiteSpace(code))
             throw new ArgumentException("Code is required", nameof(code));
 
-        ArgumentNullException.ThrowIfNull(name);
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Name is required", nameof(name));
 
-        return new TenantStatus
+        var tenantStatus = new TenantStatus
         {
             Code = code.ToLower().Trim(),
-            Name = name,
-            IsActive = true,
-            DisplayOrder = displayOrder,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            Name = name.Trim(),
+            Translations = translations,
+            DisplayOrder = displayOrder
         };
+
+        tenantStatus.InitializeAudit(); // Initialize base audit fields
+
+        return tenantStatus;
     }
 
     /// <summary>
-    /// Updates the name translations
+    /// Updates the name and translations
     /// </summary>
-    public void UpdateName(TranslatedString name)
+    public void UpdateName(string name, TranslatedString? translations = null)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        UpdatedAt = DateTime.UtcNow;
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Name is required", nameof(name));
+
+        Name = name.Trim();
+        UpdateTranslations(translations);
     }
 
     /// <summary>
@@ -52,24 +58,6 @@ public class TenantStatus:BaseEntity<int>
     public void UpdateDisplayOrder(int displayOrder)
     {
         DisplayOrder = displayOrder;
-        UpdatedAt = DateTime.UtcNow;
-    }
-
-    /// <summary>
-    /// Activates the status
-    /// </summary>
-    public void Activate()
-    {
-        IsActive = true;
-        UpdatedAt = DateTime.UtcNow;
-    }
-
-    /// <summary>
-    /// Deactivates the status (won't be available for new tenants)
-    /// </summary>
-    public void Deactivate()
-    {
-        IsActive = false;
-        UpdatedAt = DateTime.UtcNow;
+        MarkAsUpdated();
     }
 }

@@ -34,8 +34,21 @@ public class TranslatedString : ValueObject
         {
             "en" when !string.IsNullOrEmpty(English) => English,
             "en" when fallbackToSpanish => Spanish,
+            "en" => string.Empty, // Return empty if no fallback
             _ => Spanish
         };
+    }
+
+    /// <summary>
+    /// Gets translation with name as ultimate fallback
+    /// </summary>
+    /// <param name="language">Language code (es, en)</param>
+    /// <param name="fallbackName">Fallback name to use if translation is not available</param>
+    /// <returns>Translation or fallback name</returns>
+    public string GetOrFallback(string language, string fallbackName)
+    {
+        var translation = Get(language, fallbackToSpanish: false);
+        return string.IsNullOrEmpty(translation) ? fallbackName : translation;
     }
 
     /// <summary>

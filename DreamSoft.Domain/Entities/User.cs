@@ -1,11 +1,11 @@
+using DreamSoft.Domain.Common;
 using DreamSoft.Domain.Exceptions;
 
 namespace DreamSoft.Domain.Entities;
 
-public class User : BaseEntity<int>
+public class User : TenantEntity
 {
     // Identity
-    public int TenantId { get; private set; }
     public string Username { get; private set; } = null!;
     public string PasswordHash { get; private set; } = null!;
 
@@ -28,8 +28,7 @@ public class User : BaseEntity<int>
     public DateTime? LastLoginAt { get; private set; }
     public DateTime? LastPasswordChangeAt { get; private set; }
 
-    // Navigation properties
-    public Tenant Tenant { get; private set; } = null!;
+    // Navigation properties - Note: Tenant is inherited from TenantEntity
     public Language Language { get; private set; } = null!;
     public Gender? Gender { get; private set; }
     public IdType? IdType { get; private set; }
@@ -51,12 +50,10 @@ public class User : BaseEntity<int>
         string lastName,
         int languageId,
         string? phone = null,
-        bool isAdmin = false)
+        bool isAdmin = false,
+        int? createdBy = null)
     {
         // Validation
-        if (tenantId <= 0)
-            throw new DomainException("Tenant ID is required");
-
         if (string.IsNullOrWhiteSpace(username))
             throw new DomainException("Username is required");
 
@@ -77,7 +74,6 @@ public class User : BaseEntity<int>
 
         var user = new User
         {
-            TenantId = tenantId,
             Username = username.ToLower().Trim(),
             PasswordHash = passwordHash,
             FirstName = firstName.Trim(),
@@ -85,9 +81,10 @@ public class User : BaseEntity<int>
             Phone = phone?.Trim(),
             LanguageId = languageId,
             IsAdmin = isAdmin,
-            IsActive = true,
             LastPasswordChangeAt = DateTime.UtcNow
         };
+
+        user.InitializeTenantEntity(tenantId, createdBy); // Initialize tenant + audit fields
 
         return user;
     }
@@ -124,6 +121,8 @@ public class User : BaseEntity<int>
         IdTypeId = idTypeId;
         IdNumber = idNumber?.Trim();
         Address = address?.Trim();
+
+        MarkAsUpdated(); // User table doesn't track updatedBy
     }
 
     /// <summary>
@@ -138,6 +137,7 @@ public class User : BaseEntity<int>
             throw new DomainException("Username must be at least 3 characters");
 
         Username = newUsername.ToLower().Trim();
+        MarkAsUpdated(); // User table doesn't track updatedBy
     }
 
     /// <summary>
@@ -150,6 +150,7 @@ public class User : BaseEntity<int>
 
         PasswordHash = newPasswordHash;
         LastPasswordChangeAt = DateTime.UtcNow;
+        MarkAsUpdated(); // User table doesn't track updatedBy
     }
 
     /// <summary>
@@ -158,6 +159,7 @@ public class User : BaseEntity<int>
     public void UpdateAvatar(string? avatarUrl)
     {
         AvatarUrl = avatarUrl?.Trim();
+        MarkAsUpdated(); // User table doesn't track updatedBy
     }
 
     /// <summary>
@@ -169,10 +171,11 @@ public class User : BaseEntity<int>
             throw new DomainException("Language ID must be valid");
 
         LanguageId = languageId;
+        MarkAsUpdated(); // User table doesn't track updatedBy
     }
 
     /// <summary>
-    /// Records successful login
+    /// Records successful login (doesn't update UpdatedAt)
     /// </summary>
     public void RecordSuccessfulLogin()
     {
@@ -185,6 +188,7 @@ public class User : BaseEntity<int>
     public void PromoteToAdmin()
     {
         IsAdmin = true;
+        MarkAsUpdated(); // User table doesn't track updatedBy
     }
 
     /// <summary>
@@ -193,21 +197,6 @@ public class User : BaseEntity<int>
     public void DemoteFromAdmin()
     {
         IsAdmin = false;
-    }
-
-    /// <summary>
-    /// Activates the user
-    /// </summary>
-    public void Activate()
-    {
-        IsActive = true;
-    }
-
-    /// <summary>
-    /// Deactivates the user
-    /// </summary>
-    public void Deactivate()
-    {
-        IsActive = false;
+        MarkAsUpdated(); // User table doesn't track updatedBy
     }
 }

@@ -1,9 +1,10 @@
+using DreamSoft.Domain.Common;
+
 namespace DreamSoft.Domain.Entities;
 
-public class Language : BaseEntity<int>
+public class Language : LookupEntity
 {
     public string Code { get; private set; } = null!;
-    public string Name { get; private set; } = null!;
     public string NativeName { get; private set; } = null!;
     public bool IsDefault { get; private set; }
 
@@ -33,15 +34,17 @@ public class Language : BaseEntity<int>
         if (string.IsNullOrWhiteSpace(nativeName))
             throw new ArgumentException("Native name is required", nameof(nativeName));
 
-        return new Language
+        var language = new Language
         {
             Code = code.ToLower().Trim(),
             Name = name.Trim(),
             NativeName = nativeName.Trim(),
-            IsDefault = isDefault,
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow
+            IsDefault = isDefault
         };
+
+        language.InitializeAudit(); // Initialize base audit fields
+
+        return language;
     }
 
     /// <summary>
@@ -57,6 +60,7 @@ public class Language : BaseEntity<int>
 
         Name = name.Trim();
         NativeName = nativeName.Trim();
+        MarkAsUpdated();
     }
 
     /// <summary>
@@ -65,6 +69,7 @@ public class Language : BaseEntity<int>
     public void SetAsDefault()
     {
         IsDefault = true;
+        MarkAsUpdated();
     }
 
     /// <summary>
@@ -73,21 +78,6 @@ public class Language : BaseEntity<int>
     public void RemoveDefault()
     {
         IsDefault = false;
-    }
-
-    /// <summary>
-    /// Activates the language
-    /// </summary>
-    public void Activate()
-    {
-        IsActive = true;
-    }
-
-    /// <summary>
-    /// Deactivates the language
-    /// </summary>
-    public void Deactivate()
-    {
-        IsActive = false;
+        MarkAsUpdated();
     }
 }

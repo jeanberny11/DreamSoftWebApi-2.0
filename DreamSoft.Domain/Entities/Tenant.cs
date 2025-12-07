@@ -1,8 +1,9 @@
+using DreamSoft.Domain.Common;
 using DreamSoft.Domain.Exceptions;
 
 namespace DreamSoft.Domain.Entities;
 
-public class Tenant : BaseEntity<int>
+public class Tenant : AuditableEntity
 {
     // Business Identity
     public string TenantNumber { get; private set; } = null!;
@@ -92,6 +93,8 @@ public class Tenant : BaseEntity<int>
             TaxIdVerified = false
         };
 
+        tenant.InitializeAudit(); // Initialize base audit fields
+
         // Raise domain event (we'll implement event handling later)
         // tenant.RaiseDomainEvent(new TenantCreatedEvent(tenant.Id));
 
@@ -114,6 +117,8 @@ public class Tenant : BaseEntity<int>
         TaxId = taxId?.Trim();
         Phone = phone?.Trim();
         Website = website?.Trim();
+
+        MarkAsUpdated();
     }
 
     /// <summary>
@@ -136,6 +141,8 @@ public class Tenant : BaseEntity<int>
 
         Email = email.ToLower().Trim();
         Phone = phone?.Trim();
+
+        MarkAsUpdated();
     }
 
     /// <summary>
@@ -155,6 +162,8 @@ public class Tenant : BaseEntity<int>
         ProvinceId = provinceId;
         MunicipalityId = municipalityId;
         PostalCode = postalCode?.Trim();
+
+        MarkAsUpdated();
     }
 
     /// <summary>
@@ -182,6 +191,8 @@ public class Tenant : BaseEntity<int>
                 throw new DomainException("Supported languages are 'es' and 'en'");
             DefaultLanguage = lang;
         }
+
+        MarkAsUpdated();
     }
 
     /// <summary>
@@ -193,6 +204,8 @@ public class Tenant : BaseEntity<int>
             throw new DomainException("Logo URL cannot be empty");
 
         LogoUrl = logoUrl.Trim();
+
+        MarkAsUpdated();
     }
 
     /// <summary>
@@ -202,6 +215,8 @@ public class Tenant : BaseEntity<int>
     {
         EmailVerified = true;
         EmailVerifiedAt = DateTime.UtcNow;
+
+        MarkAsUpdated();
     }
 
     /// <summary>
@@ -215,6 +230,8 @@ public class Tenant : BaseEntity<int>
         TaxIdVerified = true;
         TaxIdVerifiedAt = DateTime.UtcNow;
         TaxIdVerifiedBy = verifiedByUserId;
+
+        MarkAsUpdated();
     }
 
     /// <summary>
@@ -226,6 +243,8 @@ public class Tenant : BaseEntity<int>
             throw new DomainException("Invalid status ID");
 
         StatusId = newStatusId;
+
+        MarkAsUpdated();
 
         // Raise domain event based on new status
         // We'll implement this later when we add domain events
@@ -240,6 +259,7 @@ public class Tenant : BaseEntity<int>
             throw new DomainException("Email must be verified before activation");
 
         StatusId = activeStatusId;
+        MarkAsUpdated();
         // RaiseDomainEvent(new TenantActivatedEvent(Id));
     }
 
@@ -249,6 +269,7 @@ public class Tenant : BaseEntity<int>
     public void Suspend(int suspendedStatusId)
     {
         StatusId = suspendedStatusId;
+        MarkAsUpdated();
         // RaiseDomainEvent(new TenantSuspendedEvent(Id));
     }
 

@@ -1,12 +1,12 @@
-using DreamSoft.Domain.Entities;
+using DreamSoft.Domain.Common;
 using System.Linq.Expressions;
 
 namespace DreamSoft.Domain.Repositories;
 
-public interface IRepository<T,TId> where T : BaseEntity<TId> where TId : notnull
+public interface IRepository<T> where T : BaseEntity
 {
     // Query methods
-    Task<T?> GetByIdAsync(TId id, CancellationToken cancellationToken = default);
+    Task<T?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<T>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<T>> FindAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default);
     Task<T?> FirstOrDefaultAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default);
