@@ -10,8 +10,9 @@ public class IdType : LookupEntity
     public string? Description { get; private set; }
     public string? ValidationPattern { get; private set; }
 
-    // Navigation property
+    // Navigation properties
     public ICollection<User> Users { get; private set; } = new List<User>();
+    public ICollection<Customer> Customers { get; private set; } = new List<Customer>();
 
     // Private constructor for EF Core
     private IdType()

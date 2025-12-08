@@ -33,6 +33,7 @@ public class User : TenantEntity
     public Gender? Gender { get; private set; }
     public IdType? IdType { get; private set; }
     public ICollection<RefreshToken> RefreshTokens { get; private set; } = [];
+    public ICollection<UserRole> UserRoles { get; private set; } = [];
 
     // Private constructor for EF Core
     private User()

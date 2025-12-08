@@ -28,9 +28,6 @@ public static class DependencyInjection
         // Register UnitOfWork for complex transactions
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-        // Register generic repository
-        services.AddScoped(typeof(IRepository<,>), typeof(Repository<,>));
-
         // Register services
         services.AddTransient<IDateTime, DateTimeService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
