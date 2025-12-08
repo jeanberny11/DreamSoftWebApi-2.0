@@ -1,5 +1,6 @@
 using DreamSoft.Domain.Entities;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore; 
 
 namespace DreamSoft.Application.Common.Interfaces;
 
