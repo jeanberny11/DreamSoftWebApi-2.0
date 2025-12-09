@@ -55,7 +55,7 @@ public class RegisterTenantCommandHandler
         var subdomain = request.Subdomain.ToLowerInvariant();
 
         // 2. Check if email already exists (defensive check)
-        var emailExists = await _context.Users
+        var emailExists = await _context.Tenants
             .AnyAsync(u => u.Email == email, cancellationToken);
 
         if (emailExists)
@@ -82,11 +82,11 @@ public class RegisterTenantCommandHandler
 
         // 4. Verify language exists
         var languageExists = await _context.Languages
-            .AnyAsync(l => l.LanguageId == request.LanguageId && l.Active, cancellationToken);
+            .AnyAsync(l => l.Id == request.LanguageId && l.IsActive, cancellationToken);
 
         if (!languageExists)
         {
-            throw new ValidationException("Invalid language selection.");
+            throw new ValidationException("language","Invalid language selection.");
         }
 
         // 5. Start database transaction
@@ -100,22 +100,24 @@ public class RegisterTenantCommandHandler
                 subdomain: subdomain,
                 phone: request.Phone,
                 taxId: request.TaxId,
-                languageId: request.LanguageId);
+                email: email,
+                trialStatusId: 1,
+                tenantNumber: Guid.NewGuid().ToString()
+                );
 
             _context.Tenants.Add(tenant);
             await _context.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation(
                 "Tenant created successfully. TenantId: {TenantId}, TenantNumber: {TenantNumber}",
-                tenant.TenantId, tenant.TenantNumber);
+                tenant.Id, tenant.TenantNumber);
 
             // 7. Hash password
             var passwordHash = _passwordHasher.HashPassword(request.Password);
 
             // 8. Create User (admin user for the tenant)
             var user = User.Create(
-                tenantId: tenant.TenantId,
-                email: email,
+                tenantId: tenant.Id,
                 username: email, // Use email as username initially
                 passwordHash: passwordHash,
                 firstName: request.FirstName,
@@ -128,7 +130,7 @@ public class RegisterTenantCommandHandler
 
             _logger.LogInformation(
                 "User created successfully. UserId: {UserId}, Email: {Email}",
-                user.UserId, user.Email);
+                user.Id, tenant.Email);
 
             // 9. Commit transaction
             await transaction.CommitAsync(cancellationToken);
@@ -139,9 +141,9 @@ public class RegisterTenantCommandHandler
 
             // 10. Generate access token
             var accessToken = _jwtService.GenerateAccessToken(
-                userId: user.UserId,
-                tenantId: tenant.TenantId,
-                email: user.Email,
+                userId: user.Id,
+                tenantId: tenant.Id,
+                email: tenant.Email,
                 username: user.Username,
                 isAdmin: user.IsAdmin);
 
@@ -167,12 +169,12 @@ public class RegisterTenantCommandHandler
             {
                 Success = true,
                 Message = "Registration completed successfully! Welcome to DreamSoft.",
-                TenantId = tenant.TenantId,
+                TenantId = tenant.Id,
                 TenantNumber = tenant.TenantNumber,
                 CompanyName = tenant.CompanyName,
                 Subdomain = tenant.Subdomain,
-                UserId = user.UserId,
-                Email = user.Email,
+                UserId = user.Id,
+                Email = tenant.Email,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 AccessToken = accessToken,

@@ -6,14 +6,9 @@ namespace DreamSoft.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class HealthController : ControllerBase
+public class HealthController(ILogger<HealthController> logger) : ControllerBase
 {
-    private readonly ILogger<HealthController> _logger;
-
-    public HealthController(ILogger<HealthController> logger)
-    {
-        _logger = logger;
-    }
+    private readonly ILogger<HealthController> _logger = logger;
 
     /// <summary>
     /// Health check endpoint
@@ -86,9 +81,9 @@ public class HealthController : ControllerBase
                 .Select(ts => new
                 {
                     ts.Id,
-                    ts.Code,
-                    NameEs = ts.Name.Spanish,
-                    NameEn = ts.Name.English
+                    ts.Name,
+                    NameEs = ts.Translations != null ? ts.Translations.GetOrFallback("es", ts.Name) : ts.Name,
+                    NameEn = ts.Translations != null ? ts.Translations.English : ts.Name
                 })
                 .ToListAsync();
 

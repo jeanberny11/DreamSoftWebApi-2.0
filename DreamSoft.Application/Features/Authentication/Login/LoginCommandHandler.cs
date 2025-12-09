@@ -1,9 +1,9 @@
 ﻿using DreamSoft.Application.Common.Exceptions;
 using DreamSoft.Application.Common.Interfaces;
 using DreamSoft.Application.Features.Authentication.Login;
-using DreamSoft.Domain.Entities;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 
 namespace DreamSoft.Application.Features.Authentication.Commands.Login;
 
@@ -40,29 +40,29 @@ public class LoginCommandHandler(
         // 1. Find user by email (include tenant data)
         var user = await _context.Users
             .Include(u => u.Tenant)
-            .FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
+            .FirstOrDefaultAsync(u => u.Username == username, cancellationToken);
 
         if (user == null)
         {
             _logger.LogWarning(
-                "Login failed - user not found. Email: {Email}, IP: {IpAddress}",
-                email, ipAddress);
+                "Login failed - user not found. Username: {Username}, IP: {IpAddress}",
+                username, ipAddress);
 
             throw new UnauthorizedException(invalidCredentialsMessage);
         }
 
         // 2. Check if user is active
-        if (!user.Active)
+        if (!user.IsActive)
         {
             _logger.LogWarning(
                 "Login failed - user account is inactive. UserId: {UserId}, IP: {IpAddress}",
-                user.UserId, ipAddress);
+                user.Id, ipAddress);
 
             throw new UnauthorizedException("Your account has been deactivated. Please contact support.");
         }
 
         // 3. Check if tenant is active
-        if (!user.Tenant.Active)
+        if (!user.Tenant.IsActive)
         {
             _logger.LogWarning(
                 "Login failed - tenant account is inactive. TenantId: {TenantId}, IP: {IpAddress}",
@@ -78,20 +78,20 @@ public class LoginCommandHandler(
         {
             _logger.LogWarning(
                 "Login failed - invalid password. UserId: {UserId}, IP: {IpAddress}",
-                user.UserId, ipAddress);
+                user.Id, ipAddress);
 
             throw new UnauthorizedException(invalidCredentialsMessage);
         }
 
         // 5. Update last login timestamp
-        user.UpdateLastLogin();
+        user.RecordSuccessfulLogin();
         await _context.SaveChangesAsync(cancellationToken);
 
         // 6. Generate access token
         var accessToken = _jwtService.GenerateAccessToken(
-            userId: user.UserId,
+            userId: user.Id,
             tenantId: user.TenantId,
-            email: user.Email,
+            email: user.Tenant.Email,
             username: user.Username,
             isAdmin: user.IsAdmin);
 
@@ -99,26 +99,27 @@ public class LoginCommandHandler(
         var refreshTokenString = _jwtService.GenerateRefreshToken();
 
         // 8. Create and save refresh token entity
-        var refreshToken = RefreshToken.Create(
-            userId: user.UserId,
+        var refreshToken = Domain.Entities.RefreshToken.Create(
+            tenantId: user.TenantId,
+            userId: user.Id,
             token: refreshTokenString,
-            ipAddress: ipAddress,
-            expiresInDays: request.RememberMe ? 30 : 1); // 30 days if "remember me", else 1 day
+            createdByIp: ipAddress,
+            expiresAt: DateTime.UtcNow.AddDays(request.RememberMe ? 30 : 1)); // 30 days if "remember me", else 1 day
 
         _context.RefreshTokens.Add(refreshToken);
         await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
             "Login successful. UserId: {UserId}, TenantId: {TenantId}, IP: {IpAddress}",
-            user.UserId, user.TenantId, ipAddress);
+            user.Id, user.TenantId, ipAddress);
 
         // 9. Return success response
         return new LoginResponse
         {
             Success = true,
             Message = "Login successful!",
-            UserId = user.UserId,
-            Email = user.Email,
+            UserId = user.Id,
+            Email = user.Tenant.Email,
             Username = user.Username,
             FirstName = user.FirstName,
             LastName = user.LastName,

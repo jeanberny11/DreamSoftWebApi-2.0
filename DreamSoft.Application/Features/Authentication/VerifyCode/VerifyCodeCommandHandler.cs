@@ -9,22 +9,15 @@ namespace DreamSoft.Application.Features.Authentication.Commands.VerifyCode;
 /// <summary>
 /// Handler for verifying email verification code
 /// </summary>
-public class VerifyCodeCommandHandler
-    : IRequestHandler<VerifyCodeRequest, VerifyCodeResponse>
+public class VerifyCodeCommandHandler(
+    IRedisService redisService,
+    IJwtService jwtService,
+    ILogger<VerifyCodeCommandHandler> logger)
+        : IRequestHandler<VerifyCodeRequest, VerifyCodeResponse>
 {
-    private readonly IRedisService _redisService;
-    private readonly IJwtService _jwtService;
-    private readonly ILogger<VerifyCodeCommandHandler> _logger;
-
-    public VerifyCodeCommandHandler(
-        IRedisService redisService,
-        IJwtService jwtService,
-        ILogger<VerifyCodeCommandHandler> logger)
-    {
-        _redisService = redisService;
-        _jwtService = jwtService;
-        _logger = logger;
-    }
+    private readonly IRedisService _redisService = redisService;
+    private readonly IJwtService _jwtService = jwtService;
+    private readonly ILogger<VerifyCodeCommandHandler> _logger = logger;
 
     public async Task<VerifyCodeResponse> Handle(
         VerifyCodeRequest request,
@@ -37,7 +30,7 @@ public class VerifyCodeCommandHandler
             email);
 
         // Check verification attempts limit (max 5 attempts per code)
-        var canVerify = await _redisService.CheckVerificationAttemptsAsync(email);
+        var canVerify = await _redisService.CheckVerificationAttemptsAsync(email, cancellationToken);
         if (!canVerify)
         {
             _logger.LogWarning(
@@ -50,7 +43,7 @@ public class VerifyCodeCommandHandler
         }
 
         // Get verification data from Redis
-        var verificationData = await _redisService.GetEmailVerificationDataAsync(email);
+        var verificationData = await _redisService.GetEmailVerificationDataAsync(email, cancellationToken);
 
         if (verificationData == null)
         {
@@ -58,7 +51,7 @@ public class VerifyCodeCommandHandler
                 "No verification code found for email: {Email}",
                 email);
 
-            throw new ValidationException("Invalid or expired verification code.");
+            throw new ValidationException("email","Invalid or expired verification code.");
         }
 
         // Verify the code matches
@@ -71,7 +64,7 @@ public class VerifyCodeCommandHandler
                 "Invalid verification code provided for email: {Email}. Attempts: {Attempts}",
                 email, verificationData.Attempts + 1);
 
-            throw new ValidationException("Invalid verification code.");
+            throw new ValidationException("email","Invalid verification code.");
         }
 
         // Code is valid - delete from Redis

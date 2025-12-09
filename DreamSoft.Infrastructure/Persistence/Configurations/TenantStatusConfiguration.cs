@@ -16,22 +16,17 @@ public class TenantStatusConfiguration : IEntityTypeConfiguration<TenantStatus>
             .HasColumnName("id")
             .ValueGeneratedOnAdd();
 
-        builder.Property(t => t.Code)
-            .HasColumnName("code")
+        builder.Property(t => t.Name)
+            .HasColumnName("name")
             .HasMaxLength(50)
             .IsRequired();
 
-        // Configure TranslatedString as JSONB
-        builder.OwnsOne(t => t.Name, name =>
+        // TranslatedString as JSONB (nullable)
+        builder.OwnsOne(tc => tc.Translations, translations =>
         {
-            name.ToJson("translations"); // Maps to JSONB column
-
-            name.Property(ts => ts.Spanish)
-                .HasJsonPropertyName("es")
-                .IsRequired();
-
-            name.Property(ts => ts.English)
-                .HasJsonPropertyName("en");
+            translations.ToJson("translations");
+            translations.Property(ts => ts.Spanish).HasJsonPropertyName("es").IsRequired();
+            translations.Property(ts => ts.English).HasJsonPropertyName("en");
         });
 
         builder.Property(t => t.IsActive)
@@ -51,9 +46,9 @@ public class TenantStatusConfiguration : IEntityTypeConfiguration<TenantStatus>
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
         // Indexes
-        builder.HasIndex(t => t.Code)
+        builder.HasIndex(t => t.Name)
             .IsUnique()
-            .HasDatabaseName("idx_tenant_statuses_code");
+            .HasDatabaseName("idx_tenant_statuses_name");
 
         builder.HasIndex(t => t.IsActive)
             .HasDatabaseName("idx_tenant_statuses_is_active");

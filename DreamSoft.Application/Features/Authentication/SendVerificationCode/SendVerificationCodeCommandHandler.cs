@@ -11,28 +11,19 @@ namespace DreamSoft.Application.Features.Authentication.Commands.SendVerificatio
 /// <summary>
 /// Handler for sending email verification code
 /// </summary>
-public class SendVerificationCodeCommandHandler
-    : IRequestHandler<SendVerificationCodeRequest, SendVerificationCodeResponse>
+public class SendVerificationCodeCommandHandler(
+    IApplicationDbContext context,
+    IRedisService redisService,
+    IEmailService emailService,
+    ICurrentUserService currentUserService,
+    ILogger<SendVerificationCodeCommandHandler> logger)
+        : IRequestHandler<SendVerificationCodeRequest, SendVerificationCodeResponse>
 {
-    private readonly IApplicationDbContext _context;
-    private readonly IRedisService _redisService;
-    private readonly IEmailService _emailService;
-    private readonly ICurrentUserService _currentUserService;
-    private readonly ILogger<SendVerificationCodeCommandHandler> _logger;
-
-    public SendVerificationCodeCommandHandler(
-        IApplicationDbContext context,
-        IRedisService redisService,
-        IEmailService emailService,
-        ICurrentUserService currentUserService,
-        ILogger<SendVerificationCodeCommandHandler> logger)
-    {
-        _context = context;
-        _redisService = redisService;
-        _emailService = emailService;
-        _currentUserService = currentUserService;
-        _logger = logger;
-    }
+    private readonly IApplicationDbContext _context = context;
+    private readonly IRedisService _redisService = redisService;
+    private readonly IEmailService _emailService = emailService;
+    private readonly ICurrentUserService _currentUserService = currentUserService;
+    private readonly ILogger<SendVerificationCodeCommandHandler> _logger = logger;
 
     public async Task<SendVerificationCodeResponse> Handle(
         SendVerificationCodeRequest request,
@@ -46,7 +37,7 @@ public class SendVerificationCodeCommandHandler
             email, ipAddress);
 
         // Check rate limit for sending codes (max 3 per hour per IP)
-        var canSend = await _redisService.CheckEmailSendRateLimitAsync(ipAddress);
+        var canSend = await _redisService.CheckEmailSendRateLimitAsync(ipAddress, cancellationToken);
         if (!canSend)
         {
             _logger.LogWarning(
@@ -59,7 +50,7 @@ public class SendVerificationCodeCommandHandler
         }
 
         // Check if email already exists in database
-        var emailExists = await _context.Users
+        var emailExists = await _context.Tenants
             .AnyAsync(u => u.Email == email, cancellationToken);
 
         if (emailExists)
@@ -75,10 +66,10 @@ public class SendVerificationCodeCommandHandler
         var code = GenerateVerificationCode();
 
         // Store code in Redis (5 minutes expiration)
-        await _redisService.SetEmailVerificationCodeAsync(email, code);
+        await _redisService.SetEmailVerificationCodeAsync(email, code, cancellationToken);
 
         // Send verification email
-        var emailSent = await _emailService.SendVerificationCodeAsync(email, code);
+        var emailSent = await _emailService.SendVerificationCodeAsync(email, code, cancellationToken);
 
         if (!emailSent)
         {
@@ -86,7 +77,7 @@ public class SendVerificationCodeCommandHandler
                 "Failed to send verification code email to: {Email}",
                 email);
 
-            throw new ApplicationException("Failed to send verification email. Please try again.");
+            throw new EmailSendException("Failed to send verification email. Please try again.");
         }
 
         _logger.LogInformation(

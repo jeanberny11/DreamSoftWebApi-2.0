@@ -1,6 +1,7 @@
 ﻿using DreamSoft.Application.Common.Interfaces;
 using DreamSoft.Application.Features.Authentication.Requests;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace DreamSoft.Application.Features.Authentication.RegisterTenant;
 
@@ -17,7 +18,7 @@ public class CheckSubdomainQueryHandler(IApplicationDbContext context) : IReques
     {
         // Check if subdomain exists in database
         var exists = await _context.Tenants
-            .AnyAsync(t => t.Subdomain == request.Subdomain.ToLowerInvariant(), cancellationToken);
+            .AnyAsync(t => t.Subdomain.Equals(request.Subdomain, StringComparison.InvariantCultureIgnoreCase), cancellationToken);
 
         if (exists)
         {

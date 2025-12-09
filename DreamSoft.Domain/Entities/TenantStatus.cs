@@ -5,7 +5,6 @@ namespace DreamSoft.Domain.Entities;
 
 public class TenantStatus : LookupEntity
 {
-    public string Code { get; private set; } = null!;
     public int DisplayOrder { get; private set; }
 
     // Navigation property
@@ -29,7 +28,6 @@ public class TenantStatus : LookupEntity
 
         var tenantStatus = new TenantStatus
         {
-            Code = code.ToLower().Trim(),
             Name = name.Trim(),
             Translations = translations,
             DisplayOrder = displayOrder

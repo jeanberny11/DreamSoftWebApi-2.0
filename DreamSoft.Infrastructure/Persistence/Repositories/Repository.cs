@@ -1,11 +1,11 @@
 using System.Linq.Expressions;
-using DreamSoft.Domain.Entities;
+using DreamSoft.Domain.Common;
 using DreamSoft.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace DreamSoft.Infrastructure.Persistence.Repositories;
 
-public class Repository<T,TId> : IRepository<T,TId> where T : BaseEntity<TId> where TId : notnull
+public class Repository<T> : IRepository<T> where T : BaseEntity
 {
     protected readonly ApplicationDbContext _context;
     protected readonly DbSet<T> _dbSet;
@@ -16,7 +16,7 @@ public class Repository<T,TId> : IRepository<T,TId> where T : BaseEntity<TId> wh
         _dbSet = context.Set<T>();
     }
 
-    public virtual async Task<T?> GetByIdAsync(TId id, CancellationToken cancellationToken = default)
+    public virtual async Task<T?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         return await _dbSet.FindAsync(id,cancellationToken);
     }

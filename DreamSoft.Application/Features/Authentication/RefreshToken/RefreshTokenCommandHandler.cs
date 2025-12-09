@@ -111,17 +111,18 @@ public class RefreshTokenCommandHandler
         // 7. Generate new refresh token
         var newRefreshTokenString = _jwtService.GenerateRefreshToken();
         var newRefreshToken = Domain.Entities.RefreshToken.Create(
+            tenantId: user.TenantId,
             userId: user.Id,
             token: newRefreshTokenString,
             createdByIp: ipAddress,
-            expiresAt: 7); // Default 7 days
+            expiresAt: DateTime.UtcNow.AddMinutes(7)); // Default 7 days
 
         _context.RefreshTokens.Add(newRefreshToken);
         await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
             "Access token refreshed successfully. UserId: {UserId}, IP: {IpAddress}",
-            user.UserId, ipAddress);
+            user.Id, ipAddress);
 
         // 8. Return success response
         return new RefreshTokenResponse

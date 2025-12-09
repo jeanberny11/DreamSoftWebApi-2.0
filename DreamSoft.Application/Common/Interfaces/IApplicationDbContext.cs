@@ -1,6 +1,6 @@
 using DreamSoft.Domain.Entities;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore; 
+using Microsoft.EntityFrameworkCore;
 
 namespace DreamSoft.Application.Common.Interfaces;
 
@@ -19,7 +19,7 @@ public interface IApplicationDbContext
     // ============================================
     // LOOKUP ENTITIES (18)
     // ============================================
-    
+
     // System Lookups (6)
     DbSet<TenantStatus> TenantStatuses { get; }
     DbSet<Gender> Genders { get; }

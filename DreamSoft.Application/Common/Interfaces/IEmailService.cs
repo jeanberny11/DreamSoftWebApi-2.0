@@ -8,7 +8,7 @@ public interface IEmailService
     /// <summary>
     /// Sends email verification code to user
     /// </summary>
-    Task SendVerificationCodeAsync(
+    Task<bool> SendVerificationCodeAsync(
         string toEmail,
         string code,
         CancellationToken cancellationToken = default);
