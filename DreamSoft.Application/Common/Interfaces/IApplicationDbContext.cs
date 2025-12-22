@@ -47,15 +47,17 @@ public interface IApplicationDbContext
     DbSet<MenuItem> MenuItems { get; }
 
     // ============================================
-    // SYSTEM ENTITIES (4)
+    // SYSTEM ENTITIES (8)
     // ============================================
     DbSet<SubscriptionPlan> SubscriptionPlans { get; }
     DbSet<TenantSubscription> TenantSubscriptions { get; }
     DbSet<Payment> Payments { get; }
-    DbSet<Permission> Permissions { get; }
+    DbSet<RoleTemplate> RoleTemplates { get; }
+    DbSet<RoleMenuItemTemplate> RoleMenuItemTemplates { get; }
+    DbSet<RoleMenuActionTemplate> RoleMenuActionTemplates { get; }
 
     // ============================================
-    // TENANT ENTITIES (8)
+    // TENANT ENTITIES (9)
     // ============================================
     DbSet<RefreshToken> RefreshTokens { get; }
     DbSet<Customer> Customers { get; }
@@ -63,7 +65,8 @@ public interface IApplicationDbContext
     DbSet<Product> Products { get; }
     DbSet<ProductImage> ProductImages { get; }
     DbSet<Role> Roles { get; }
-    DbSet<RolePermission> RolePermissions { get; }
+    DbSet<RoleMenuItem> RoleMenuItems { get; }
+    DbSet<RoleMenuItemAction> RoleMenuItemActions { get; }
     DbSet<UserRole> UserRoles { get; }
 
     // ============================================

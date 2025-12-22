@@ -4,13 +4,14 @@ namespace DreamSoft.Application.Common.Exceptions;
 
 /// <summary>
 /// Exception thrown when validation fails
+/// Contains field-level validation errors
 /// </summary>
-public class ValidationException : ApplicationException
+public class ValidationException : Exception
 {
     public IDictionary<string, string[]> Errors { get; }
 
     public ValidationException()
-        : base("One or more validation failures have occurred.")
+        : base("One or more validation errors occurred")
     {
         Errors = new Dictionary<string, string[]>();
     }
@@ -21,14 +22,5 @@ public class ValidationException : ApplicationException
         Errors = failures
             .GroupBy(e => e.PropertyName, e => e.ErrorMessage)
             .ToDictionary(failureGroup => failureGroup.Key, failureGroup => failureGroup.ToArray());
-    }
-
-    public ValidationException(string propertyName, string errorMessage)
-        : this()
-    {
-        Errors = new Dictionary<string, string[]>
-        {
-            { propertyName, new[] { errorMessage } }
-        };
     }
 }

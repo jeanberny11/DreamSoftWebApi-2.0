@@ -1,17 +1,8 @@
-﻿namespace DreamSoft.Application.Common.Exceptions;
+namespace DreamSoft.Application.Common.Exceptions;
 
 /// <summary>
-/// Exception thrown when a user is not authorized to perform an action
+/// Exception thrown when user is not authorized
 /// </summary>
-public class UnauthorizedException : ApplicationException
+public class UnauthorizedException(string resourceKey, params object[] parameters) : ApplicationException(resourceKey, parameters)
 {
-    public UnauthorizedException(string message)
-        : base(message)
-    {
-    }
-
-    public UnauthorizedException(string message, Exception innerException)
-        : base(message, innerException)
-    {
-    }
 }

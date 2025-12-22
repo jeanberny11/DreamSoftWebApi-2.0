@@ -15,7 +15,7 @@ public class TaxClassification : LookupEntity
 
     private TaxClassification() { }
 
-    public static TaxClassification Create(string code, string name, TranslatedString? translations = null, string? description = null, string? ncfType = null, bool requiresRnc = false)
+    public static TaxClassification Create(string code, string name, TranslatedString translations, string? description = null, string? ncfType = null, bool requiresRnc = false)
     {
         if (string.IsNullOrWhiteSpace(code))
             throw new ArgumentException("Code is required", nameof(code));

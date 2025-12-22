@@ -1,6 +1,5 @@
 using DreamSoft.Application.Common.Interfaces;
 using DreamSoft.Domain.Entities;
-using DreamSoft.Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 
@@ -47,7 +46,9 @@ public class ApplicationDbContext(
     public DbSet<Domain.Entities.Module> Modules => Set<Domain.Entities.Module>();
     public DbSet<MenuGroup> MenuGroups => Set<MenuGroup>();
     public DbSet<MenuItem> MenuItems => Set<MenuItem>();
-    public DbSet<Permission> Permissions => Set<Permission>();
+    public DbSet<RoleTemplate> RoleTemplates => Set<RoleTemplate>();
+    public DbSet<RoleMenuItemTemplate> RoleMenuItemTemplates => Set<RoleMenuItemTemplate>();
+    public DbSet<RoleMenuActionTemplate> RoleMenuActionTemplates => Set<RoleMenuActionTemplate>();
 
     // Tenant Entities
     public DbSet<Customer> Customers => Set<Customer>();
@@ -55,18 +56,14 @@ public class ApplicationDbContext(
     public DbSet<Product> Products => Set<Product>();
     public DbSet<ProductImage> ProductImages => Set<ProductImage>();
     public DbSet<Role> Roles => Set<Role>();
-    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<RoleMenuItem> RoleMenuItems => Set<RoleMenuItem>();
+    public DbSet<RoleMenuItemAction> RoleMenuItemActions => Set<RoleMenuItemAction>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.ApplyConfiguration(new TenantConfiguration());
-        modelBuilder.ApplyConfiguration(new TenantStatusConfiguration());
-        modelBuilder.ApplyConfiguration(new UserConfiguration());
-        modelBuilder.ApplyConfiguration(new GenderConfiguration());
-        modelBuilder.ApplyConfiguration(new IdTypeConfiguration());
-        modelBuilder.ApplyConfiguration(new LanguageConfiguration());
-        modelBuilder.ApplyConfiguration(new RefreshTokenConfiguration());
+        // FIXED: Use ONLY assembly scanning to avoid duplicate configuration
+        // This will automatically find and apply all IEntityTypeConfiguration<T> classes
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
 
         base.OnModelCreating(modelBuilder);

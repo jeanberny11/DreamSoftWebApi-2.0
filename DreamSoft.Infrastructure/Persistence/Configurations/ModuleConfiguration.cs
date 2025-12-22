@@ -57,9 +57,8 @@ public class ModuleConfiguration : IEntityTypeConfiguration<Module>
             .HasColumnName("updated_at")
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-        // Indexes
+        // Indexes - FIXED: Removed duplicate Code index
         builder.HasIndex(m => m.Code).IsUnique().HasDatabaseName("modules_code_key");
-        builder.HasIndex(m => m.Code).HasDatabaseName("idx_modules_code");
-        builder.HasIndex(m => m.Translations).HasDatabaseName("idx_modules_translations");
+        //builder.HasIndex(m => m.Translations).HasDatabaseName("idx_modules_translations");
     }
 }

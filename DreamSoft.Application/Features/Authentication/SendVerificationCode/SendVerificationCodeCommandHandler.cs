@@ -44,9 +44,7 @@ public class SendVerificationCodeCommandHandler(
                 "Rate limit exceeded for IP: {IpAddress} attempting to send code to {Email}",
                 ipAddress, email);
 
-            throw new RateLimitExceededException(
-                "Too many verification code requests. Please try again later.",
-                TimeSpan.FromHours(1));
+            throw new RateLimitExceededException("RateLimitExceeded");
         }
 
         // Check if email already exists in database
@@ -59,7 +57,7 @@ public class SendVerificationCodeCommandHandler(
                 "Attempted to send verification code to existing email: {Email}",
                 email);
 
-            throw new ConflictException($"An account with email '{email}' already exists.");
+            throw new ConflictException("EmailAlreadyExists", email);
         }
 
         // Generate 6-digit verification code
@@ -77,7 +75,7 @@ public class SendVerificationCodeCommandHandler(
                 "Failed to send verification code email to: {Email}",
                 email);
 
-            throw new EmailSendException("Failed to send verification email. Please try again.");
+            throw new EmailSendException("EmailSendFailed");
         }
 
         _logger.LogInformation(

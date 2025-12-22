@@ -1,11 +1,14 @@
 using DreamSoft.Application.Common.Interfaces;
 using DreamSoft.Domain.Repositories;
 using DreamSoft.Infrastructure.Persistence;
-using DreamSoft.Infrastructure.Persistence.Repositories;
-using DreamSoft.Infrastructure.Services;
+using DreamSoft.Infrastructure.Services.Common;
+using DreamSoft.Infrastructure.Services.Features.Authentication;
+using DreamSoft.Infrastructure.Services.Features.Caching;
+using DreamSoft.Infrastructure.Services.Features.Email;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using StackExchange.Redis;
 
 namespace DreamSoft.Infrastructure;
 
@@ -28,9 +31,23 @@ public static class DependencyInjection
         // Register UnitOfWork for complex transactions
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-        // Register services
+        // Common Services
         services.AddTransient<IDateTime, DateTimeService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+
+        // Feature Services - Authentication
+        services.AddScoped<IPasswordHasher, PasswordHasher>();
+        services.AddScoped<IJwtService, JwtService>();
+
+        // Feature Services - Caching (Redis)
+        services.AddSingleton<IConnectionMultiplexer>(sp =>
+            ConnectionMultiplexer.Connect(
+                configuration.GetConnectionString("Redis") ?? "localhost:6379"));
+        services.AddScoped<IRedisService, RedisService>();
+
+        // Feature Services - Email (Resend API)
+        services.AddHttpClient("Resend");
+        services.AddScoped<IEmailService, EmailService>();
 
         // Required for CurrentUserService to access HTTP context
         services.AddHttpContextAccessor();

@@ -1,13 +1,15 @@
-﻿using MediatR;
+using MediatR;
 
 namespace DreamSoft.Application.Features.Authentication.RefreshToken;
 
 /// <summary>
 /// Request to refresh access token
-/// Note: Refresh token comes from httpOnly cookie, not request body
+/// Refresh token is extracted from HTTP-only cookie by controller and passed here
 /// </summary>
 public class RefreshTokenRequest : IRequest<RefreshTokenResponse>
 {
-    // Empty - refresh token is read from cookie in controller
-    // This is just for consistent command pattern
+    /// <summary>
+    /// Refresh token (extracted from HTTP-only cookie by controller)
+    /// </summary>
+    public string RefreshToken { get; set; } = null!;
 }

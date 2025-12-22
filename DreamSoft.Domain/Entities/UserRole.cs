@@ -2,12 +2,21 @@ using DreamSoft.Domain.Common;
 
 namespace DreamSoft.Domain.Entities;
 
-public class UserRole : AuditableEntity
+/// <summary>
+/// Junction table for User-Role many-to-many relationship
+/// Uses composite primary key (UserId, RoleId) - no separate Id column
+/// </summary>
+public class UserRole
 {
     public int UserId { get; protected set; }
     public int RoleId { get; protected set; }
     public int? CreatedBy { get; protected set; }
     public int? UpdatedBy { get; protected set; }
+    
+    // Audit fields (not inheriting from AuditableEntity)
+    public DateTime CreatedAt { get; protected set; }
+    public DateTime? UpdatedAt { get; protected set; }
+    public bool IsActive { get; protected set; }
 
     // Navigation properties
     public User User { get; private set; } = null!;
@@ -29,10 +38,26 @@ public class UserRole : AuditableEntity
         {
             UserId = userId,
             RoleId = roleId,
-            CreatedBy = createdBy
+            CreatedBy = createdBy,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = null,
+            IsActive = true
         };
 
-        userRole.InitializeAudit();
         return userRole;
+    }
+
+    public void Deactivate(int? updatedBy = null)
+    {
+        IsActive = false;
+        UpdatedBy = updatedBy;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Activate(int? updatedBy = null)
+    {
+        IsActive = true;
+        UpdatedBy = updatedBy;
+        UpdatedAt = DateTime.UtcNow;
     }
 }

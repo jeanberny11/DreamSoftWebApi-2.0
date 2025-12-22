@@ -1,6 +1,7 @@
-﻿using DreamSoft.Application.Common.Exceptions;
+using DreamSoft.Application.Common.Exceptions;
 using DreamSoft.Application.Common.Interfaces;
 using DreamSoft.Application.Features.Authentication.RefreshToken;
+using DreamSoft.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -9,6 +10,7 @@ namespace DreamSoft.Application.Features.Authentication.Commands.RefreshToken;
 
 /// <summary>
 /// Handler for refreshing access token using refresh token
+/// Implements token rotation for security (old token is revoked, new token is issued)
 /// </summary>
 public class RefreshTokenCommandHandler
     : IRequestHandler<RefreshTokenRequest, RefreshTokenResponse>
@@ -30,24 +32,8 @@ public class RefreshTokenCommandHandler
         _logger = logger;
     }
 
-    public  Task<RefreshTokenResponse> Handle(
+    public async Task<RefreshTokenResponse> Handle(
         RefreshTokenRequest request,
-        CancellationToken cancellationToken)
-    {
-        // Note: The refresh token is expected to be in an HTTP-only cookie
-        // The API controller will extract it and pass it here
-        // For now, we'll throw an exception as the token comes from cookies
-        throw new UnauthorizedException("Refresh token must be provided via HTTP-only cookie.");
-
-        // This handler will be called from the controller with the token extracted from cookies
-        // See Phase 8 for controller implementation
-    }
-
-    /// <summary>
-    /// Internal method to handle refresh token logic (called by controller)
-    /// </summary>
-    public async Task<RefreshTokenResponse> HandleRefreshToken(
-        string refreshTokenString,
         CancellationToken cancellationToken)
     {
         var ipAddress = _currentUserService.IpAddress ?? "Unknown";
@@ -56,81 +42,85 @@ public class RefreshTokenCommandHandler
             "Refresh token request from IP: {IpAddress}",
             ipAddress);
 
-        // 1. Validate and get refresh token from database
-        var refreshToken = await _jwtService.ValidateRefreshTokenAsync(refreshTokenString);
+        // STEP 1: Validate and get refresh token from database
+        var refreshTokenEntity = await _jwtService.ValidateRefreshTokenAsync(
+            request.RefreshToken,
+            cancellationToken);
 
         // ValidateRefreshTokenAsync throws UnauthorizedException if invalid
         // If we reach here, the token is valid
 
-        // 2. Get user with tenant data
+        // STEP 2: Get user with tenant data
         var user = await _context.Users
             .Include(u => u.Tenant)
-            .FirstOrDefaultAsync(u => u.Id == refreshToken.UserId, cancellationToken);
+            .FirstOrDefaultAsync(u => u.Id == refreshTokenEntity.UserId, cancellationToken);
 
         if (user == null)
         {
             _logger.LogWarning(
                 "Refresh token validation failed - user not found. UserId: {UserId}",
-                refreshToken.UserId);
+                refreshTokenEntity.UserId);
 
-            throw new UnauthorizedException("Invalid refresh token.");
+            throw new UnauthorizedException("Unauthorized");
         }
 
-        // 3. Check if user is active
+        // STEP 3: Check if user is active
         if (!user.IsActive)
         {
             _logger.LogWarning(
                 "Refresh token validation failed - user inactive. UserId: {UserId}",
                 user.Id);
 
-            throw new UnauthorizedException("Your account has been deactivated.");
+            throw new UnauthorizedException("Unauthorized");
         }
 
-        // 4. Check if tenant is active
+        // STEP 4: Check if tenant is active
         if (!user.Tenant.IsActive)
         {
             _logger.LogWarning(
                 "Refresh token validation failed - tenant inactive. TenantId: {TenantId}",
                 user.TenantId);
 
-            throw new UnauthorizedException("Your organization's account has been deactivated.");
+            throw new UnauthorizedException("Unauthorized");
         }
 
-        // 5. Revoke the old refresh token
-        refreshToken.Revoke(ipAddress);
+        // STEP 5: Revoke the old refresh token (one-time use for security)
+        refreshTokenEntity.Revoke(ipAddress);
         await _context.SaveChangesAsync(cancellationToken);
 
-        // 6. Generate new access token
+        // STEP 6: Generate new access token
         var accessToken = _jwtService.GenerateAccessToken(
             userId: user.Id,
             tenantId: user.TenantId,
-            email: "",
+            email: user.Tenant.Email,    // ← Tenant email
             username: user.Username,
             isAdmin: user.IsAdmin);
 
-        // 7. Generate new refresh token
+        // STEP 7: Generate new refresh token (token rotation for security)
         var newRefreshTokenString = _jwtService.GenerateRefreshToken();
         var newRefreshToken = Domain.Entities.RefreshToken.Create(
             tenantId: user.TenantId,
             userId: user.Id,
             token: newRefreshTokenString,
             createdByIp: ipAddress,
-            expiresAt: DateTime.UtcNow.AddMinutes(7)); // Default 7 days
+            expiresAt: DateTime.UtcNow.AddDays(7)); // 7 days default
 
         _context.RefreshTokens.Add(newRefreshToken);
         await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
-            "Access token refreshed successfully. UserId: {UserId}, IP: {IpAddress}",
-            user.Id, ipAddress);
+            "Access token refreshed successfully. UserId: {UserId}, TenantId: {TenantId}, IP: {IpAddress}",
+            user.Id, user.TenantId, ipAddress);
 
-        // 8. Return success response
+        // STEP 8: Return success response
+        // Note: New refresh token will be set as HTTP-only cookie by controller
         return new RefreshTokenResponse
         {
             Success = true,
             Message = "Token refreshed successfully.",
             AccessToken = accessToken,
-            AccessTokenExpiresInSeconds = 3600 // 1 hour
+            AccessTokenExpiresInSeconds = 3600, // 1 hour
+            RefreshToken = newRefreshTokenString // Controller will set this as HTTP-only cookie
         };
     }
 }

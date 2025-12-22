@@ -14,7 +14,12 @@ public class SubscriptionTier : LookupEntity
 
     private SubscriptionTier() { }
 
-    public static SubscriptionTier Create(string code, string name, int level, TranslatedString? translations = null, string? description = null)
+    public static SubscriptionTier Create(
+        string code,
+        string name,
+        int level,
+        TranslatedString translations,
+        string? description = null)
     {
         if (string.IsNullOrWhiteSpace(code))
             throw new ArgumentException("Code is required", nameof(code));

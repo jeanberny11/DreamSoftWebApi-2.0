@@ -16,10 +16,19 @@ public class PermissionActionConfiguration : IEntityTypeConfiguration<Permission
             .HasColumnName("id")
             .ValueGeneratedOnAdd();
 
-        builder.Property(pa => pa.Name)
-            .HasColumnName("name")
+        builder.Property(pa => pa.Code)
+            .HasColumnName("code")
             .HasMaxLength(50)
             .IsRequired();
+
+        builder.Property(pa => pa.Name)
+            .HasColumnName("name")
+            .HasMaxLength(100)
+            .IsRequired();
+
+        builder.Property(pa => pa.Description)
+            .HasColumnName("description")
+            .HasColumnType("text");
 
         // TranslatedString as JSONB
         builder.OwnsOne(pa => pa.Translations, translations =>
@@ -42,6 +51,11 @@ public class PermissionActionConfiguration : IEntityTypeConfiguration<Permission
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
         // Indexes
-        builder.HasIndex(pa => pa.Name).IsUnique().HasDatabaseName("permission_actions_name_key");
+        builder.HasIndex(pa => pa.Code)
+            .IsUnique()
+            .HasDatabaseName("permission_actions_code_key");
+
+        builder.HasIndex(pa => pa.Name)
+            .HasDatabaseName("idx_permission_actions_name");
     }
 }

@@ -72,12 +72,11 @@ public class MenuItemConfiguration : IEntityTypeConfiguration<MenuItem>
             .HasColumnName("updated_at")
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-        // Indexes
+        // Indexes - FIXED: Removed duplicate Code index
         builder.HasIndex(mi => mi.Code).IsUnique().HasDatabaseName("menu_items_code_key");
-        builder.HasIndex(mi => mi.Code).HasDatabaseName("idx_menu_items_code");
         builder.HasIndex(mi => mi.ModuleId).HasDatabaseName("idx_menu_items_module");
         builder.HasIndex(mi => mi.MenuGroupId).HasDatabaseName("idx_menu_items_menu_group");
-        builder.HasIndex(mi => mi.Translations).HasDatabaseName("idx_menu_items_translations");
+        //builder.HasIndex(mi => mi.Translations).HasDatabaseName("idx_menu_items_translations");
 
         // Relationships
         builder.HasOne(mi => mi.Module)

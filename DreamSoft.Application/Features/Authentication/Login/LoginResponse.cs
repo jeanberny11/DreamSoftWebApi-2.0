@@ -25,6 +25,9 @@ public class LoginResponse
     // Authentication tokens
     public string AccessToken { get; set; } = null!;
     public int AccessTokenExpiresInSeconds { get; set; }
-
-    // Refresh token will be in httpOnly cookie (not in response body)
+    
+    /// <summary>
+    /// Refresh token (will be set as HTTP-only cookie by controller)
+    /// </summary>
+    public string RefreshToken { get; set; } = null!;
 }

@@ -5,7 +5,7 @@ namespace DreamSoft.Domain.Entities;
 /// <summary>
 /// Represents a refresh token for maintaining user sessions
 /// </summary>
-public class RefreshToken : TenantEntity
+public class RefreshToken : AuditableEntity
 {
     public int UserId { get; private set; }
     public string Token { get; private set; } = null!;
@@ -49,10 +49,10 @@ public class RefreshToken : TenantEntity
             UserId = userId,
             Token = token,
             ExpiresAt = expiresAt,
-            CreatedByIp = createdByIp
+            CreatedByIp = createdByIp,
         };
 
-        refreshToken.InitializeTenantEntity(tenantId, userId); // Initialize tenant + audit fields
+        refreshToken.InitializeAudit();
 
         return refreshToken;
     }

@@ -39,4 +39,9 @@ public interface ICurrentUserService
     /// Gets the IP address of the current request
     /// </summary>
     string? IpAddress { get; }
+
+    /// <summary>
+    /// Gets the subdomain from the current HTTP request (e.g., acme.dreamsoft.com → "acme")
+    /// </summary>
+    string? Subdomain { get; }
 }

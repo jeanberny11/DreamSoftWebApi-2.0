@@ -41,7 +41,7 @@ public class MenuGroupConfiguration : IEntityTypeConfiguration<MenuGroup>
         builder.OwnsOne(mg => mg.Translations, translations =>
         {
             translations.ToJson("translations");
-            translations.Property(ts => ts.Spanish).HasJsonPropertyName("es").IsRequired();
+            translations.Property(ts => ts.Spanish).HasJsonPropertyName("es");
             translations.Property(ts => ts.English).HasJsonPropertyName("en");
         });
 
@@ -57,9 +57,14 @@ public class MenuGroupConfiguration : IEntityTypeConfiguration<MenuGroup>
             .HasColumnName("updated_at")
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-        // Indexes
+        // Indexes - FIXED: Removed duplicate Code index
         builder.HasIndex(mg => mg.Code).IsUnique().HasDatabaseName("menu_groups_code_key");
-        builder.HasIndex(mg => mg.Code).HasDatabaseName("idx_menu_groups_code");
-        builder.HasIndex(mg => mg.Translations).HasDatabaseName("idx_menu_groups_translations");
+        //builder.HasIndex(mg => mg.Translations).HasDatabaseName("idx_menu_groups_translations");
+
+        // Relationships
+        builder.HasMany(mg => mg.MenuItems)
+            .WithOne(mi => mi.MenuGroup)
+            .HasForeignKey(mi => mi.MenuGroupId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

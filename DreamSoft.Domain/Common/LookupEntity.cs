@@ -20,8 +20,9 @@ public abstract class LookupEntity : AuditableEntity
     /// Multi-language translations stored as JSONB
     /// Format: {"en":"English text","es":"Texto español"}
     /// Spanish is required, English is optional
+    /// NOTE: Changed to required (not nullable) to match database constraints
     /// </summary>
-    public TranslatedString? Translations { get; protected set; }
+    public TranslatedString Translations { get; protected set; } = null!;
 
     /// <summary>
     /// Gets the translated name for the specified language
@@ -40,8 +41,9 @@ public abstract class LookupEntity : AuditableEntity
     /// <summary>
     /// Updates the translations
     /// </summary>
-    protected void UpdateTranslations(TranslatedString? translations)
+    protected void UpdateTranslations(TranslatedString translations)
     {
+        ArgumentNullException.ThrowIfNull(translations, nameof(translations));
         Translations = translations;
         MarkAsUpdated();
     }

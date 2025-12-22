@@ -23,6 +23,9 @@ public class RegisterTenantResponse
     // Authentication tokens
     public string AccessToken { get; set; } = null!;
     public int AccessTokenExpiresInSeconds { get; set; } // 3600 = 1 hour
-
-    // Refresh token will be in httpOnly cookie (not in response body)
+    
+    /// <summary>
+    /// Refresh token (will be set as HTTP-only cookie by controller)
+    /// </summary>
+    public string RefreshToken { get; set; } = null!;
 }

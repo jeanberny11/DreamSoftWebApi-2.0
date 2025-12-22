@@ -25,13 +25,16 @@ public class BillingCycleConfiguration : IEntityTypeConfiguration<BillingCycle>
             .HasColumnName("months")
             .IsRequired();
 
-        // TranslatedString as JSONB
+        // FIXED: TranslatedString as JSONB (NOT NULL - required)
         builder.OwnsOne(bc => bc.Translations, translations =>
         {
             translations.ToJson("translations");
             translations.Property(ts => ts.Spanish).HasJsonPropertyName("es").IsRequired();
             translations.Property(ts => ts.English).HasJsonPropertyName("en");
         });
+        
+        // Make the owned type itself required
+        builder.Navigation(bc => bc.Translations).IsRequired();
 
         builder.Property(bc => bc.IsActive)
             .HasColumnName("is_active")

@@ -1,6 +1,6 @@
 using DreamSoft.Application.Common.Interfaces;
 
-namespace DreamSoft.Infrastructure.Services;
+namespace DreamSoft.Infrastructure.Services.Common;
 
 public class DateTimeService : IDateTime
 {

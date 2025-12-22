@@ -10,11 +10,8 @@ public class UserRoleConfiguration : IEntityTypeConfiguration<UserRole>
     {
         builder.ToTable("user_roles");
 
-        builder.HasKey(ur => ur.Id);
-
-        builder.Property(ur => ur.Id)
-            .HasColumnName("id")
-            .ValueGeneratedOnAdd();
+        // FIXED: Composite primary key matching database structure (no id column)
+        builder.HasKey(ur => new { ur.UserId, ur.RoleId });
 
         builder.Property(ur => ur.UserId)
             .HasColumnName("user_id")
@@ -45,9 +42,6 @@ public class UserRoleConfiguration : IEntityTypeConfiguration<UserRole>
         // Indexes
         builder.HasIndex(ur => ur.UserId).HasDatabaseName("idx_user_roles_user");
         builder.HasIndex(ur => ur.RoleId).HasDatabaseName("idx_user_roles_role");
-        builder.HasIndex(ur => new { ur.UserId, ur.RoleId })
-            .IsUnique()
-            .HasDatabaseName("user_roles_user_id_role_id_key");
 
         // Relationships
         builder.HasOne(ur => ur.User)

@@ -37,9 +37,7 @@ public class VerifyCodeCommandHandler(
                 "Maximum verification attempts exceeded for email: {Email}",
                 email);
 
-            throw new RateLimitExceededException(
-                "Maximum verification attempts exceeded. Please request a new code.",
-                TimeSpan.FromMinutes(5));
+            throw new RateLimitExceededException("RateLimitExceeded");
         }
 
         // Get verification data from Redis
@@ -51,7 +49,7 @@ public class VerifyCodeCommandHandler(
                 "No verification code found for email: {Email}",
                 email);
 
-            throw new ValidationException("email","Invalid or expired verification code.");
+            throw new UnauthorizedException("InvalidOtpCode");
         }
 
         // Verify the code matches
@@ -64,7 +62,7 @@ public class VerifyCodeCommandHandler(
                 "Invalid verification code provided for email: {Email}. Attempts: {Attempts}",
                 email, verificationData.Attempts + 1);
 
-            throw new ValidationException("email","Invalid verification code.");
+            throw new UnauthorizedException("InvalidOtpCode");
         }
 
         // Code is valid - delete from Redis

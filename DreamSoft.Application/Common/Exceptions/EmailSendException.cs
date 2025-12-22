@@ -1,17 +1,8 @@
 namespace DreamSoft.Application.Common.Exceptions;
 
 /// <summary>
-/// Exception thrown when there's a EmailSendException with existing data (e.g., duplicate email)
+/// Exception thrown when email sending fails
 /// </summary>
-public class EmailSendException : ApplicationException
+public class EmailSendException(string resourceKey, params object[] parameters) : ApplicationException(resourceKey, parameters)
 {
-    public EmailSendException(string message)
-        : base(message)
-    {
-    }
-
-    public EmailSendException(string message, Exception innerException)
-        : base(message, innerException)
-    {
-    }
 }

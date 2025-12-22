@@ -20,6 +20,10 @@ public class SubscriptionPlanConfiguration : IEntityTypeConfiguration<Subscripti
             .HasColumnName("tier_id")
             .IsRequired();
 
+        builder.Property(sp => sp.BillingCycleId)
+            .HasColumnName("billing_cycle_id")
+            .IsRequired();
+
         builder.Property(sp => sp.PlanName)
             .HasColumnName("name")
             .HasMaxLength(100)
@@ -29,32 +33,37 @@ public class SubscriptionPlanConfiguration : IEntityTypeConfiguration<Subscripti
             .HasColumnName("description")
             .HasColumnType("text");
 
-        // TranslatedString as JSONB (nullable)
+        // FIXED: TranslatedString as JSONB (NOT NULL - required)
         builder.OwnsOne(sp => sp.Translations, translations =>
         {
             translations.ToJson("translations");
             translations.Property(ts => ts.Spanish).HasJsonPropertyName("es").IsRequired();
             translations.Property(ts => ts.English).HasJsonPropertyName("en");
         });
+        
+        // Make the owned type itself required
+        builder.Navigation(sp => sp.Translations).IsRequired();
 
-        builder.Property(sp => sp.BillingCycleId)
-            .HasColumnName("billing_cycle_id")
-            .IsRequired();
-
-        builder.Property(sp => sp.PriceMonthly)
-            .HasColumnName("price_monthly")
+        builder.Property(sp => sp.Price)
+            .HasColumnName("price")
             .HasColumnType("decimal(10,2)")
             .IsRequired();
 
-        builder.Property(sp => sp.PriceYearly)
-            .HasColumnName("price_yearly")
-            .HasColumnType("decimal(10,2)");
+        builder.Property(sp => sp.StripePriceId)
+            .HasColumnName("stripe_price_id")
+            .HasMaxLength(255);
 
+        builder.Property(sp => sp.TrialDays)
+            .HasColumnName("trial_days");
+
+        // Resource limits (moved from SubscriptionTier)
         builder.Property(sp => sp.MaxUsers)
-            .HasColumnName("max_users");
+            .HasColumnName("max_users")
+            .IsRequired();
 
         builder.Property(sp => sp.MaxStorageGb)
-            .HasColumnName("max_storage_gb");
+            .HasColumnName("max_storage_gb")
+            .IsRequired();
 
         builder.Property(sp => sp.MaxInvoicesPerMonth)
             .HasColumnName("max_invoices_per_month");
@@ -72,7 +81,9 @@ public class SubscriptionPlanConfiguration : IEntityTypeConfiguration<Subscripti
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
         // Indexes
-        builder.HasIndex(sp => sp.TierId).HasDatabaseName("subscription_plans_tier_id_key");
+        builder.HasIndex(sp => sp.TierId).HasDatabaseName("idx_subscription_plans_tier");
+        builder.HasIndex(sp => sp.BillingCycleId).HasDatabaseName("idx_subscription_plans_billing_cycle");
+        builder.HasIndex(sp => sp.StripePriceId).HasDatabaseName("idx_subscription_plans_stripe_price");
 
         // Relationships
         builder.HasOne(sp => sp.Tier)

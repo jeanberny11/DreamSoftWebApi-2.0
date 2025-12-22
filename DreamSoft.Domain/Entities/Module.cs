@@ -16,7 +16,7 @@ public class Module : LookupEntity
 
     private Module() { }
 
-    public static Module Create(string code, string name, TranslatedString? translations = null, string? description = null, string? icon = null, int? sortOrder = null)
+    public static Module Create(string code, string name, TranslatedString translations, string? description = null, string? icon = null, int? sortOrder = null)
     {
         if (string.IsNullOrWhiteSpace(code))
             throw new ArgumentException("Code is required", nameof(code));

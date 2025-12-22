@@ -15,7 +15,7 @@ public class MenuGroup : LookupEntity
 
     private MenuGroup() { }
 
-    public static MenuGroup Create(string code, string name, TranslatedString? translations = null, string? description = null, string? icon = null, int? sortOrder = null)
+    public static MenuGroup Create(string code, string name, TranslatedString translations, string? description = null, string? icon = null, int? sortOrder = null)
     {
         if (string.IsNullOrWhiteSpace(code))
             throw new ArgumentException("Code is required", nameof(code));

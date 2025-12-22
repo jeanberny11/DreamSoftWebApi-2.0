@@ -2,9 +2,10 @@ using DreamSoft.Domain.Common;
 
 namespace DreamSoft.Domain.Entities;
 
-public class Language : LookupEntity
+public class Language : AuditableEntity
 {
     public string Code { get; private set; } = null!;
+    public string Name { get; private set; } = null!;
     public string NativeName { get; private set; } = null!;
     public bool IsDefault { get; private set; }
 

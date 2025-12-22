@@ -97,6 +97,12 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasColumnName("updated_at")
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
+        builder.Property(u => u.CreatedBy)
+           .HasColumnName("created_by");
+
+        builder.Property(u => u.UpdatedBy)
+            .HasColumnName("updated_by");
+
         // Relationships
         builder.HasOne(u => u.Tenant)
             .WithMany()
@@ -117,6 +123,18 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .WithMany(i => i.Users)
             .HasForeignKey(u => u.IdTypeId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne(u => u.CreatedByUser)
+            .WithMany()
+            .HasForeignKey(u => u.CreatedBy)
+            .OnDelete(DeleteBehavior.SetNull)
+            .HasConstraintName("users_created_by_fkey");
+
+        builder.HasOne(u => u.UpdatedByUser)
+            .WithMany()
+            .HasForeignKey(u => u.UpdatedBy)
+            .OnDelete(DeleteBehavior.SetNull)
+            .HasConstraintName("users_updated_by_fkey");
 
         // Indexes
         builder.HasIndex(u => new { u.TenantId, u.Username })

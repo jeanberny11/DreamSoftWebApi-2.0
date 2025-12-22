@@ -1,17 +1,8 @@
-﻿namespace DreamSoft.Application.Common.Exceptions;
+namespace DreamSoft.Application.Common.Exceptions;
 
 /// <summary>
-/// Exception thrown when there's a conflict with existing data (e.g., duplicate email)
+/// Exception thrown when a resource already exists (duplicate)
 /// </summary>
-public class ConflictException : ApplicationException
+public class ConflictException(string resourceKey, params object[] parameters) : ApplicationException(resourceKey, parameters)
 {
-    public ConflictException(string message)
-        : base(message)
-    {
-    }
-
-    public ConflictException(string message, Exception innerException)
-        : base(message, innerException)
-    {
-    }
 }

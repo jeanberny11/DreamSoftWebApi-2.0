@@ -26,9 +26,10 @@ public class IdType : LookupEntity
         int countryId,
         string code,
         string name,
+        TranslatedString translations,
         string? description = null,
-        string? validationPattern = null,
-        TranslatedString? translations = null)
+        string? validationPattern = null
+        )
     {
         if (countryId <= 0)
             throw new ArgumentException("Country ID must be valid", nameof(countryId));
@@ -59,9 +60,9 @@ public class IdType : LookupEntity
     /// </summary>
     public void Update(
         string name,
+        TranslatedString translations,
         string? description = null,
-        string? validationPattern = null,
-        TranslatedString? translations = null)
+        string? validationPattern = null)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Name is required", nameof(name));

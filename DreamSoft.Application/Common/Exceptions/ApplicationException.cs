@@ -1,17 +1,18 @@
-﻿namespace DreamSoft.Application.Common.Exceptions;
+namespace DreamSoft.Application.Common.Exceptions;
 
 /// <summary>
-/// Base exception for all application-specific exceptions
+/// Base exception class for application-level exceptions
+/// Carries resource key and parameters for localization
 /// </summary>
-public abstract class ApplicationException : Exception
+public class ApplicationException(string resourceKey, params object[] parameters) : Exception(resourceKey)
 {
-    protected ApplicationException(string message)
-        : base(message)
-    {
-    }
+    /// <summary>
+    /// Resource key for localized error message
+    /// </summary>
+    public string ResourceKey { get; } = resourceKey;
 
-    protected ApplicationException(string message, Exception innerException)
-        : base(message, innerException)
-    {
-    }
+    /// <summary>
+    /// Parameters to format the localized message
+    /// </summary>
+    public object[] Parameters { get; } = parameters;
 }

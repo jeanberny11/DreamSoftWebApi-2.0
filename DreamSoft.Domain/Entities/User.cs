@@ -101,6 +101,7 @@ public class User : TenantEntity
     public void UpdateProfile(
         string firstName,
         string lastName,
+        int? updatedBy = null,
         string? phone = null,
         int? genderId = null,
         DateTime? dateOfBirth = null,
@@ -123,13 +124,13 @@ public class User : TenantEntity
         IdNumber = idNumber?.Trim();
         Address = address?.Trim();
 
-        MarkAsUpdated(); // User table doesn't track updatedBy
+        RecordUpdate(updatedBy); // Now tracking who updated
     }
 
     /// <summary>
     /// Updates username
     /// </summary>
-    public void UpdateUsername(string newUsername)
+    public void UpdateUsername(string newUsername, int? updatedBy = null)
     {
         if (string.IsNullOrWhiteSpace(newUsername))
             throw new DomainException("Username is required");
@@ -138,66 +139,67 @@ public class User : TenantEntity
             throw new DomainException("Username must be at least 3 characters");
 
         Username = newUsername.ToLower().Trim();
-        MarkAsUpdated(); // User table doesn't track updatedBy
+        RecordUpdate(updatedBy); // Now tracking who updated
     }
 
     /// <summary>
     /// Updates password hash
     /// </summary>
-    public void UpdatePassword(string newPasswordHash)
+    public void UpdatePassword(string newPasswordHash, int? updatedBy = null)
     {
         if (string.IsNullOrWhiteSpace(newPasswordHash))
             throw new DomainException("Password hash is required");
 
         PasswordHash = newPasswordHash;
         LastPasswordChangeAt = DateTime.UtcNow;
-        MarkAsUpdated(); // User table doesn't track updatedBy
+        RecordUpdate(updatedBy); // Now tracking who updated
     }
 
     /// <summary>
     /// Updates avatar
     /// </summary>
-    public void UpdateAvatar(string? avatarUrl)
+    public void UpdateAvatar(string? avatarUrl, int? updatedBy = null)
     {
         AvatarUrl = avatarUrl?.Trim();
-        MarkAsUpdated(); // User table doesn't track updatedBy
+        RecordUpdate(updatedBy); // Now tracking who updated
     }
 
     /// <summary>
     /// Updates preferred language
     /// </summary>
-    public void UpdateLanguage(int languageId)
+    public void UpdateLanguage(int languageId, int? updatedBy = null)
     {
         if (languageId <= 0)
             throw new DomainException("Language ID must be valid");
 
         LanguageId = languageId;
-        MarkAsUpdated(); // User table doesn't track updatedBy
+        RecordUpdate(updatedBy); // Now tracking who updated
     }
 
     /// <summary>
-    /// Records successful login (doesn't update UpdatedAt)
+    /// Records successful login (doesn't update UpdatedAt or UpdatedBy)
     /// </summary>
     public void RecordSuccessfulLogin()
     {
         LastLoginAt = DateTime.UtcNow;
+        // Don't call RecordUpdate - login is not an "update" action
     }
 
     /// <summary>
     /// Promotes user to admin
     /// </summary>
-    public void PromoteToAdmin()
+    public void PromoteToAdmin(int? updatedBy = null)
     {
         IsAdmin = true;
-        MarkAsUpdated(); // User table doesn't track updatedBy
+        RecordUpdate(updatedBy); // Now tracking who updated
     }
 
     /// <summary>
     /// Demotes user from admin
     /// </summary>
-    public void DemoteFromAdmin()
+    public void DemoteFromAdmin(int? updatedBy = null)
     {
         IsAdmin = false;
-        MarkAsUpdated(); // User table doesn't track updatedBy
+        RecordUpdate(updatedBy); // Now tracking who updated
     }
 }

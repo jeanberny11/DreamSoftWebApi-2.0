@@ -18,7 +18,7 @@ public class Gender : LookupEntity
     /// <summary>
     /// Creates a new gender (typically used for seeding)
     /// </summary>
-    public static Gender Create(string code, string name, TranslatedString? translations = null)
+    public static Gender Create(string code, string name, TranslatedString translations)
     {
         if (string.IsNullOrWhiteSpace(code))
             throw new ArgumentException("Code is required", nameof(code));
@@ -41,7 +41,7 @@ public class Gender : LookupEntity
     /// <summary>
     /// Updates translations
     /// </summary>
-    public void SetTranslations(TranslatedString? translations)
+    public void SetTranslations(TranslatedString translations)
     {
         UpdateTranslations(translations);
     }

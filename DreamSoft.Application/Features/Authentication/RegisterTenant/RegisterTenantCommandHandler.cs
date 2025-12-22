@@ -19,6 +19,7 @@ public class RegisterTenantCommandHandler
     private readonly IJwtService _jwtService;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IEmailService _emailService;
+    private readonly ICurrentUserService _currentUserService;
     private readonly ILogger<RegisterTenantCommandHandler> _logger;
 
     public RegisterTenantCommandHandler(
@@ -26,12 +27,14 @@ public class RegisterTenantCommandHandler
         IJwtService jwtService,
         IPasswordHasher passwordHasher,
         IEmailService emailService,
+        ICurrentUserService currentUserService,
         ILogger<RegisterTenantCommandHandler> logger)
     {
         _context = context;
         _jwtService = jwtService;
         _passwordHasher = passwordHasher;
         _emailService = emailService;
+        _currentUserService = currentUserService;
         _logger = logger;
     }
 
@@ -48,7 +51,7 @@ public class RegisterTenantCommandHandler
         if (sessionData == null)
         {
             _logger.LogWarning("Invalid or expired session token provided during registration");
-            throw new UnauthorizedException("Session has expired. Please verify your email again.");
+            throw new UnauthorizedException("Unauthorized");
         }
 
         var email = sessionData.Email.ToLowerInvariant();
@@ -64,7 +67,7 @@ public class RegisterTenantCommandHandler
                 "Attempted registration with existing email: {Email}",
                 email);
 
-            throw new ConflictException($"An account with email '{email}' already exists.");
+            throw new ConflictException("EmailAlreadyExists", email);
         }
 
         // 3. Check if subdomain is available
@@ -77,7 +80,7 @@ public class RegisterTenantCommandHandler
                 "Attempted registration with existing subdomain: {Subdomain}",
                 subdomain);
 
-            throw new ConflictException($"The subdomain '{subdomain}' is already taken.");
+            throw new ConflictException("TenantAlreadyExists", subdomain);
         }
 
         // 4. Verify language exists
@@ -86,7 +89,7 @@ public class RegisterTenantCommandHandler
 
         if (!languageExists)
         {
-            throw new ValidationException("language","Invalid language selection.");
+            throw new NotFoundException("NotFound");
         }
 
         // 5. Start database transaction
@@ -147,7 +150,20 @@ public class RegisterTenantCommandHandler
                 username: user.Username,
                 isAdmin: user.IsAdmin);
 
-            // 11. Send welcome email (fire and forget - don't block response)
+            // 11. Generate refresh token
+            var ipAddress = _currentUserService.IpAddress ?? "Unknown";
+            var refreshTokenString = _jwtService.GenerateRefreshToken();
+            var refreshToken = Domain.Entities.RefreshToken.Create(
+                tenantId: tenant.Id,
+                userId: user.Id,
+                token: refreshTokenString,
+                createdByIp: ipAddress,
+                expiresAt: DateTime.UtcNow.AddDays(7)); // 7 days default
+
+            _context.RefreshTokens.Add(refreshToken);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            // 12. Send welcome email (fire and forget - don't block response)
             _ = Task.Run(async () =>
             {
                 try
@@ -164,7 +180,7 @@ public class RegisterTenantCommandHandler
                 }
             }, cancellationToken);
 
-            // 12. Return success response
+            // 13. Return success response
             return new RegisterTenantResponse
             {
                 Success = true,
@@ -178,7 +194,8 @@ public class RegisterTenantCommandHandler
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 AccessToken = accessToken,
-                AccessTokenExpiresInSeconds = 3600 // 1 hour
+                AccessTokenExpiresInSeconds = 3600, // 1 hour
+                RefreshToken = refreshTokenString   // ← Refresh token for HTTP-only cookie
             };
         }
         catch (Exception ex)

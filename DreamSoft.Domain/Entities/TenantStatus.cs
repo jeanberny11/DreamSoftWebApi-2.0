@@ -18,7 +18,7 @@ public class TenantStatus : LookupEntity
     /// <summary>
     /// Creates a new tenant status (typically only used for seeding)
     /// </summary>
-    public static TenantStatus Create(string code, string name, TranslatedString? translations, int displayOrder)
+    public static TenantStatus Create(string code, string name, TranslatedString translations, int displayOrder)
     {
         if (string.IsNullOrWhiteSpace(code))
             throw new ArgumentException("Code is required", nameof(code));
@@ -41,7 +41,7 @@ public class TenantStatus : LookupEntity
     /// <summary>
     /// Updates the name and translations
     /// </summary>
-    public void UpdateName(string name, TranslatedString? translations = null)
+    public void UpdateName(string name, TranslatedString translations)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Name is required", nameof(name));

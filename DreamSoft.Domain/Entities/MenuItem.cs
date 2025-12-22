@@ -18,11 +18,10 @@ public class MenuItem : LookupEntity
     public Module Module { get; private set; } = null!;
     public MenuGroup MenuGroup { get; private set; } = null!;
     public SubscriptionTier? RequiredTier { get; private set; }
-    public ICollection<Permission> Permissions { get; private set; } = [];
 
     private MenuItem() { }
 
-    public static MenuItem Create(int moduleId, int menuGroupId, string code, string name, TranslatedString? translations = null, string? description = null, string? route = null, string? icon = null, int? requiredTierId = null, int? sortOrder = null)
+    public static MenuItem Create(int moduleId, int menuGroupId, string code, string name, TranslatedString translations, string? description = null, string? route = null, string? icon = null, int? requiredTierId = null, int? sortOrder = null)
     {
         if (moduleId <= 0)
             throw new ArgumentException("Module ID is required", nameof(moduleId));

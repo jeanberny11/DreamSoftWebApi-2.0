@@ -28,7 +28,10 @@ public class RoleConfiguration : IEntityTypeConfiguration<Role>
             .HasColumnName("updated_by");
 
         // Role-specific fields
-        builder.Property(r => r.RoleName)
+        builder.Property(r => r.RoleTemplateId)
+            .HasColumnName("role_template_id");
+
+        builder.Property(r => r.Name)
             .HasColumnName("name")
             .HasMaxLength(100)
             .IsRequired();
@@ -37,8 +40,8 @@ public class RoleConfiguration : IEntityTypeConfiguration<Role>
             .HasColumnName("description")
             .HasColumnType("text");
 
-        builder.Property(r => r.IsSystemRole)
-            .HasColumnName("is_system_role")
+        builder.Property(r => r.IsCustom)
+            .HasColumnName("is_custom")
             .HasDefaultValue(false);
 
         // Audit fields
@@ -56,7 +59,8 @@ public class RoleConfiguration : IEntityTypeConfiguration<Role>
 
         // Indexes
         builder.HasIndex(r => r.TenantId).HasDatabaseName("idx_roles_tenant");
-        builder.HasIndex(r => new { r.TenantId, r.RoleName })
+        builder.HasIndex(r => r.RoleTemplateId).HasDatabaseName("idx_roles_role_template");
+        builder.HasIndex(r => new { r.TenantId, r.Name })
             .IsUnique()
             .HasDatabaseName("roles_tenant_id_name_key");
 
@@ -78,5 +82,11 @@ public class RoleConfiguration : IEntityTypeConfiguration<Role>
             .HasForeignKey(r => r.UpdatedBy)
             .OnDelete(DeleteBehavior.SetNull)
             .HasConstraintName("roles_updated_by_fkey");
+
+        builder.HasOne(r => r.RoleTemplate)
+            .WithMany(rt => rt.Roles)
+            .HasForeignKey(r => r.RoleTemplateId)
+            .OnDelete(DeleteBehavior.SetNull)
+            .HasConstraintName("roles_role_template_id_fkey");
     }
 }

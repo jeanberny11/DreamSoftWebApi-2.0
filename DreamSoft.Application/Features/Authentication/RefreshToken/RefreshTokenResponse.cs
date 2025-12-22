@@ -1,4 +1,4 @@
-﻿namespace DreamSoft.Application.Features.Authentication.RefreshToken;
+namespace DreamSoft.Application.Features.Authentication.RefreshToken;
 
 /// <summary>
 /// Response after successful token refresh
@@ -9,6 +9,9 @@ public class RefreshTokenResponse
     public string Message { get; set; } = null!;
     public string AccessToken { get; set; } = null!;
     public int AccessTokenExpiresInSeconds { get; set; }
-
-    // New refresh token will be in httpOnly cookie (not in response body)
+    
+    /// <summary>
+    /// New refresh token (controller will set this as HTTP-only cookie)
+    /// </summary>
+    public string RefreshToken { get; set; } = null!;
 }

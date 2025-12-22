@@ -17,7 +17,7 @@ public class BillingCycle : LookupEntity
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Name is required", nameof(name));
 
-        ArgumentNullException.ThrowIfNull(translations);
+        ArgumentNullException.ThrowIfNull(translations, nameof(translations)); // Now required!
 
         if (months <= 0)
             throw new ArgumentException("Months must be greater than zero", nameof(months));
@@ -25,7 +25,7 @@ public class BillingCycle : LookupEntity
         var billingCycle = new BillingCycle
         {
             Name = name.Trim(),
-            Translations = translations,
+            Translations = translations, // Required
             Months = months
         };
 

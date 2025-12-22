@@ -29,10 +29,6 @@ public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
             .HasColumnName("expires_at")
             .IsRequired();
 
-        builder.Property(rt => rt.CreatedAt)
-            .HasColumnName("created_at")
-            .IsRequired();
-
         builder.Property(rt => rt.CreatedByIp)
             .HasColumnName("created_by_ip")
             .HasMaxLength(50);
@@ -43,6 +39,13 @@ public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
         builder.Property(rt => rt.RevokedByIp)
             .HasColumnName("revoked_by_ip")
             .HasMaxLength(50);
+
+        builder.Property(rt => rt.CreatedAt)
+            .HasColumnName("created_at")
+            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+        builder.Property(rt => rt.UpdatedAt)
+            .HasColumnName("updated_at");
 
         // Indexes
         builder.HasIndex(rt => rt.Token)

@@ -16,6 +16,8 @@ public class RegisterTenantRequest : IRequest<RegisterTenantResponse>
     public string Subdomain { get; set; } = null!;
     public string? Phone { get; set; }
     public string? TaxId { get; set; }
+    public string Email { get; set; } = null!;
+    public string? Address { get; set; }
 
     // Admin user information
     public string FirstName { get; set; } = null!;
