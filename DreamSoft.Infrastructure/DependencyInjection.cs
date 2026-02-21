@@ -31,6 +31,7 @@ public static class DependencyInjection
         // Common Services
         services.AddTransient<IDateTime, DateTimeService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<ITenantService, TenantService>();
 
         // Required for CurrentUserService to access HTTP context
         services.AddHttpContextAccessor();

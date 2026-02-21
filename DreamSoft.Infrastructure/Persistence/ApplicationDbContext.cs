@@ -1,4 +1,5 @@
 using DreamSoft.Application.Common.Interfaces;
+using DreamSoft.Domain.Common;
 using DreamSoft.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
@@ -9,9 +10,11 @@ namespace DreamSoft.Infrastructure.Persistence;
 public class ApplicationDbContext(
     DbContextOptions<ApplicationDbContext> options,
     ICurrentUserService currentUserService,
+    ITenantService tenantService,
     IDateTime dateTime) : DbContext(options), IApplicationDbContext
 {
     private readonly ICurrentUserService _currentUserService = currentUserService;
+    private readonly ITenantService _tenantService = tenantService;
     private readonly IDateTime _dateTime = dateTime;
 
     // ============================================
@@ -111,13 +114,66 @@ public class ApplicationDbContext(
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+
+        // Global query filters for tenant isolation.
+        // Only applied when a tenant context exists (null check allows system-level queries).
+        modelBuilder.Entity<User>()
+            .HasQueryFilter(e => _tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId);
+
+        modelBuilder.Entity<Role>()
+            .HasQueryFilter(e => _tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId);
+
         base.OnModelCreating(modelBuilder);
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        var result = await base.SaveChangesAsync(cancellationToken);
-        return result;
+        StampAuditFields();
+        return await base.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Automatically stamps audit fields on all tracked entities before saving.
+    /// AuditableEntity: sets CreatedAt / IsActive on Add; UpdatedAt on Modify.
+    /// TenantEntity: sets TenantId / CreatedBy on Add; UpdatedBy on Modify.
+    /// </summary>
+    private void StampAuditFields()
+    {
+        var now = _dateTime.UtcNow;
+        var userId = _currentUserService.UserId;
+        var tenantId = _tenantService.CurrentTenantId;
+
+        foreach (var entry in ChangeTracker.Entries<AuditableEntity>())
+        {
+            if (entry.State == EntityState.Added)
+            {
+                entry.Property(nameof(AuditableEntity.CreatedAt)).CurrentValue = now;
+                entry.Property(nameof(AuditableEntity.IsActive)).CurrentValue = true;
+            }
+
+            if (entry.State == EntityState.Modified)
+            {
+                entry.Property(nameof(AuditableEntity.UpdatedAt)).CurrentValue = now;
+            }
+        }
+
+        foreach (var entry in ChangeTracker.Entries<TenantEntity>())
+        {
+            if (entry.State == EntityState.Added)
+            {
+                // Only overwrite TenantId when the domain hasn't set one yet,
+                // so explicit factory-provided values are respected.
+                if (entry.Property(nameof(TenantEntity.TenantId)).CurrentValue is 0 or null && tenantId.HasValue)
+                    entry.Property(nameof(TenantEntity.TenantId)).CurrentValue = tenantId.Value;
+
+                entry.Property(nameof(TenantEntity.CreatedBy)).CurrentValue = userId;
+            }
+
+            if (entry.State == EntityState.Modified)
+            {
+                entry.Property(nameof(TenantEntity.UpdatedBy)).CurrentValue = userId;
+            }
+        }
     }
 
     /// <summary>
