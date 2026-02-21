@@ -18,4 +18,8 @@
     <ProjectReference Include="..\DreamSoft.Domain\DreamSoft.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Features\" />
+  </ItemGroup>
+
 </Project>

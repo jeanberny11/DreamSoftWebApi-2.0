@@ -5,6 +5,8 @@ namespace DreamSoft.Domain.Entities;
 
 public class BillingCycle : LookupEntity
 {
+    public string Code { get; set; } = null!;
+    public string Description { get; set; } = null!;
     public int Months { get; protected set; }
 
     // Navigation properties
@@ -12,7 +14,7 @@ public class BillingCycle : LookupEntity
 
     private BillingCycle() { }
 
-    public static BillingCycle Create(string name, TranslatedString translations, int months)
+    public static BillingCycle Create(string code, string name, string description, TranslatedString translations, int months)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Name is required", nameof(name));
@@ -24,6 +26,8 @@ public class BillingCycle : LookupEntity
 
         var billingCycle = new BillingCycle
         {
+            Code = code.Trim(),
+            Description = description.Trim(),
             Name = name.Trim(),
             Translations = translations, // Required
             Months = months

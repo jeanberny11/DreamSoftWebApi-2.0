@@ -35,7 +35,7 @@ public abstract class LookupEntity : AuditableEntity
         if (Translations == null)
             return Name;
 
-        return Translations.GetOrFallback(language, Name);
+        return Translations.GetNameOrFallback(language, Name);
     }
 
     /// <summary>

@@ -5,19 +5,13 @@ namespace DreamSoft.Domain.Entities;
 
 public class Gender : LookupEntity
 {
-    public string Code { get; private set; } = null!;
+    public string Code { get; set; } = null!;
 
-    // Navigation property
-    public ICollection<User> Users { get; private set; } = new List<User>();
+    // Navigation properties
+    public ICollection<User> Users { get; private set; } = [];
 
-    // Private constructor for EF Core
-    private Gender()
-    {
-    }
+    private Gender() { }
 
-    /// <summary>
-    /// Creates a new gender (typically used for seeding)
-    /// </summary>
     public static Gender Create(string code, string name, TranslatedString translations)
     {
         if (string.IsNullOrWhiteSpace(code))
@@ -26,6 +20,8 @@ public class Gender : LookupEntity
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Name is required", nameof(name));
 
+        ArgumentNullException.ThrowIfNull(translations, nameof(translations));
+
         var gender = new Gender
         {
             Code = code.ToUpper().Trim(),
@@ -33,16 +29,7 @@ public class Gender : LookupEntity
             Translations = translations
         };
 
-        gender.InitializeAudit(); // Initialize base audit fields
-
+        gender.InitializeAudit();
         return gender;
-    }
-
-    /// <summary>
-    /// Updates translations
-    /// </summary>
-    public void SetTranslations(TranslatedString translations)
-    {
-        UpdateTranslations(translations);
     }
 }

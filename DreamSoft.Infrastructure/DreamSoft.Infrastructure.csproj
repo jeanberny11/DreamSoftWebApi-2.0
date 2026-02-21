@@ -28,4 +28,10 @@
     <ProjectReference Include="..\DreamSoft.Domain\DreamSoft.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Migrations\" />
+    <Folder Include="Persistence\Configurations\" />
+    <Folder Include="Services\Features\" />
+  </ItemGroup>
+
 </Project>
