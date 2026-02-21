@@ -107,6 +107,9 @@ public class ApplicationDbContext(
     /// <summary>Role template permissions for specific menu option actions</summary>
     public DbSet<RoleOptionActionTemplate> RoleOptionActionTemplates => Set<RoleOptionActionTemplate>();
 
+    /// <summary>User-role assignments (many-to-many with extra payload)</summary>
+    public DbSet<UserRole> UserRoles => Set<UserRole>();
+
     // ============================================
     // DATABASE CONFIGURATION
     // ============================================
@@ -122,6 +125,9 @@ public class ApplicationDbContext(
 
         modelBuilder.Entity<Role>()
             .HasQueryFilter(e => _tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId);
+
+        modelBuilder.Entity<UserRole>()
+            .HasQueryFilter(e => _tenantService.CurrentTenantId == null || e.User.TenantId == _tenantService.CurrentTenantId);
 
         base.OnModelCreating(modelBuilder);
     }

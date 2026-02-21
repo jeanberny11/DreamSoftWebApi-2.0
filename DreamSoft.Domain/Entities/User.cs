@@ -28,13 +28,14 @@ public class User : TenantEntity
     public Gender? Gender { get; set; }
     public IdType? IdType { get; set; }
     public Language? Language { get; set; }
-    public ICollection<Role> Roles { get; private set; } = [];
-    
+    public ICollection<UserRole> UserRoles { get; private set; } = [];
+
     // Self-referential navigation properties for audit trail
     public ICollection<User> CreatedUsers { get; private set; } = [];
     public ICollection<User> UpdatedUsers { get; private set; } = [];
     public ICollection<Role> CreatedRoles { get; private set; } = [];
     public ICollection<Role> UpdatedRoles { get; private set; } = [];
+    public ICollection<UserRole> AssignedUserRoles { get; private set; } = [];
 
     private User() { }
 

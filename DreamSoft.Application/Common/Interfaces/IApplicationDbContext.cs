@@ -100,6 +100,9 @@ public interface IApplicationDbContext
     /// <summary>Role template permissions for specific menu option actions</summary>
     DbSet<RoleOptionActionTemplate> RoleOptionActionTemplates { get; }
 
+    /// <summary>User-role assignments (many-to-many with extra payload)</summary>
+    DbSet<UserRole> UserRoles { get; }
+
     // ============================================
     // DATABASE OPERATIONS
     // ============================================
