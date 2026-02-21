@@ -23,8 +23,10 @@ public static class DependencyInjection
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
 
-        // Register AutoMapper (we'll add profiles later)
-        //services.AddAutoMapper(Assembly.GetExecutingAssembly());
+        // Register AutoMapper — scans this assembly for all Profile subclasses
+        // (including MappingProfile which auto-discovers IMapFrom<T> implementations)
+        var assembly = Assembly.GetExecutingAssembly();
+        services.AddAutoMapper(cfg => cfg.AddMaps(assembly));
 
         return services;
     }
