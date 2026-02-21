@@ -3,8 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 namespace DreamSoft.Api.Controllers;
 
-[ApiController]
-[Route("api/[controller]")]
+[Route("api/v{version:apiVersion}/landing/features")]
 public class FeatureController(ILogger<FeatureController> logger) : ApiControllerBase
 {
     private readonly ILogger<FeatureController> _logger = logger;
