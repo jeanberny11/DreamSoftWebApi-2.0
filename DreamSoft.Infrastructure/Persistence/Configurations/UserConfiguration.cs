@@ -157,9 +157,15 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasForeignKey(u => u.UpdatedBy)
             .OnDelete(DeleteBehavior.SetNull);
 
-        builder.HasMany(u => u.Roles)
-            .WithMany(r => r.Users)
-            .UsingEntity(j => j.ToTable("user_roles"));
+        builder.HasMany(u => u.UserRoles)
+            .WithOne(ur => ur.User)
+            .HasForeignKey(ur => ur.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(u => u.AssignedUserRoles)
+            .WithOne(ur => ur.AssignedByUser)
+            .HasForeignKey(ur => ur.AssignedBy)
+            .OnDelete(DeleteBehavior.SetNull);
 
         builder.HasMany(u => u.CreatedRoles)
             .WithOne(r => r.CreatedByUser)

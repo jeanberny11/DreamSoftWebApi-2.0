@@ -14,7 +14,7 @@ public class Role : TenantEntity
 
     // Navigation properties
     public RoleTemplate? RoleTemplate { get; set; }
-    public ICollection<User> Users { get; private set; } = [];
+    public ICollection<UserRole> UserRoles { get; private set; } = [];
     public ICollection<RoleMenuOption> RoleMenuOptions { get; private set; } = [];
     public ICollection<RoleOptionAction> RoleOptionActions { get; private set; } = [];
 

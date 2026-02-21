@@ -78,7 +78,8 @@ public class AuditStampTests : IDisposable
                 b.Ignore(e => e.Gender);
                 b.Ignore(e => e.IdType);
                 b.Ignore(e => e.Language);
-                b.Ignore(e => e.Roles);
+                b.Ignore(e => e.UserRoles);
+                b.Ignore(e => e.AssignedUserRoles);
                 b.Ignore(e => e.CreatedUsers);
                 b.Ignore(e => e.UpdatedUsers);
                 b.Ignore(e => e.CreatedRoles);
