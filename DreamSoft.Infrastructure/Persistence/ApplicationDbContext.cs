@@ -82,6 +82,9 @@ public class ApplicationDbContext(
     /// <summary>Tenant subscription history</summary>
     public DbSet<TenantSubscription> TenantSubscriptions => Set<TenantSubscription>();
 
+    /// <summary>Email verification OTP sessions for tenant registration.</summary>
+    public DbSet<TenantRegistrationToken> TenantRegistrationTokens => Set<TenantRegistrationToken>();
+
     /// <summary>Users within tenants</summary>
     public DbSet<User> Users => Set<User>();
 
