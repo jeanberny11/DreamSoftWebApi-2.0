@@ -75,6 +75,9 @@ public interface IApplicationDbContext
     /// <summary>Tenant subscription history</summary>
     DbSet<TenantSubscription> TenantSubscriptions { get; }
 
+    /// <summary>Email verification OTP sessions for tenant registration.</summary>
+    DbSet<TenantRegistrationToken> TenantRegistrationTokens { get; }
+
     /// <summary>Users within tenants</summary>
     DbSet<User> Users { get; }
 

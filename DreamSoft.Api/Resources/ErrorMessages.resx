@@ -103,4 +103,25 @@
   <data name="EmailSendFailed" xml:space="preserve">
     <value>Failed to send email. Please try again later</value>
   </data>
+  <data name="EmailAlreadyVerified" xml:space="preserve">
+    <value>Email address has already been verified</value>
+  </data>
+  <data name="OnboardingAlreadyComplete" xml:space="preserve">
+    <value>Onboarding is already complete for this account</value>
+  </data>
+  <data name="PlanNotBelongToSolution" xml:space="preserve">
+    <value>The selected plan does not belong to the selected solution</value>
+  </data>
+  <data name="EmailVerificationRequired" xml:space="preserve">
+    <value>Please verify your email address to continue</value>
+  </data>
+  <data name="OnboardingRequired" xml:space="preserve">
+    <value>Please complete onboarding to access this resource</value>
+  </data>
+  <data name="AccountSuspended" xml:space="preserve">
+    <value>Your account has been suspended. Please contact support</value>
+  </data>
+  <data name="AccountCancelled" xml:space="preserve">
+    <value>Your account has been cancelled</value>
+  </data>
 </root>

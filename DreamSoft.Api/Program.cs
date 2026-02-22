@@ -166,6 +166,7 @@ app.UseMiddleware<TenantResolutionMiddleware>();
 // Authentication & Authorization
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<TenantGatewayMiddleware>(); // ← Blocks ACTIVE-status-required routes for unverified/unsubs tenants
 
 app.MapControllers();
 

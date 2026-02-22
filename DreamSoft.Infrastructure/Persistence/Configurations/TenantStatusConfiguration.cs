@@ -24,7 +24,7 @@ public class TenantStatusConfiguration : IEntityTypeConfiguration<TenantStatus>
         // Properties mapping
         builder.Property(t => t.Code)
             .HasColumnName("code")
-            .HasMaxLength(50)
+            .HasMaxLength(100) // was 50 — needed for PENDING_EMAIL_VERIFICATION
             .IsRequired()
             .HasDefaultValue(string.Empty);
 
@@ -84,8 +84,8 @@ public class TenantStatusConfiguration : IEntityTypeConfiguration<TenantStatus>
             .IsUnique()
             .HasDatabaseName("tenant_statuses_code_key");
 
-        // Check constraint for lowercase code
-        builder.ToTable(t => t.HasCheckConstraint("tenant_statuses_code_check", "code = lower(code)"));
+        // Check constraint for SCREAMING_SNAKE_CASE code
+        builder.ToTable(t => t.HasCheckConstraint("tenant_statuses_code_check", "code = upper(code)")); // was lower(code)
 
         // Indexes
         builder.HasIndex(t => t.Name)

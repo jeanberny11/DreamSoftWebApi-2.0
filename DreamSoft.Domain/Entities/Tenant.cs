@@ -180,4 +180,19 @@ public class Tenant : AuditableEntity
         Subdomain = subdomain.ToLower().Trim();
         MarkAsUpdated();
     }
+
+    /// <summary>
+    /// Transitions the tenant to a new status.
+    /// Business rules about valid transitions are enforced in the handler,
+    /// not here, keeping the domain simple.
+    /// </summary>
+    public void TransitionStatus(int newStatusId)
+    {
+        if (newStatusId <= 0)
+            throw new ArgumentException(
+                "Status ID must be greater than zero", nameof(newStatusId));
+
+        StatusId = newStatusId;
+        MarkAsUpdated();
+    }
 }
