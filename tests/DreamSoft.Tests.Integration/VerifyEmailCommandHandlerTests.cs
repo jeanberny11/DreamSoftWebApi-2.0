@@ -26,21 +26,23 @@ public class VerifyEmailCommandHandlerTests : HandlerTestBase
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["RateLimit:MaxVerificationAttemptsPerCode"] = "5",
+                ["RateLimit:MaxVerifyEmailAttemptsPerWindow"] = "5",
+                ["RateLimit:VerifyEmailWindowMinutes"] = "10",
                 ["Jwt:RefreshTokenExpirationDays"] = "7",
             })
             .Build();
 
         _registerHandler = new RegisterTenantCommandHandler(
-            Db, UnitOfWork, PasswordHasher, TokenService, EmailService, CurrentUser);
+            Db, UnitOfWork, PasswordHasher, EmailService, CurrentUser);
 
         _sut = new VerifyEmailCommandHandler(
-            Db, UnitOfWork, PasswordHasher, TokenService, EmailService, CurrentUser, _config);
+            Db, UnitOfWork, PasswordHasher, TokenService, EmailService, CurrentUser, RateLimitService, _config);
     }
 
     /// <summary>
-    /// Registers a tenant and returns the plain OTP code and registration token.
+    /// Registers a tenant and returns the plain OTP code and tenantId.
     /// </summary>
-    private async Task<(string RegToken, string PlainCode, int TenantId)> RegisterAsync(
+    private async Task<(string PlainCode, int TenantId)> RegisterAsync(
         string subdomain = "acme", string email = "admin@acme.com")
     {
         var cmd = new RegisterTenantCommand(
@@ -52,10 +54,10 @@ public class VerifyEmailCommandHandlerTests : HandlerTestBase
         // StubEmailService captures the plain code
         var sentCode = EmailService.SentVerificationCodes.Last().Code;
 
-        // StubTokenService: "reg-token-{tenantId}"
-        var tenantId = int.Parse(result.RegistrationToken["reg-token-".Length..]);
+        // Lookup tenant id from the email returned in response
+        var tenant = await Db.Tenants.FirstAsync(t => t.Email == result.Email);
 
-        return (result.RegistrationToken, sentCode, tenantId);
+        return (sentCode, tenant.Id);
     }
 
     // ---------------------------------------------------------------
@@ -65,10 +67,10 @@ public class VerifyEmailCommandHandlerTests : HandlerTestBase
     [Fact]
     public async Task Handle_WithCorrectCode_ReturnsAccessAndRefreshTokens()
     {
-        var (regToken, plainCode, _) = await RegisterAsync();
+        var (plainCode, _) = await RegisterAsync();
 
         var result = await _sut.Handle(
-            new VerifyEmailCommand(regToken, plainCode), CancellationToken.None);
+            new VerifyEmailCommand("admin@acme.com", plainCode), CancellationToken.None);
 
         Assert.False(string.IsNullOrWhiteSpace(result.AccessToken));
         Assert.False(string.IsNullOrWhiteSpace(result.RefreshToken));
@@ -77,9 +79,9 @@ public class VerifyEmailCommandHandlerTests : HandlerTestBase
     [Fact]
     public async Task Handle_WithCorrectCode_TransitionsTenantToPendingSubscription()
     {
-        var (regToken, plainCode, tenantId) = await RegisterAsync();
+        var (plainCode, tenantId) = await RegisterAsync();
 
-        await _sut.Handle(new VerifyEmailCommand(regToken, plainCode), CancellationToken.None);
+        await _sut.Handle(new VerifyEmailCommand("admin@acme.com", plainCode), CancellationToken.None);
 
         var tenant = await Db.Tenants
             .Include(t => t.Status)
@@ -90,9 +92,9 @@ public class VerifyEmailCommandHandlerTests : HandlerTestBase
     [Fact]
     public async Task Handle_WithCorrectCode_VerifiesTenantEmail()
     {
-        var (regToken, plainCode, tenantId) = await RegisterAsync();
+        var (plainCode, tenantId) = await RegisterAsync();
 
-        await _sut.Handle(new VerifyEmailCommand(regToken, plainCode), CancellationToken.None);
+        await _sut.Handle(new VerifyEmailCommand("admin@acme.com", plainCode), CancellationToken.None);
 
         var tenant = await Db.Tenants.FindAsync(tenantId);
         Assert.True(tenant!.EmailVerified);
@@ -101,9 +103,9 @@ public class VerifyEmailCommandHandlerTests : HandlerTestBase
     [Fact]
     public async Task Handle_WithCorrectCode_VerifiesAdminUserEmail()
     {
-        var (regToken, plainCode, tenantId) = await RegisterAsync();
+        var (plainCode, tenantId) = await RegisterAsync();
 
-        await _sut.Handle(new VerifyEmailCommand(regToken, plainCode), CancellationToken.None);
+        await _sut.Handle(new VerifyEmailCommand("admin@acme.com", plainCode), CancellationToken.None);
 
         var user = await Db.Users.IgnoreQueryFilters()
             .FirstAsync(u => u.TenantId == tenantId);
@@ -113,9 +115,9 @@ public class VerifyEmailCommandHandlerTests : HandlerTestBase
     [Fact]
     public async Task Handle_WithCorrectCode_ConsumesOtpToken()
     {
-        var (regToken, plainCode, tenantId) = await RegisterAsync();
+        var (plainCode, tenantId) = await RegisterAsync();
 
-        await _sut.Handle(new VerifyEmailCommand(regToken, plainCode), CancellationToken.None);
+        await _sut.Handle(new VerifyEmailCommand("admin@acme.com", plainCode), CancellationToken.None);
 
         var token = await Db.TenantRegistrationTokens
             .FirstAsync(t => t.TenantId == tenantId);
@@ -125,9 +127,9 @@ public class VerifyEmailCommandHandlerTests : HandlerTestBase
     [Fact]
     public async Task Handle_WithCorrectCode_SendsWelcomeEmail()
     {
-        var (regToken, plainCode, _) = await RegisterAsync();
+        var (plainCode, _) = await RegisterAsync();
 
-        await _sut.Handle(new VerifyEmailCommand(regToken, plainCode), CancellationToken.None);
+        await _sut.Handle(new VerifyEmailCommand("admin@acme.com", plainCode), CancellationToken.None);
 
         Assert.Single(EmailService.SentWelcomeEmails);
     }
@@ -135,9 +137,9 @@ public class VerifyEmailCommandHandlerTests : HandlerTestBase
     [Fact]
     public async Task Handle_WithCorrectCode_PersistsRefreshToken()
     {
-        var (regToken, plainCode, tenantId) = await RegisterAsync();
+        var (plainCode, tenantId) = await RegisterAsync();
 
-        await _sut.Handle(new VerifyEmailCommand(regToken, plainCode), CancellationToken.None);
+        await _sut.Handle(new VerifyEmailCommand("admin@acme.com", plainCode), CancellationToken.None);
 
         var user = await Db.Users.IgnoreQueryFilters()
             .FirstAsync(u => u.TenantId == tenantId);
@@ -155,18 +157,18 @@ public class VerifyEmailCommandHandlerTests : HandlerTestBase
     [Fact]
     public async Task Handle_WithWrongCode_ThrowsUnauthorizedException()
     {
-        var (regToken, _, _) = await RegisterAsync();
+        await RegisterAsync();
 
         await Assert.ThrowsAsync<UnauthorizedException>(
-            () => _sut.Handle(new VerifyEmailCommand(regToken, "000000"), CancellationToken.None));
+            () => _sut.Handle(new VerifyEmailCommand("admin@acme.com", "000000"), CancellationToken.None));
     }
 
     [Fact]
     public async Task Handle_WithWrongCode_IncrementsAttemptCount()
     {
-        var (regToken, _, tenantId) = await RegisterAsync();
+        var (_, tenantId) = await RegisterAsync();
 
-        try { await _sut.Handle(new VerifyEmailCommand(regToken, "000000"), CancellationToken.None); }
+        try { await _sut.Handle(new VerifyEmailCommand("admin@acme.com", "000000"), CancellationToken.None); }
         catch (UnauthorizedException) { }
 
         var token = await Db.TenantRegistrationTokens
@@ -177,19 +179,19 @@ public class VerifyEmailCommandHandlerTests : HandlerTestBase
     [Fact]
     public async Task Handle_AfterMaxAttempts_ThrowsUnauthorizedException()
     {
-        var (regToken, _, _) = await RegisterAsync();
+        await RegisterAsync();
 
         // Exhaust all 5 attempts with wrong codes
         for (var i = 0; i < 5; i++)
         {
-            try { await _sut.Handle(new VerifyEmailCommand(regToken, "000000"), CancellationToken.None); }
+            try { await _sut.Handle(new VerifyEmailCommand("admin@acme.com", "000000"), CancellationToken.None); }
             catch (UnauthorizedException) { }
         }
 
         // 6th attempt — even with correct code — must fail (token invalid)
         var correctCode = EmailService.SentVerificationCodes.Last().Code;
         await Assert.ThrowsAsync<UnauthorizedException>(
-            () => _sut.Handle(new VerifyEmailCommand(regToken, correctCode), CancellationToken.None));
+            () => _sut.Handle(new VerifyEmailCommand("admin@acme.com", correctCode), CancellationToken.None));
     }
 
     // ---------------------------------------------------------------
@@ -197,11 +199,11 @@ public class VerifyEmailCommandHandlerTests : HandlerTestBase
     // ---------------------------------------------------------------
 
     [Fact]
-    public async Task Handle_WithInvalidRegistrationToken_ThrowsUnauthorizedException()
+    public async Task Handle_WithUnknownEmail_ThrowsUnauthorizedException()
     {
         await Assert.ThrowsAsync<UnauthorizedException>(
             () => _sut.Handle(
-                new VerifyEmailCommand("not-a-real-token", "123456"),
+                new VerifyEmailCommand("nobody@unknown.com", "123456"),
                 CancellationToken.None));
     }
 
@@ -212,13 +214,13 @@ public class VerifyEmailCommandHandlerTests : HandlerTestBase
     [Fact]
     public async Task Handle_WhenAlreadyVerified_ThrowsConflictException()
     {
-        var (regToken, plainCode, _) = await RegisterAsync();
+        var (plainCode, _) = await RegisterAsync();
 
         // First verify succeeds
-        await _sut.Handle(new VerifyEmailCommand(regToken, plainCode), CancellationToken.None);
+        await _sut.Handle(new VerifyEmailCommand("admin@acme.com", plainCode), CancellationToken.None);
 
         // Second attempt must be rejected
         await Assert.ThrowsAsync<ConflictException>(
-            () => _sut.Handle(new VerifyEmailCommand(regToken, plainCode), CancellationToken.None));
+            () => _sut.Handle(new VerifyEmailCommand("admin@acme.com", plainCode), CancellationToken.None));
     }
 }

@@ -17,7 +17,7 @@ public class RegisterTenantCommandHandlerTests : HandlerTestBase
     public RegisterTenantCommandHandlerTests()
     {
         _sut = new RegisterTenantCommandHandler(
-            Db, UnitOfWork, PasswordHasher, TokenService, EmailService, CurrentUser);
+            Db, UnitOfWork, PasswordHasher, EmailService, CurrentUser);
     }
 
     private static RegisterTenantCommand ValidCommand(
@@ -45,11 +45,12 @@ public class RegisterTenantCommandHandlerTests : HandlerTestBase
     // ---------------------------------------------------------------
 
     [Fact]
-    public async Task Handle_WithValidCommand_ReturnsRegistrationToken()
+    public async Task Handle_WithValidCommand_ReturnsEmailAndSubdomain()
     {
         var result = await _sut.Handle(ValidCommand(), CancellationToken.None);
 
-        Assert.False(string.IsNullOrWhiteSpace(result.RegistrationToken));
+        Assert.Equal("admin@acme.com", result.Email);
+        Assert.Equal("acme", result.Subdomain);
     }
 
     [Fact]
@@ -126,13 +127,12 @@ public class RegisterTenantCommandHandlerTests : HandlerTestBase
     }
 
     [Fact]
-    public async Task Handle_WithValidCommand_RegistrationTokenContainsTenantId()
+    public async Task Handle_WithValidCommand_SubdomainIsNormalized()
     {
-        var result = await _sut.Handle(ValidCommand(), CancellationToken.None);
+        var result = await _sut.Handle(ValidCommand(subdomain: "ACME"), CancellationToken.None);
 
-        var tenant = await Db.Tenants.FirstAsync(t => t.Subdomain == "acme");
-        // StubTokenService returns "reg-token-{tenantId}"
-        Assert.Equal($"reg-token-{tenant.Id}", result.RegistrationToken);
+        // Subdomain in response must be lowercase-trimmed
+        Assert.Equal("acme", result.Subdomain);
     }
 
     // ---------------------------------------------------------------

@@ -13,7 +13,6 @@ public class RegisterTenantCommandHandler(
     IApplicationDbContext context,
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
-    ITokenService tokenService,
     IEmailService emailService,
     ICurrentUserService currentUserService)
     : IRequestHandler<RegisterTenantCommand, RegisterTenantResponse>
@@ -127,9 +126,9 @@ public class RegisterTenantCommandHandler(
         await emailService.SendVerificationCodeAsync(
             adminEmail, plainCode, cancellationToken);
 
-        // 9. Return short-lived registration JWT (gates the verify-email step)
-        var registrationToken = tokenService.GenerateRegistrationToken(tenantId);
-        return new RegisterTenantResponse(registrationToken);
+        // 9. Return the email and subdomain — the client uses these to identify the tenant
+        //    on the verify-email and resend-verification calls (no token needed)
+        return new RegisterTenantResponse(adminEmail, request.Subdomain.ToLower().Trim());
     }
 
     private static string GenerateSixDigitCode()

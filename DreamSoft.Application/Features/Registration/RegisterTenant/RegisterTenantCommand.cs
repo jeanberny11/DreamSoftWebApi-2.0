@@ -25,4 +25,4 @@ public record RegisterTenantCommand(
     string? TermsVersion = null
 ) : IRequest<RegisterTenantResponse>;
 
-public record RegisterTenantResponse(string RegistrationToken);
+public record RegisterTenantResponse(string Email, string Subdomain);
