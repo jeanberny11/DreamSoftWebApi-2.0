@@ -97,7 +97,8 @@ public class RegisterTenantCommandHandler(
                 passwordHash: passwordHash,
                 firstName: request.AdminFirstName,
                 lastName: request.AdminLastName,
-                languageId: request.LanguageId);
+                languageId: request.LanguageId,
+                isAdmin: true);
 
             // 6. Generate 6-digit OTP and PBKDF2-hash it
             plainCode = GenerateSixDigitCode();

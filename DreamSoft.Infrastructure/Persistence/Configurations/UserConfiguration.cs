@@ -97,6 +97,11 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasColumnName("is_email_verified")
             .HasDefaultValue(false);
 
+        builder.Property(u => u.IsAdmin)
+            .HasColumnName("is_admin")
+            .HasDefaultValue(false)
+            .IsRequired();
+
         builder.Property(u => u.LastLoginAt)
             .HasColumnName("last_login_at");
 

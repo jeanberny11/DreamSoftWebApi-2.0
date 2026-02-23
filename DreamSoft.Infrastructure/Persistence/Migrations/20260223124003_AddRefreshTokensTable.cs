@@ -12,14 +12,6 @@ namespace DreamSoft.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "refresh_token",
-                table: "users");
-
-            migrationBuilder.DropColumn(
-                name: "refresh_token_expiry_time",
-                table: "users");
-
             migrationBuilder.CreateTable(
                 name: "refresh_tokens",
                 columns: table => new
@@ -70,19 +62,6 @@ namespace DreamSoft.Infrastructure.Persistence.Migrations
         {
             migrationBuilder.DropTable(
                 name: "refresh_tokens");
-
-            migrationBuilder.AddColumn<string>(
-                name: "refresh_token",
-                table: "users",
-                type: "character varying(500)",
-                maxLength: 500,
-                nullable: true);
-
-            migrationBuilder.AddColumn<DateTime>(
-                name: "refresh_token_expiry_time",
-                table: "users",
-                type: "timestamp with time zone",
-                nullable: true);
         }
     }
 }

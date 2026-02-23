@@ -20,6 +20,7 @@ public class User : TenantEntity
     public string? AvatarUrl { get; set; }
     public int? LanguageId { get; set; }
     public bool IsEmailVerified { get; set; }
+    public bool IsAdmin { get; private set; }
     public DateTime? LastLoginAt { get; set; }
     public int FailedLoginAttempts { get; set; }
     public DateTime? LockoutUntil { get; set; }
@@ -48,7 +49,8 @@ public class User : TenantEntity
         string firstName,
         string lastName,
         int? languageId = null,
-        int? createdBy = null)
+        int? createdBy = null,
+        bool isAdmin = false)
     {
         if (string.IsNullOrWhiteSpace(username))
             throw new ArgumentException("Username is required", nameof(username));
@@ -73,7 +75,8 @@ public class User : TenantEntity
             FirstName = firstName.Trim(),
             LastName = lastName.Trim(),
             LanguageId = languageId,
-            IsEmailVerified = false
+            IsEmailVerified = false,
+            IsAdmin = isAdmin
         };
 
         user.InitializeTenantEntity(tenantId, createdBy);
@@ -129,10 +132,10 @@ public class User : TenantEntity
         RecordUpdate(updatedBy);
     }
 
-    public void VerifyEmail()
+    public void VerifyEmail(int? updatedBy = null)
     {
         IsEmailVerified = true;
-        MarkAsUpdated();
+        RecordUpdate(updatedBy);
     }
 
     public void UpdatePassword(string passwordHash, int? updatedBy = null)

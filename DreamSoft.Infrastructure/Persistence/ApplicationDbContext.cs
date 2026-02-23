@@ -178,11 +178,15 @@ public class ApplicationDbContext(
                 if (entry.Property(nameof(TenantEntity.TenantId)).CurrentValue is 0 or null && tenantId.HasValue)
                     entry.Property(nameof(TenantEntity.TenantId)).CurrentValue = tenantId.Value;
 
-                entry.Property(nameof(TenantEntity.CreatedBy)).CurrentValue = userId;
+                if (userId.HasValue)
+                    entry.Property(nameof(TenantEntity.CreatedBy)).CurrentValue = userId;
             }
 
-            if (entry.State == EntityState.Modified)
+            if (entry.State == EntityState.Modified && userId.HasValue)
             {
+                // Only overwrite UpdatedBy when an authenticated user is present.
+                // When no user is in context (e.g. registration flow), the domain
+                // is responsible for setting UpdatedBy explicitly via RecordUpdate().
                 entry.Property(nameof(TenantEntity.UpdatedBy)).CurrentValue = userId;
             }
         }

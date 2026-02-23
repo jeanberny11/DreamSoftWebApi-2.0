@@ -17,7 +17,7 @@ public class TokenService(IConfiguration configuration) : ITokenService
     {
         var claims = new[]
         {
-            new Claim(JwtRegisteredClaimNames.Sub, tenantId.ToString()),
+            new Claim("tenant_id", tenantId.ToString()),
             new Claim("purpose", "registration"),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
@@ -34,7 +34,7 @@ public class TokenService(IConfiguration configuration) : ITokenService
             new Claim("tenant_id", tenant.Id.ToString()),
             new Claim("email", user.Email),
             new Claim("username", user.Username),
-            new Claim("is_admin", "false"),
+            new Claim("is_admin", user.IsAdmin.ToString().ToLower()),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
         return BuildToken(claims, TimeSpan.FromMinutes(expiry));
@@ -50,9 +50,8 @@ public class TokenService(IConfiguration configuration) : ITokenService
             var principal = ValidateToken(token);
             var purpose = principal?.FindFirstValue("purpose");
             if (purpose != "registration") return null;
-            var sub = principal?.FindFirstValue(ClaimTypes.NameIdentifier) ??
-                      principal?.FindFirstValue(JwtRegisteredClaimNames.Sub);
-            return int.TryParse(sub, out var id) ? id : null;
+            var tenantIdValue = principal?.FindFirstValue("tenant_id");
+            return int.TryParse(tenantIdValue, out var id) ? id : null;
         }
         catch { return null; }
     }

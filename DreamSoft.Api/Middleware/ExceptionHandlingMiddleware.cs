@@ -135,7 +135,9 @@ public class ExceptionHandlingMiddleware(
             StatusCode = (int)HttpStatusCode.InternalServerError,
             ErrorCode = ErrorCodes.InternalError,
             ErrorType = ErrorTypes.InternalError,
-            ErrorMessage = _localizer["InternalServerError"],
+            ErrorMessage = _environment.IsDevelopment()
+                ? $"{exception.GetType().Name}: {exception.Message}{(exception.InnerException != null ? $" | Inner: {exception.InnerException.Message}" : string.Empty)}"
+                : _localizer["InternalServerError"],
             TraceId = traceId,
             Timestamp = timestamp,
             StackTrace = _environment.IsDevelopment() ? exception.StackTrace : null

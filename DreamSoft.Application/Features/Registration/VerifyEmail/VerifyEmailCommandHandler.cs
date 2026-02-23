@@ -72,10 +72,10 @@ public class VerifyEmailCommandHandler(
                 "NotFound",
                 "TenantStatus PENDING_SUBSCRIPTION not found. Run migration.");
 
-        // 8. Load the admin user (first user for this tenant)
+        // 8. Load the admin user for this tenant
         var adminUser = await context.Users
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(u => u.TenantId == tenantId, cancellationToken)
+            .FirstOrDefaultAsync(u => u.TenantId == tenantId && u.IsAdmin, cancellationToken)
             ?? throw new NotFoundException("UserNotFound", tenantId);
 
         // ── Begin transaction ────────────────────────────────────────────────
@@ -85,7 +85,7 @@ public class VerifyEmailCommandHandler(
             otpToken.Consume();
             tenant.TransitionStatus(pendingSubStatus.Id);
             tenant.VerifyEmail(DateTime.UtcNow);
-            adminUser.VerifyEmail();
+            adminUser.VerifyEmail(adminUser.Id);
 
             await context.SaveChangesAsync(cancellationToken);
             await unitOfWork.CommitTransactionAsync(cancellationToken);
