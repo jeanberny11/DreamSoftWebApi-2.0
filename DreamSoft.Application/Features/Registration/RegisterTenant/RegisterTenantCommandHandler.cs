@@ -14,7 +14,8 @@ public class RegisterTenantCommandHandler(
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
     ITokenService tokenService,
-    IEmailService emailService)
+    IEmailService emailService,
+    ICurrentUserService currentUserService)
     : IRequestHandler<RegisterTenantCommand, RegisterTenantResponse>
 {
     public async Task<RegisterTenantResponse> Handle(
@@ -72,6 +73,15 @@ public class RegisterTenantCommandHandler(
                 countryId: request.CountryId,
                 provinceId: request.ProvinceId,
                 municipalityId: request.MunicipalityId);
+
+            // Record Terms of Service acceptance if provided
+            if (!string.IsNullOrWhiteSpace(request.TermsVersion))
+            {
+                tenant.AcceptTerms(
+                    version:     request.TermsVersion,
+                    acceptedAt:  DateTime.UtcNow,
+                    acceptedIp:  currentUserService.IpAddress);
+            }
 
             context.Tenants.Add(tenant);
             await context.SaveChangesAsync(cancellationToken); // materialise tenant.Id

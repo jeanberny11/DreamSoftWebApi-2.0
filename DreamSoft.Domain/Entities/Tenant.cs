@@ -26,6 +26,16 @@ public class Tenant : AuditableEntity
     public string LogoUrl { get; set; } = "";
     public int StatusId { get; set; }
 
+    // Terms of Service acceptance
+    /// <summary>Version string of the ToS the tenant accepted (e.g. "2025-01-01").</summary>
+    public string? TermsVersion { get; private set; }
+
+    /// <summary>UTC timestamp when the tenant accepted the Terms of Service.</summary>
+    public DateTime? TermsAcceptedAt { get; private set; }
+
+    /// <summary>IP address from which the ToS were accepted.</summary>
+    public string? TermsAcceptedIp { get; private set; }
+
     // Navigation properties
     public Country? Country { get; set; }
     public Province? Province { get; set; }
@@ -178,6 +188,21 @@ public class Tenant : AuditableEntity
             throw new ArgumentException("Subdomain is required", nameof(subdomain));
 
         Subdomain = subdomain.ToLower().Trim();
+        MarkAsUpdated();
+    }
+
+    /// <summary>
+    /// Records that the tenant accepted the Terms of Service.
+    /// Idempotent — re-calling with the same version is a no-op.
+    /// </summary>
+    public void AcceptTerms(string version, DateTime acceptedAt, string? acceptedIp)
+    {
+        if (string.IsNullOrWhiteSpace(version))
+            throw new ArgumentException("Terms version is required.", nameof(version));
+
+        TermsVersion    = version.Trim();
+        TermsAcceptedAt = acceptedAt;
+        TermsAcceptedIp = acceptedIp;
         MarkAsUpdated();
     }
 

@@ -72,6 +72,12 @@ public sealed class StubTenantService : ITenantService
     public int? CurrentTenantId { get; set; }
 }
 
+public sealed class StubRateLimitService : IRateLimitService
+{
+    /// <summary>Always allow — rate limiting is exercised at the unit/integration level separately.</summary>
+    public bool IsAllowed(string key, int maxAttempts, int windowMinutes) => true;
+}
+
 // ---------------------------------------------------------------
 // Minimal in-memory DbContext for handler tests
 // Maps only the tables needed: Tenants, TenantStatuses,
@@ -122,6 +128,7 @@ public sealed class RegistrationTestDbContext : DbContext, IApplicationDbContext
     public DbSet<Domain.Entities.TenantRegistrationToken> TenantRegistrationTokens => Set<Domain.Entities.TenantRegistrationToken>();
     public DbSet<Domain.Entities.User> Users => Set<Domain.Entities.User>();
     public DbSet<Domain.Entities.Role> Roles => Set<Domain.Entities.Role>();
+    public DbSet<Domain.Entities.RefreshToken> RefreshTokens => Set<Domain.Entities.RefreshToken>();
 
     // Junction tables (not exercised in these tests but required by interface)
     public DbSet<Domain.Entities.SolutionMenuOption> SolutionMenuOptions => Set<Domain.Entities.SolutionMenuOption>();
@@ -208,6 +215,7 @@ public sealed class RegistrationTestDbContext : DbContext, IApplicationDbContext
             b.Ignore(e => e.Tenant);
             b.Ignore(e => e.CreatedByUser);
             b.Ignore(e => e.UpdatedByUser);
+            b.Ignore(e => e.RefreshTokens);
             b.HasQueryFilter(e => _tenantService.CurrentTenantId == null
                                || e.TenantId == _tenantService.CurrentTenantId);
         });
@@ -278,6 +286,17 @@ public sealed class RegistrationTestDbContext : DbContext, IApplicationDbContext
             b.Ignore(e => e.Solution);
             b.Ignore(e => e.SubscriptionPlan);
             b.Ignore(e => e.Status);
+        });
+
+        // RefreshToken — needed by VerifyEmail handler
+        modelBuilder.Entity<Domain.Entities.RefreshToken>(b =>
+        {
+            b.ToTable("RefreshTokens");
+            b.HasKey(e => e.Id);
+            b.Property(e => e.UserId).IsRequired();
+            b.Property(e => e.Token).IsRequired().HasMaxLength(500);
+            b.Property(e => e.ExpiresAt).IsRequired();
+            b.Ignore(e => e.User);
         });
 
         // Ignore all remaining entities not needed for these tests
@@ -366,6 +385,7 @@ public abstract class HandlerTestBase : IDisposable
     protected readonly StubEmailService EmailService = new();
     protected readonly StubCurrentUserService CurrentUser = new();
     protected readonly StubTenantService TenantService = new();
+    protected readonly StubRateLimitService RateLimitService = new();
     protected readonly StubUnitOfWork UnitOfWork;
 
     protected HandlerTestBase()

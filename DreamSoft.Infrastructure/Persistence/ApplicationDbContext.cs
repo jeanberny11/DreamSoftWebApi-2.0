@@ -88,6 +88,9 @@ public class ApplicationDbContext(
     /// <summary>Users within tenants</summary>
     public DbSet<User> Users => Set<User>();
 
+    /// <summary>Persisted refresh token sessions (one per login, supports multi-device).</summary>
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
     /// <summary>Roles within tenants</summary>
     public DbSet<Role> Roles => Set<Role>();
 

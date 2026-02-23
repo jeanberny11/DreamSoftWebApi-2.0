@@ -21,14 +21,15 @@ public class User : TenantEntity
     public int? LanguageId { get; set; }
     public bool IsEmailVerified { get; set; }
     public DateTime? LastLoginAt { get; set; }
-    public string? RefreshToken { get; set; }
-    public DateTime? RefreshTokenExpiryTime { get; set; }
+    public int FailedLoginAttempts { get; set; }
+    public DateTime? LockoutUntil { get; set; }
 
     // Navigation properties
     public Gender? Gender { get; set; }
     public IdType? IdType { get; set; }
     public Language? Language { get; set; }
     public ICollection<UserRole> UserRoles { get; private set; } = [];
+    public ICollection<RefreshToken> RefreshTokens { get; private set; } = [];
 
     // Self-referential navigation properties for audit trail
     public ICollection<User> CreatedUsers { get; private set; } = [];
@@ -158,32 +159,32 @@ public class User : TenantEntity
         RecordUpdate(updatedBy);
     }
 
+    // ── Lockout constants ───────────────────────────────────────────────────
+    public const int MaxFailedAttempts = 5;
+    public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
+
+    public bool IsLockedOut()
+        => LockoutUntil.HasValue && DateTime.UtcNow < LockoutUntil.Value;
+
+    public void RecordFailedLogin()
+    {
+        FailedLoginAttempts++;
+        if (FailedLoginAttempts >= MaxFailedAttempts)
+            LockoutUntil = DateTime.UtcNow.Add(LockoutDuration);
+        MarkAsUpdated();
+    }
+
+    public void ResetFailedLoginAttempts()
+    {
+        FailedLoginAttempts = 0;
+        LockoutUntil = null;
+        MarkAsUpdated();
+    }
+
     public void RecordLogin()
     {
         LastLoginAt = DateTime.UtcNow;
         MarkAsUpdated();
-    }
-
-    public void SetRefreshToken(string refreshToken, DateTime expiryTime)
-    {
-        RefreshToken = refreshToken;
-        RefreshTokenExpiryTime = expiryTime;
-        MarkAsUpdated();
-    }
-
-    public void ClearRefreshToken()
-    {
-        RefreshToken = null;
-        RefreshTokenExpiryTime = null;
-        MarkAsUpdated();
-    }
-
-    public bool IsRefreshTokenValid()
-    {
-        if (string.IsNullOrEmpty(RefreshToken) || !RefreshTokenExpiryTime.HasValue)
-            return false;
-
-        return DateTime.UtcNow < RefreshTokenExpiryTime.Value;
     }
 
     public string GetFullName()

@@ -16,7 +16,13 @@ public record RegisterTenantCommand(
     string AdminEmail,
     string AdminPassword,
     int LanguageId,
-    int CurrencyId
+    int CurrencyId,
+    /// <summary>
+    /// Version identifier of the Terms of Service the user accepted during registration.
+    /// When provided, the acceptance is recorded on the Tenant entity.
+    /// Example: "2025-01-01"
+    /// </summary>
+    string? TermsVersion = null
 ) : IRequest<RegisterTenantResponse>;
 
 public record RegisterTenantResponse(string RegistrationToken);

@@ -1,3 +1,4 @@
+using DreamSoft.Application.Features.Registration.CheckSubdomainAvailability;
 using DreamSoft.Application.Features.Registration.RegisterTenant;
 using DreamSoft.Application.Features.Registration.ResendVerification;
 using DreamSoft.Application.Features.Registration.VerifyEmail;
@@ -9,6 +10,26 @@ namespace DreamSoft.Api.Controllers;
 [AllowAnonymous]
 public class RegistrationController : ApiControllerBase
 {
+    /// <summary>
+    /// Check whether a subdomain is available for registration.
+    /// Returns availability status and the normalized subdomain.
+    /// Rate-limited at the infrastructure level.
+    /// </summary>
+    [HttpGet("check-subdomain")]
+    [ProducesResponseType(typeof(SubdomainAvailabilityResponse), 200)]
+    [ProducesResponseType(400)]
+    public async Task<IActionResult> CheckSubdomain(
+        [FromQuery] string subdomain,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(subdomain))
+            return BadRequest("Subdomain is required.");
+
+        var result = await Mediator.Send(
+            new CheckSubdomainAvailabilityQuery(subdomain), cancellationToken);
+        return Ok(result);
+    }
+
     /// <summary>Register a new tenant. Returns a short-lived registration
     /// token to be used in the verify-email call.</summary>
     [HttpPost]

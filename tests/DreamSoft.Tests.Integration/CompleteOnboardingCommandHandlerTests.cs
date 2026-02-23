@@ -28,7 +28,7 @@ public class CompleteOnboardingCommandHandlerTests : HandlerTestBase
     public CompleteOnboardingCommandHandlerTests()
     {
         _registerHandler = new RegisterTenantCommandHandler(
-            Db, UnitOfWork, PasswordHasher, TokenService, EmailService);
+            Db, UnitOfWork, PasswordHasher, TokenService, EmailService, CurrentUser);
 
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -39,7 +39,7 @@ public class CompleteOnboardingCommandHandlerTests : HandlerTestBase
             .Build();
 
         _verifyHandler = new VerifyEmailCommandHandler(
-            Db, UnitOfWork, PasswordHasher, TokenService, EmailService, config);
+            Db, UnitOfWork, PasswordHasher, TokenService, EmailService, CurrentUser, config);
 
         _sut = new CompleteOnboardingCommandHandler(Db, UnitOfWork, CurrentUser);
 

@@ -81,6 +81,9 @@ public interface IApplicationDbContext
     /// <summary>Users within tenants</summary>
     DbSet<User> Users { get; }
 
+    /// <summary>Persisted refresh token sessions (one per login, supports multi-device).</summary>
+    DbSet<RefreshToken> RefreshTokens { get; }
+
     /// <summary>Roles within tenants</summary>
     DbSet<Role> Roles { get; }
 

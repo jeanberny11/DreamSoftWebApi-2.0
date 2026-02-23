@@ -2,10 +2,10 @@ using DreamSoft.Application.Common.Interfaces;
 using DreamSoft.Domain.Repositories;
 using DreamSoft.Infrastructure.Persistence;
 using DreamSoft.Infrastructure.Services.Common;
+using DreamSoft.Infrastructure.Services.RateLimit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using StackExchange.Redis;
 
 namespace DreamSoft.Infrastructure;
 
@@ -33,6 +33,10 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<ITenantService, TenantService>();
         services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IPasswordHasher, PasswordHasherService>();
+
+        // Rate limiting — singleton so the in-memory window state persists across requests
+        services.AddSingleton<IRateLimitService, InMemoryRateLimitService>();
 
         // Required for CurrentUserService to access HTTP context
         services.AddHttpContextAccessor();

@@ -17,7 +17,7 @@ public class RegisterTenantCommandHandlerTests : HandlerTestBase
     public RegisterTenantCommandHandlerTests()
     {
         _sut = new RegisterTenantCommandHandler(
-            Db, UnitOfWork, PasswordHasher, TokenService, EmailService);
+            Db, UnitOfWork, PasswordHasher, TokenService, EmailService, CurrentUser);
     }
 
     private static RegisterTenantCommand ValidCommand(

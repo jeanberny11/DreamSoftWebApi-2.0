@@ -100,12 +100,13 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.LastLoginAt)
             .HasColumnName("last_login_at");
 
-        builder.Property(u => u.RefreshToken)
-            .HasColumnName("refresh_token")
-            .HasMaxLength(500);
+        builder.Property(u => u.FailedLoginAttempts)
+            .HasColumnName("failed_login_attempts")
+            .HasDefaultValue(0)
+            .IsRequired();
 
-        builder.Property(u => u.RefreshTokenExpiryTime)
-            .HasColumnName("refresh_token_expiry_time");
+        builder.Property(u => u.LockoutUntil)
+            .HasColumnName("lockout_until");
 
         builder.Property(u => u.CreatedBy)
             .HasColumnName("created_by");
@@ -176,5 +177,10 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .WithOne(r => r.UpdatedByUser)
             .HasForeignKey(r => r.UpdatedBy)
             .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasMany(u => u.RefreshTokens)
+            .WithOne(rt => rt.User)
+            .HasForeignKey(rt => rt.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

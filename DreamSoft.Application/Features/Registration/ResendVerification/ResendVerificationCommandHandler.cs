@@ -13,19 +13,30 @@ public class ResendVerificationCommandHandler(
     IApplicationDbContext context,
     IPasswordHasher passwordHasher,
     ITokenService tokenService,
-    IEmailService emailService)
+    IEmailService emailService,
+    ICurrentUserService currentUserService,
+    IRateLimitService rateLimitService)
     : IRequestHandler<ResendVerificationCommand, Unit>
 {
+    // IP-based limits: max 5 resends per hour from the same IP address
+    private const int MaxResendPerHour = 5;
+    private const int WindowMinutes    = 60;
+
     public async Task<Unit> Handle(
         ResendVerificationCommand request,
         CancellationToken cancellationToken)
     {
-        // 1. Validate registration token and extract tenantId
+        // 1. IP-based rate limit — checked before token validation to prevent enumeration
+        var ip = currentUserService.IpAddress ?? "unknown";
+        if (!rateLimitService.IsAllowed($"resend-otp:{ip}", MaxResendPerHour, WindowMinutes))
+            throw new RateLimitExceededException("RateLimitExceeded");
+
+        // 2. Validate registration token and extract tenantId
         var tenantId = tokenService.GetTenantIdFromRegistrationToken(
             request.RegistrationToken)
             ?? throw new UnauthorizedException("Unauthorized");
 
-        // 2. Load tenant — must still be PENDING_EMAIL_VERIFICATION
+        // 3. Load tenant — must still be PENDING_EMAIL_VERIFICATION
         var tenant = await context.Tenants
             .Include(t => t.Status)
             .FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken)
@@ -34,7 +45,7 @@ public class ResendVerificationCommandHandler(
         if (tenant.Status.Code != TenantStatusCodes.PendingEmailVerification)
             throw new ConflictException("EmailAlreadyVerified");
 
-        // 3. Rate limit — reject if any token was created in the last 2 minutes
+        // 4. Per-tenant cool-down — reject if any token was created in the last 2 minutes
         var twoMinutesAgo = DateTime.UtcNow.AddMinutes(-2);
         var recentToken = await context.TenantRegistrationTokens
             .AnyAsync(t => t.TenantId == tenantId
@@ -43,13 +54,13 @@ public class ResendVerificationCommandHandler(
         if (recentToken)
             throw new RateLimitExceededException("RateLimitExceeded");
 
-        // 4. Invalidate all existing unconsumed tokens
+        // 5. Invalidate all existing unconsumed tokens
         var activeTokens = await context.TenantRegistrationTokens
             .Where(t => t.TenantId == tenantId && !t.IsConsumed)
             .ToListAsync(cancellationToken);
         foreach (var t in activeTokens) t.Consume();
 
-        // 5. Generate new OTP and PBKDF2-hash it
+        // 6. Generate new OTP and PBKDF2-hash it
         var plainCode = RandomNumberGenerator.GetInt32(100_000, 1_000_000).ToString();
         var codeHash = passwordHasher.HashPassword(plainCode);
         var newToken = TenantRegistrationToken.Create(
@@ -60,7 +71,7 @@ public class ResendVerificationCommandHandler(
         context.TenantRegistrationTokens.Add(newToken);
         await context.SaveChangesAsync(cancellationToken);
 
-        // 6. Load admin user and send new verification email
+        // 7. Load admin user and send new verification email
         var adminUser = await context.Users
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(u => u.TenantId == tenantId, cancellationToken)

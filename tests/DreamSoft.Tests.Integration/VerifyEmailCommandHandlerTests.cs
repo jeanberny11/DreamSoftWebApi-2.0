@@ -31,10 +31,10 @@ public class VerifyEmailCommandHandlerTests : HandlerTestBase
             .Build();
 
         _registerHandler = new RegisterTenantCommandHandler(
-            Db, UnitOfWork, PasswordHasher, TokenService, EmailService);
+            Db, UnitOfWork, PasswordHasher, TokenService, EmailService, CurrentUser);
 
         _sut = new VerifyEmailCommandHandler(
-            Db, UnitOfWork, PasswordHasher, TokenService, EmailService, _config);
+            Db, UnitOfWork, PasswordHasher, TokenService, EmailService, CurrentUser, _config);
     }
 
     /// <summary>
@@ -141,8 +141,11 @@ public class VerifyEmailCommandHandlerTests : HandlerTestBase
 
         var user = await Db.Users.IgnoreQueryFilters()
             .FirstAsync(u => u.TenantId == tenantId);
-        Assert.NotNull(user.RefreshToken);
-        Assert.NotNull(user.RefreshTokenExpiryTime);
+
+        // Refresh token is now stored in the refresh_tokens table, not on the User entity
+        var tokenExists = await Db.RefreshTokens
+            .AnyAsync(rt => rt.UserId == user.Id);
+        Assert.True(tokenExists);
     }
 
     // ---------------------------------------------------------------

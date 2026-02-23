@@ -1,6 +1,7 @@
 using DreamSoft.Application.Common.Exceptions;
 using DreamSoft.Application.Common.Interfaces;
 using DreamSoft.Domain.Constants;
+using DreamSoft.Domain.Entities;
 using DreamSoft.Domain.Repositories;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +15,7 @@ public class VerifyEmailCommandHandler(
     IPasswordHasher passwordHasher,
     ITokenService tokenService,
     IEmailService emailService,
+    ICurrentUserService currentUserService,
     IConfiguration configuration)
     : IRequestHandler<VerifyEmailCommand, VerifyEmailResponse>
 {
@@ -104,17 +106,21 @@ public class VerifyEmailCommandHandler(
             cancellationToken);
 
         // 10. Issue real access + refresh tokens
-        var accessToken = tokenService.GenerateAccessToken(adminUser, tenant);
-        var refreshToken = tokenService.GenerateRefreshToken();
+        var accessToken  = tokenService.GenerateAccessToken(adminUser, tenant);
+        var rawToken     = tokenService.GenerateRefreshToken();
 
-        var refreshExpiry = int.Parse(
+        var refreshExpiryDays = int.Parse(
             configuration["Jwt:RefreshTokenExpirationDays"] ?? "7");
-        adminUser.SetRefreshToken(
-            refreshToken,
-            DateTime.UtcNow.AddDays(refreshExpiry));
 
+        var refreshTokenEntity = RefreshToken.Create(
+            userId:      adminUser.Id,
+            token:       rawToken,
+            expiresAt:   DateTime.UtcNow.AddDays(refreshExpiryDays),
+            createdByIp: currentUserService.IpAddress);
+
+        context.RefreshTokens.Add(refreshTokenEntity);
         await context.SaveChangesAsync(cancellationToken);
 
-        return new VerifyEmailResponse(accessToken, refreshToken);
+        return new VerifyEmailResponse(accessToken, rawToken);
     }
 }

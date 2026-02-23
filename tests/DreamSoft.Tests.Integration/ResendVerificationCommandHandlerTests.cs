@@ -18,10 +18,10 @@ public class ResendVerificationCommandHandlerTests : HandlerTestBase
     public ResendVerificationCommandHandlerTests()
     {
         _registerHandler = new RegisterTenantCommandHandler(
-            Db, UnitOfWork, PasswordHasher, TokenService, EmailService);
+            Db, UnitOfWork, PasswordHasher, TokenService, EmailService, CurrentUser);
 
         _sut = new ResendVerificationCommandHandler(
-            Db, PasswordHasher, TokenService, EmailService);
+            Db, PasswordHasher, TokenService, EmailService, CurrentUser, RateLimitService);
     }
 
     private async Task<(string RegToken, int TenantId)> RegisterAsync(

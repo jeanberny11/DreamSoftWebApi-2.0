@@ -120,6 +120,19 @@ public class TenantConfiguration : IEntityTypeConfiguration<Tenant>
             .HasColumnName("status_id")
             .IsRequired();
 
+        // Terms of Service acceptance
+        builder.Property(t => t.TermsVersion)
+            .HasColumnName("terms_version")
+            .HasMaxLength(50);
+
+        builder.Property(t => t.TermsAcceptedAt)
+            .HasColumnName("terms_accepted_at")
+            .HasColumnType("timestamp with time zone");
+
+        builder.Property(t => t.TermsAcceptedIp)
+            .HasColumnName("terms_accepted_ip")
+            .HasMaxLength(50);
+
         // Audit fields
         builder.Property(t => t.IsActive)
             .HasColumnName("is_active")
