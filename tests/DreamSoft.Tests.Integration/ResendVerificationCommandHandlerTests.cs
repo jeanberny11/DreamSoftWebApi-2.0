@@ -18,13 +18,13 @@ public class ResendVerificationCommandHandlerTests : HandlerTestBase
     public ResendVerificationCommandHandlerTests()
     {
         _registerHandler = new RegisterTenantCommandHandler(
-            Db, UnitOfWork, PasswordHasher, TokenService, EmailService, CurrentUser);
+            Db, UnitOfWork, PasswordHasher, EmailService, CurrentUser);
 
         _sut = new ResendVerificationCommandHandler(
-            Db, PasswordHasher, TokenService, EmailService, CurrentUser, RateLimitService);
+            Db, PasswordHasher, EmailService, CurrentUser, RateLimitService);
     }
 
-    private async Task<(string RegToken, int TenantId)> RegisterAsync(
+    private async Task<int> RegisterAsync(
         string subdomain = "acme", string email = "admin@acme.com")
     {
         var cmd = new RegisterTenantCommand(
@@ -32,8 +32,8 @@ public class ResendVerificationCommandHandlerTests : HandlerTestBase
             1, 1, 1, "John", "Doe", email, "Secret@123", 1, 1);
 
         var result = await _registerHandler.Handle(cmd, CancellationToken.None);
-        var tenantId = int.Parse(result.RegistrationToken["reg-token-".Length..]);
-        return (result.RegistrationToken, tenantId);
+        var tenant = await Db.Tenants.FirstAsync(t => t.Email == result.Email);
+        return tenant.Id;
     }
 
     // ---------------------------------------------------------------
@@ -43,7 +43,7 @@ public class ResendVerificationCommandHandlerTests : HandlerTestBase
     [Fact]
     public async Task Handle_AfterCooldown_ReturnsUnit()
     {
-        var (regToken, tenantId) = await RegisterAsync();
+        var tenantId = await RegisterAsync();
 
         // Push the existing token's CreatedAt into the past (> 2 min ago)
         await Db.Database.ExecuteSqlRawAsync(
@@ -51,7 +51,7 @@ public class ResendVerificationCommandHandlerTests : HandlerTestBase
             tenantId);
 
         var result = await _sut.Handle(
-            new ResendVerificationCommand(regToken), CancellationToken.None);
+            new ResendVerificationCommand("admin@acme.com"), CancellationToken.None);
 
         Assert.Equal(MediatR.Unit.Value, result);
     }
@@ -59,14 +59,14 @@ public class ResendVerificationCommandHandlerTests : HandlerTestBase
     [Fact]
     public async Task Handle_AfterCooldown_SendsNewVerificationEmail()
     {
-        var (regToken, tenantId) = await RegisterAsync();
+        var tenantId = await RegisterAsync();
         var initialEmailCount = EmailService.SentVerificationCodes.Count;
 
         await Db.Database.ExecuteSqlRawAsync(
             "UPDATE TenantRegistrationTokens SET CreatedAt = datetime('now', '-3 minutes') WHERE TenantId = {0}",
             tenantId);
 
-        await _sut.Handle(new ResendVerificationCommand(regToken), CancellationToken.None);
+        await _sut.Handle(new ResendVerificationCommand("admin@acme.com"), CancellationToken.None);
 
         Assert.Equal(initialEmailCount + 1, EmailService.SentVerificationCodes.Count);
     }
@@ -74,13 +74,13 @@ public class ResendVerificationCommandHandlerTests : HandlerTestBase
     [Fact]
     public async Task Handle_AfterCooldown_InvalidatesOldToken()
     {
-        var (regToken, tenantId) = await RegisterAsync();
+        var tenantId = await RegisterAsync();
 
         await Db.Database.ExecuteSqlRawAsync(
             "UPDATE TenantRegistrationTokens SET CreatedAt = datetime('now', '-3 minutes') WHERE TenantId = {0}",
             tenantId);
 
-        await _sut.Handle(new ResendVerificationCommand(regToken), CancellationToken.None);
+        await _sut.Handle(new ResendVerificationCommand("admin@acme.com"), CancellationToken.None);
 
         // All previous tokens must be consumed
         var unconsumed = await Db.TenantRegistrationTokens
@@ -94,7 +94,7 @@ public class ResendVerificationCommandHandlerTests : HandlerTestBase
     [Fact]
     public async Task Handle_AfterCooldown_CreatesNewOtpToken()
     {
-        var (regToken, tenantId) = await RegisterAsync();
+        var tenantId = await RegisterAsync();
         var tokensBefore = await Db.TenantRegistrationTokens
             .Where(t => t.TenantId == tenantId).CountAsync();
 
@@ -102,7 +102,7 @@ public class ResendVerificationCommandHandlerTests : HandlerTestBase
             "UPDATE TenantRegistrationTokens SET CreatedAt = datetime('now', '-3 minutes') WHERE TenantId = {0}",
             tenantId);
 
-        await _sut.Handle(new ResendVerificationCommand(regToken), CancellationToken.None);
+        await _sut.Handle(new ResendVerificationCommand("admin@acme.com"), CancellationToken.None);
 
         var tokensAfter = await Db.TenantRegistrationTokens
             .Where(t => t.TenantId == tenantId).CountAsync();
@@ -116,23 +116,23 @@ public class ResendVerificationCommandHandlerTests : HandlerTestBase
     [Fact]
     public async Task Handle_WithinCooldownWindow_ThrowsRateLimitExceededException()
     {
-        var (regToken, _) = await RegisterAsync();
+        await RegisterAsync();
 
         // No time manipulation — token was just created (within 2-minute window)
         await Assert.ThrowsAsync<RateLimitExceededException>(
-            () => _sut.Handle(new ResendVerificationCommand(regToken), CancellationToken.None));
+            () => _sut.Handle(new ResendVerificationCommand("admin@acme.com"), CancellationToken.None));
     }
 
     // ---------------------------------------------------------------
-    // Invalid token
+    // Unknown email
     // ---------------------------------------------------------------
 
     [Fact]
-    public async Task Handle_WithInvalidRegistrationToken_ThrowsUnauthorizedException()
+    public async Task Handle_WithUnknownEmail_ThrowsUnauthorizedException()
     {
         await Assert.ThrowsAsync<UnauthorizedException>(
             () => _sut.Handle(
-                new ResendVerificationCommand("not-a-real-token"),
+                new ResendVerificationCommand("nobody@unknown.com"),
                 CancellationToken.None));
     }
 
@@ -143,7 +143,7 @@ public class ResendVerificationCommandHandlerTests : HandlerTestBase
     [Fact]
     public async Task Handle_WhenTenantAlreadyVerified_ThrowsConflictException()
     {
-        var (regToken, tenantId) = await RegisterAsync();
+        var tenantId = await RegisterAsync();
 
         // Manually move tenant to PENDING_SUBSCRIPTION status
         await Db.Database.ExecuteSqlRawAsync(
@@ -158,6 +158,6 @@ public class ResendVerificationCommandHandlerTests : HandlerTestBase
         Db.ChangeTracker.Clear();
 
         await Assert.ThrowsAsync<ConflictException>(
-            () => _sut.Handle(new ResendVerificationCommand(regToken), CancellationToken.None));
+            () => _sut.Handle(new ResendVerificationCommand("admin@acme.com"), CancellationToken.None));
     }
 }

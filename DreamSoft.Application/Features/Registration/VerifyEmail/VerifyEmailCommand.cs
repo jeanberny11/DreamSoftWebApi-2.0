@@ -3,11 +3,12 @@ using MediatR;
 namespace DreamSoft.Application.Features.Registration.VerifyEmail;
 
 /// <summary>
-/// RegistrationToken is extracted from the Authorization: Bearer header
-/// by the controller and passed in here. It is NOT part of the request body.
+/// Email identifies the tenant (normalized to lowercase).
+/// Code is the 6-digit OTP sent to that address.
+/// No Authorization header or registration JWT is required.
 /// </summary>
 public record VerifyEmailCommand(
-    string RegistrationToken,
+    string Email,
     string Code
 ) : IRequest<VerifyEmailResponse>;
 

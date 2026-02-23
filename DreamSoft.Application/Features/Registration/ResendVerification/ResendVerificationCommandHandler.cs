@@ -12,7 +12,6 @@ namespace DreamSoft.Application.Features.Registration.ResendVerification;
 public class ResendVerificationCommandHandler(
     IApplicationDbContext context,
     IPasswordHasher passwordHasher,
-    ITokenService tokenService,
     IEmailService emailService,
     ICurrentUserService currentUserService,
     IRateLimitService rateLimitService)
@@ -26,22 +25,21 @@ public class ResendVerificationCommandHandler(
         ResendVerificationCommand request,
         CancellationToken cancellationToken)
     {
-        // 1. IP-based rate limit — checked before token validation to prevent enumeration
+        // 1. IP-based rate limit — checked before DB lookup to prevent enumeration
         var ip = currentUserService.IpAddress ?? "unknown";
         if (!rateLimitService.IsAllowed($"resend-otp:{ip}", MaxResendPerHour, WindowMinutes))
             throw new RateLimitExceededException("RateLimitExceeded");
 
-        // 2. Validate registration token and extract tenantId
-        var tenantId = tokenService.GetTenantIdFromRegistrationToken(
-            request.RegistrationToken)
-            ?? throw new UnauthorizedException("Unauthorized");
-
-        // 3. Load tenant — must still be PENDING_EMAIL_VERIFICATION
+        // 2. Lookup tenant by normalized email — same opaque error to prevent user enumeration
+        var normalizedEmail = request.Email.Trim().ToLower();
         var tenant = await context.Tenants
             .Include(t => t.Status)
-            .FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken)
-            ?? throw new NotFoundException("TenantNotFound", tenantId);
+            .FirstOrDefaultAsync(t => t.Email == normalizedEmail, cancellationToken)
+            ?? throw new UnauthorizedException("Unauthorized");
 
+        var tenantId = tenant.Id;
+
+        // 3. Tenant must still be PENDING_EMAIL_VERIFICATION
         if (tenant.Status.Code != TenantStatusCodes.PendingEmailVerification)
             throw new ConflictException("EmailAlreadyVerified");
 
@@ -74,7 +72,7 @@ public class ResendVerificationCommandHandler(
         // 7. Load admin user and send new verification email
         var adminUser = await context.Users
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(u => u.TenantId == tenantId, cancellationToken)
+            .FirstOrDefaultAsync(u => u.TenantId == tenantId && u.IsAdmin, cancellationToken)
             ?? throw new NotFoundException("UserNotFound", tenantId);
 
         await emailService.SendVerificationCodeAsync(

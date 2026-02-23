@@ -19,15 +19,8 @@ public sealed class StubPasswordHasher : IPasswordHasher
 
 public sealed class StubTokenService : ITokenService
 {
-    public string GenerateRegistrationToken(int tenantId) => $"reg-token-{tenantId}";
     public string GenerateAccessToken(Domain.Entities.User user, Domain.Entities.Tenant tenant) => $"access-token-{user.Id}";
     public string GenerateRefreshToken() => "refresh-token-fixed";
-    public int? GetTenantIdFromRegistrationToken(string token)
-    {
-        if (token.StartsWith("reg-token-") && int.TryParse(token["reg-token-".Length..], out var id))
-            return id;
-        return null;
-    }
 }
 
 public sealed class StubEmailService : IEmailService

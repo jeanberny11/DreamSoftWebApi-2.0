@@ -28,18 +28,20 @@ public class CompleteOnboardingCommandHandlerTests : HandlerTestBase
     public CompleteOnboardingCommandHandlerTests()
     {
         _registerHandler = new RegisterTenantCommandHandler(
-            Db, UnitOfWork, PasswordHasher, TokenService, EmailService, CurrentUser);
+            Db, UnitOfWork, PasswordHasher, EmailService, CurrentUser);
 
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["RateLimit:MaxVerificationAttemptsPerCode"] = "5",
+                ["RateLimit:MaxVerifyEmailAttemptsPerWindow"] = "5",
+                ["RateLimit:VerifyEmailWindowMinutes"] = "10",
                 ["Jwt:RefreshTokenExpirationDays"] = "7",
             })
             .Build();
 
         _verifyHandler = new VerifyEmailCommandHandler(
-            Db, UnitOfWork, PasswordHasher, TokenService, EmailService, CurrentUser, config);
+            Db, UnitOfWork, PasswordHasher, TokenService, EmailService, CurrentUser, RateLimitService, config);
 
         _sut = new CompleteOnboardingCommandHandler(Db, UnitOfWork, CurrentUser);
 
@@ -100,7 +102,7 @@ public class CompleteOnboardingCommandHandlerTests : HandlerTestBase
         var plainCode = EmailService.SentVerificationCodes.Last().Code;
 
         await _verifyHandler.Handle(
-            new VerifyEmailCommand(regResult.RegistrationToken, plainCode),
+            new VerifyEmailCommand(regResult.Email, plainCode),
             CancellationToken.None);
 
         var tenantId = await Db.Tenants

@@ -16,23 +16,31 @@ public class VerifyEmailCommandHandler(
     ITokenService tokenService,
     IEmailService emailService,
     ICurrentUserService currentUserService,
+    IRateLimitService rateLimitService,
     IConfiguration configuration)
     : IRequestHandler<VerifyEmailCommand, VerifyEmailResponse>
 {
+    // IP-based limits: max 5 verify attempts per 10 minutes from the same IP
+    private const int MaxVerifyPerWindow = 5;
+    private const int VerifyWindowMinutes = 10;
+
     public async Task<VerifyEmailResponse> Handle(
         VerifyEmailCommand request,
         CancellationToken cancellationToken)
     {
-        // 1. Validate registration token and extract tenantId
-        var tenantId = tokenService.GetTenantIdFromRegistrationToken(
-            request.RegistrationToken)
-            ?? throw new UnauthorizedException("Unauthorized");
+        // 1. IP-based rate limit — prevents brute-force from a single IP
+        var ip = currentUserService.IpAddress ?? "unknown";
+        if (!rateLimitService.IsAllowed($"verify-email:{ip}", MaxVerifyPerWindow, VerifyWindowMinutes))
+            throw new RateLimitExceededException("RateLimitExceeded");
 
-        // 2. Load tenant with status
+        // 2. Lookup tenant by normalized email — same error as wrong code to prevent enumeration
+        var normalizedEmail = request.Email.Trim().ToLower();
         var tenant = await context.Tenants
             .Include(t => t.Status)
-            .FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken)
-            ?? throw new NotFoundException("TenantNotFound", tenantId);
+            .FirstOrDefaultAsync(t => t.Email == normalizedEmail, cancellationToken)
+            ?? throw new UnauthorizedException("InvalidOtpCode");
+
+        var tenantId = tenant.Id;
 
         // 3. Idempotency guard — if already verified, reject
         if (tenant.Status.Code != TenantStatusCodes.PendingEmailVerification)

@@ -13,17 +13,6 @@ public class TokenService(IConfiguration configuration) : ITokenService
 {
     private readonly IConfiguration _config = configuration;
 
-    public string GenerateRegistrationToken(int tenantId)
-    {
-        var claims = new[]
-        {
-            new Claim("tenant_id", tenantId.ToString()),
-            new Claim("purpose", "registration"),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-        };
-        return BuildToken(claims, TimeSpan.FromHours(24));
-    }
-
     public string GenerateAccessToken(User user, Tenant tenant)
     {
         var expiry = int.Parse(
@@ -43,19 +32,6 @@ public class TokenService(IConfiguration configuration) : ITokenService
     public string GenerateRefreshToken()
         => Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
 
-    public int? GetTenantIdFromRegistrationToken(string token)
-    {
-        try
-        {
-            var principal = ValidateToken(token);
-            var purpose = principal?.FindFirstValue("purpose");
-            if (purpose != "registration") return null;
-            var tenantIdValue = principal?.FindFirstValue("tenant_id");
-            return int.TryParse(tenantIdValue, out var id) ? id : null;
-        }
-        catch { return null; }
-    }
-
     // ── Private helpers ────────────────────────────────────────
     private string BuildToken(IEnumerable<Claim> claims, TimeSpan expiry)
     {
@@ -72,21 +48,4 @@ public class TokenService(IConfiguration configuration) : ITokenService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    private ClaimsPrincipal? ValidateToken(string token)
-    {
-        var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(_config["Jwt:Secret"]!));
-        var handler = new JwtSecurityTokenHandler();
-        return handler.ValidateToken(token, new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = _config["Jwt:Issuer"],
-            ValidAudience = _config["Jwt:Audience"],
-            IssuerSigningKey = key,
-            ClockSkew = TimeSpan.Zero
-        }, out _);
-    }
 }
