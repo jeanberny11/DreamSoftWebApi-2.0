@@ -1,78 +1,195 @@
 using DreamSoft.Application.Common.Interfaces;
+using DreamSoft.Domain.Common;
 using DreamSoft.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
+using Module = DreamSoft.Domain.Entities.Module;
 
 namespace DreamSoft.Infrastructure.Persistence;
 
 public class ApplicationDbContext(
     DbContextOptions<ApplicationDbContext> options,
     ICurrentUserService currentUserService,
+    ITenantService tenantService,
     IDateTime dateTime) : DbContext(options), IApplicationDbContext
 {
     private readonly ICurrentUserService _currentUserService = currentUserService;
+    private readonly ITenantService _tenantService = tenantService;
     private readonly IDateTime _dateTime = dateTime;
 
-    // DbSets will be added here as we create entities
-    public DbSet<Tenant> Tenants => Set<Tenant>();
-    public DbSet<TenantStatus> TenantStatuses => Set<TenantStatus>();
-    public DbSet<User> Users => Set<User>();
-    public DbSet<Gender> Genders => Set<Gender>();
-    public DbSet<IdType> IdTypes => Set<IdType>();
-    public DbSet<Language> Languages => Set<Language>();
-    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    // ============================================
+    // LOOKUP ENTITIES
+    // ============================================
 
-    // Geographic Lookup Entities
-    public DbSet<Country> Countries => Set<Country>();
-    public DbSet<Province> Provinces => Set<Province>();
-    public DbSet<Municipality> Municipalities => Set<Municipality>();
-
-    // Enum-based Lookup Entities
-    public DbSet<CustomerType> CustomerTypes => Set<CustomerType>();
-    public DbSet<CustomerStatus> CustomerStatuses => Set<CustomerStatus>();
-    public DbSet<ProductType> ProductTypes => Set<ProductType>();
-    public DbSet<ProductStatus> ProductStatuses => Set<ProductStatus>();
-    public DbSet<PermissionAction> PermissionActions => Set<PermissionAction>();
+    /// <summary>Billing cycle options (monthly, quarterly, annual)</summary>
     public DbSet<BillingCycle> BillingCycles => Set<BillingCycle>();
 
-    // Other Lookup Entities
-    public DbSet<SubscriptionTier> SubscriptionTiers => Set<SubscriptionTier>();
-    public DbSet<TaxClassification> TaxClassifications => Set<TaxClassification>();
+    /// <summary>Countries lookup table</summary>
+    public DbSet<Country> Countries => Set<Country>();
 
-    // System Entities
-    public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
-    public DbSet<TenantSubscription> TenantSubscriptions => Set<TenantSubscription>();
-    public DbSet<Payment> Payments => Set<Payment>();
-    public DbSet<Domain.Entities.Module> Modules => Set<Domain.Entities.Module>();
+    /// <summary>Currencies lookup table</summary>
+    public DbSet<Currency> Currencies => Set<Currency>();
+
+    /// <summary>Gender types</summary>
+    public DbSet<Gender> Genders => Set<Gender>();
+
+    /// <summary>ID/Document types by country</summary>
+    public DbSet<IdType> IdTypes => Set<IdType>();
+
+    /// <summary>Supported languages</summary>
+    public DbSet<Language> Languages => Set<Language>();
+
+    /// <summary>Menu groupings for UI organization</summary>
     public DbSet<MenuGroup> MenuGroups => Set<MenuGroup>();
-    public DbSet<MenuItem> MenuItems => Set<MenuItem>();
-    public DbSet<RoleTemplate> RoleTemplates => Set<RoleTemplate>();
-    public DbSet<RoleMenuItemTemplate> RoleMenuItemTemplates => Set<RoleMenuItemTemplate>();
-    public DbSet<RoleMenuActionTemplate> RoleMenuActionTemplates => Set<RoleMenuActionTemplate>();
 
-    // Tenant Entities
-    public DbSet<Customer> Customers => Set<Customer>();
-    public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
-    public DbSet<Product> Products => Set<Product>();
-    public DbSet<ProductImage> ProductImages => Set<ProductImage>();
+    /// <summary>Menu options/items in the application</summary>
+    public DbSet<MenuOption> MenuOptions => Set<MenuOption>();
+
+    /// <summary>Application modules</summary>
+    public DbSet<Module> Modules => Set<Module>();
+
+    /// <summary>Municipalities within provinces</summary>
+    public DbSet<Municipality> Municipalities => Set<Municipality>();
+
+    /// <summary>Permission action types (view, create, edit, delete, etc.)</summary>
+    public DbSet<OptionAction> OptionActions => Set<OptionAction>();
+
+    /// <summary>Provinces/states within countries</summary>
+    public DbSet<Province> Provinces => Set<Province>();
+
+    /// <summary>Business solutions (POS, Restaurant, Financial, etc.)</summary>
+    public DbSet<Solution> Solutions => Set<Solution>();
+
+    /// <summary>Subscription status types (Active, Trial, Suspended, etc.)</summary>
+    public DbSet<SubscriptionStatus> SubscriptionStatuses => Set<SubscriptionStatus>();
+
+    /// <summary>Tenant status types</summary>
+    public DbSet<TenantStatus> TenantStatuses => Set<TenantStatus>();
+
+    // ============================================
+    // BUSINESS ENTITIES
+    // ============================================
+
+    /// <summary>Role templates for quick role setup</summary>
+    public DbSet<RoleTemplate> RoleTemplates => Set<RoleTemplate>();
+
+    /// <summary>Subscription plans combining solutions and billing cycles</summary>
+    public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
+
+    /// <summary>Tenant organizations</summary>
+    public DbSet<Tenant> Tenants => Set<Tenant>();
+
+    /// <summary>Tenant subscription history</summary>
+    public DbSet<TenantSubscription> TenantSubscriptions => Set<TenantSubscription>();
+
+    /// <summary>Email verification OTP sessions for tenant registration.</summary>
+    public DbSet<TenantRegistrationToken> TenantRegistrationTokens => Set<TenantRegistrationToken>();
+
+    /// <summary>Users within tenants</summary>
+    public DbSet<User> Users => Set<User>();
+
+    /// <summary>Persisted refresh token sessions (one per login, supports multi-device).</summary>
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
+    /// <summary>Roles within tenants</summary>
     public DbSet<Role> Roles => Set<Role>();
-    public DbSet<RoleMenuItem> RoleMenuItems => Set<RoleMenuItem>();
-    public DbSet<RoleMenuItemAction> RoleMenuItemActions => Set<RoleMenuItemAction>();
+
+    // ============================================
+    // JUNCTION/RELATIONSHIP TABLES
+    // ============================================
+
+    /// <summary>Solution to menu option assignments (many-to-many)</summary>
+    public DbSet<SolutionMenuOption> SolutionMenuOptions => Set<SolutionMenuOption>();
+
+    /// <summary>Role to menu option assignments (many-to-many)</summary>
+    public DbSet<RoleMenuOption> RoleMenuOptions => Set<RoleMenuOption>();
+
+    /// <summary>Role template to menu option assignments (many-to-many)</summary>
+    public DbSet<RoleMenuOptionTemplate> RoleMenuOptionTemplates => Set<RoleMenuOptionTemplate>();
+
+    /// <summary>Role permissions for specific menu option actions</summary>
+    public DbSet<RoleOptionAction> RoleOptionActions => Set<RoleOptionAction>();
+
+    /// <summary>Role template permissions for specific menu option actions</summary>
+    public DbSet<RoleOptionActionTemplate> RoleOptionActionTemplates => Set<RoleOptionActionTemplate>();
+
+    /// <summary>User-role assignments (many-to-many with extra payload)</summary>
     public DbSet<UserRole> UserRoles => Set<UserRole>();
+
+    // ============================================
+    // DATABASE CONFIGURATION
+    // ============================================
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // FIXED: Use ONLY assembly scanning to avoid duplicate configuration
-        // This will automatically find and apply all IEntityTypeConfiguration<T> classes
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+
+        // Global query filters for tenant isolation.
+        // Only applied when a tenant context exists (null check allows system-level queries).
+        modelBuilder.Entity<User>()
+            .HasQueryFilter(e => _tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId);
+
+        modelBuilder.Entity<Role>()
+            .HasQueryFilter(e => _tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId);
+
+        modelBuilder.Entity<UserRole>()
+            .HasQueryFilter(e => _tenantService.CurrentTenantId == null || e.User.TenantId == _tenantService.CurrentTenantId);
 
         base.OnModelCreating(modelBuilder);
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        var result = await base.SaveChangesAsync(cancellationToken);
-        return result;
+        StampAuditFields();
+        return await base.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Automatically stamps audit fields on all tracked entities before saving.
+    /// AuditableEntity: sets CreatedAt / IsActive on Add; UpdatedAt on Modify.
+    /// TenantEntity: sets TenantId / CreatedBy on Add; UpdatedBy on Modify.
+    /// </summary>
+    private void StampAuditFields()
+    {
+        var now = _dateTime.UtcNow;
+        var userId = _currentUserService.UserId;
+        var tenantId = _tenantService.CurrentTenantId;
+
+        foreach (var entry in ChangeTracker.Entries<AuditableEntity>())
+        {
+            if (entry.State == EntityState.Added)
+            {
+                entry.Property(nameof(AuditableEntity.CreatedAt)).CurrentValue = now;
+                entry.Property(nameof(AuditableEntity.IsActive)).CurrentValue = true;
+            }
+
+            if (entry.State == EntityState.Modified)
+            {
+                entry.Property(nameof(AuditableEntity.UpdatedAt)).CurrentValue = now;
+            }
+        }
+
+        foreach (var entry in ChangeTracker.Entries<TenantEntity>())
+        {
+            if (entry.State == EntityState.Added)
+            {
+                // Only overwrite TenantId when the domain hasn't set one yet,
+                // so explicit factory-provided values are respected.
+                if (entry.Property(nameof(TenantEntity.TenantId)).CurrentValue is 0 or null && tenantId.HasValue)
+                    entry.Property(nameof(TenantEntity.TenantId)).CurrentValue = tenantId.Value;
+
+                if (userId.HasValue)
+                    entry.Property(nameof(TenantEntity.CreatedBy)).CurrentValue = userId;
+            }
+
+            if (entry.State == EntityState.Modified && userId.HasValue)
+            {
+                // Only overwrite UpdatedBy when an authenticated user is present.
+                // When no user is in context (e.g. registration flow), the domain
+                // is responsible for setting UpdatedBy explicitly via RecordUpdate().
+                entry.Property(nameof(TenantEntity.UpdatedBy)).CurrentValue = userId;
+            }
+        }
     }
 
     /// <summary>

@@ -1,9 +1,14 @@
+using System.Text.Json.Serialization;
+
 namespace DreamSoft.Domain.ValueObjects;
 
 public class TranslatedString : ValueObject
 {
-    public string Spanish { get; private set; } = string.Empty;
-    public string? English { get; private set; }
+    [JsonPropertyName("es")]
+    public BaseTranslatedProperties Spanish { get; private set; } = null!;
+
+    [JsonPropertyName("en")]
+    public BaseTranslatedProperties? English { get; private set; }
 
     // Private constructor for EF Core
     private TranslatedString()
@@ -11,15 +16,15 @@ public class TranslatedString : ValueObject
     }
 
     // Factory method for creating instances
-    public static TranslatedString Create(string spanish, string? english = null)
+    public static TranslatedString Create(BaseTranslatedProperties spanish, BaseTranslatedProperties? english = null)
     {
-        if (string.IsNullOrWhiteSpace(spanish))
+        if (spanish == null)
             throw new ArgumentException("Spanish translation is required", nameof(spanish));
 
         return new TranslatedString
         {
-            Spanish = spanish.Trim(),
-            English = english?.Trim()
+            Spanish = spanish,
+            English = english
         };
     }
 
@@ -28,14 +33,46 @@ public class TranslatedString : ValueObject
     /// </summary>
     /// <param name="language">Language code (es, en)</param>
     /// <param name="fallbackToSpanish">If true, returns Spanish when English is not available</param>
-    public string Get(string language = "es", bool fallbackToSpanish = true)
+    public BaseTranslatedProperties? Get(string language = "es", bool fallbackToSpanish = true)
     {
         return language?.ToLower() switch
         {
-            "en" when !string.IsNullOrEmpty(English) => English,
+            "en" when English != null => English,
             "en" when fallbackToSpanish => Spanish,
-            "en" => string.Empty, // Return empty if no fallback
+            "en" => null, // Return empty if no fallback
             _ => Spanish
+        };
+    }
+
+    /// <summary>
+    /// Gets the name translation in the specified language
+    /// </summary>
+    /// <param name="language">Language code (es, en)</param>
+    /// <param name="fallbackToSpanish">If true, returns Spanish when English is not available</param>
+    public string GetName(string language = "es", bool fallbackToSpanish = true)
+    {
+        return language?.ToLower() switch
+        {
+            "en" when English != null => English.Name,
+            "en" when fallbackToSpanish => Spanish.Name,
+            "en" => string.Empty, // Return empty if no fallback
+            _ => Spanish.Name
+        };
+    }
+
+    /// <summary>
+    /// Gets the descripcion translation in the specified language
+    /// </summary>
+    /// <param name="language">Language code (es, en)</param>
+    /// <param name="fallbackToSpanish">If true, returns Spanish when English is not available</param>
+    public string? GetDescription(string language = "es", bool fallbackToSpanish = true)
+    {
+        return language?.ToLower() switch
+        {
+            "en" when English != null => English.Descripcion,
+            "en" when fallbackToSpanish => Spanish.Descripcion,
+            "en" => string.Empty, // Return empty if no fallback
+            _ => Spanish.Descripcion
         };
     }
 
@@ -45,23 +82,35 @@ public class TranslatedString : ValueObject
     /// <param name="language">Language code (es, en)</param>
     /// <param name="fallbackName">Fallback name to use if translation is not available</param>
     /// <returns>Translation or fallback name</returns>
-    public string GetOrFallback(string language, string fallbackName)
+    public string GetNameOrFallback(string language, string fallbackName)
     {
-        var translation = Get(language, fallbackToSpanish: false);
+        var translation = GetName(language, fallbackToSpanish: false);
+        return string.IsNullOrEmpty(translation) ? fallbackName : translation;
+    }
+
+    /// <summary>
+    /// Gets translation with Description as ultimate fallback
+    /// </summary>
+    /// <param name="language">Language code (es, en)</param>
+    /// <param name="fallbackName">Fallback name to use if translation is not available</param>
+    /// <returns>Translation or fallback Description</returns>
+    public string GetDescriptionOrFallback(string language, string fallbackName)
+    {
+        var translation = GetDescription(language, fallbackToSpanish: false);
         return string.IsNullOrEmpty(translation) ? fallbackName : translation;
     }
 
     /// <summary>
     /// Updates the Spanish translation
     /// </summary>
-    public TranslatedString WithSpanish(string spanish)
+    public TranslatedString WithSpanish(BaseTranslatedProperties spanish)
     {
-        if (string.IsNullOrWhiteSpace(spanish))
+        if (spanish == null)
             throw new ArgumentException("Spanish translation cannot be empty", nameof(spanish));
 
         return new TranslatedString
         {
-            Spanish = spanish.Trim(),
+            Spanish = spanish,
             English = English
         };
     }
@@ -69,12 +118,12 @@ public class TranslatedString : ValueObject
     /// <summary>
     /// Updates the English translation
     /// </summary>
-    public TranslatedString WithEnglish(string? english)
+    public TranslatedString WithEnglish(BaseTranslatedProperties? english)
     {
         return new TranslatedString
         {
             Spanish = Spanish,
-            English = english?.Trim()
+            English = english
         };
     }
 
@@ -84,5 +133,5 @@ public class TranslatedString : ValueObject
         yield return English;
     }
 
-    public override string ToString() => Spanish;
+    public override string ToString() => Spanish.Name;
 }

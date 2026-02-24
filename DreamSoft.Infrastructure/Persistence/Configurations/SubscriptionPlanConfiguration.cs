@@ -4,98 +4,114 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DreamSoft.Infrastructure.Persistence.Configurations;
 
+/// <summary>
+/// Entity Framework Core configuration for SubscriptionPlan entity
+/// Maps to the 'subscription_plans' table in PostgreSQL
+/// </summary>
 public class SubscriptionPlanConfiguration : IEntityTypeConfiguration<SubscriptionPlan>
 {
     public void Configure(EntityTypeBuilder<SubscriptionPlan> builder)
     {
+        // Table mapping
         builder.ToTable("subscription_plans");
 
-        builder.HasKey(sp => sp.Id);
-
-        builder.Property(sp => sp.Id)
+        // Primary key
+        builder.HasKey(s => s.Id);
+        builder.Property(s => s.Id)
             .HasColumnName("id")
             .ValueGeneratedOnAdd();
 
-        builder.Property(sp => sp.TierId)
-            .HasColumnName("tier_id")
+        // Properties mapping
+        builder.Property(s => s.SolutionId)
+            .HasColumnName("solution_id")
             .IsRequired();
 
-        builder.Property(sp => sp.BillingCycleId)
+        builder.Property(s => s.Code)
+            .HasColumnName("code")
+            .HasMaxLength(50)
+            .IsRequired()
+            .HasDefaultValue(string.Empty);
+
+        builder.Property(s => s.Name)
+            .HasColumnName("name")
+            .HasMaxLength(50)
+            .IsRequired()
+            .HasDefaultValue(string.Empty);
+
+        builder.Property(s => s.Description)
+            .HasColumnName("description")
+            .HasMaxLength(200)
+            .IsRequired()
+            .HasDefaultValue(string.Empty);
+
+        builder.Property(s => s.BillingCycleId)
             .HasColumnName("billing_cycle_id")
             .IsRequired();
 
-        builder.Property(sp => sp.PlanName)
-            .HasColumnName("name")
-            .HasMaxLength(100)
-            .IsRequired();
+        builder.Property(s => s.Price)
+            .HasColumnName("price")
+            .HasColumnType("numeric(10,2)")
+            .IsRequired()
+            .HasDefaultValue(0);
 
-        builder.Property(sp => sp.Description)
-            .HasColumnName("description")
-            .HasColumnType("text");
+        builder.Property(s => s.TrialDays)
+            .HasColumnName("trial_days")
+            .IsRequired()
+            .HasDefaultValue(0);
 
-        // FIXED: TranslatedString as JSONB (NOT NULL - required)
-        builder.OwnsOne(sp => sp.Translations, translations =>
+        // JSONB Translation Configuration
+        builder.OwnsOne(s => s.Translations, translations =>
         {
             translations.ToJson("translations");
-            translations.Property(ts => ts.Spanish).HasJsonPropertyName("es").IsRequired();
-            translations.Property(ts => ts.English).HasJsonPropertyName("en");
+
+            translations.OwnsOne(t => t.Spanish, spanish =>
+            {
+                spanish.ToJson("es");
+                spanish.Property(sp => sp.Name)
+                    .HasJsonPropertyName("name")
+                    .IsRequired();
+                spanish.Property(sp => sp.Descripcion)
+                    .HasJsonPropertyName("description");
+            });
+
+            translations.OwnsOne(t => t.English, english =>
+            {
+                english.ToJson("en");
+                english.Property(e => e.Name)
+                    .HasJsonPropertyName("name");
+                english.Property(e => e.Descripcion)
+                    .HasJsonPropertyName("description");
+            });
         });
-        
-        // Make the owned type itself required
-        builder.Navigation(sp => sp.Translations).IsRequired();
 
-        builder.Property(sp => sp.Price)
-            .HasColumnName("price")
-            .HasColumnType("decimal(10,2)")
-            .IsRequired();
-
-        builder.Property(sp => sp.StripePriceId)
-            .HasColumnName("stripe_price_id")
-            .HasMaxLength(255);
-
-        builder.Property(sp => sp.TrialDays)
-            .HasColumnName("trial_days");
-
-        // Resource limits (moved from SubscriptionTier)
-        builder.Property(sp => sp.MaxUsers)
-            .HasColumnName("max_users")
-            .IsRequired();
-
-        builder.Property(sp => sp.MaxStorageGb)
-            .HasColumnName("max_storage_gb")
-            .IsRequired();
-
-        builder.Property(sp => sp.MaxInvoicesPerMonth)
-            .HasColumnName("max_invoices_per_month");
-
-        builder.Property(sp => sp.IsActive)
+        // Audit fields
+        builder.Property(s => s.IsActive)
             .HasColumnName("is_active")
+            .IsRequired()
             .HasDefaultValue(true);
 
-        builder.Property(sp => sp.CreatedAt)
+        builder.Property(s => s.CreatedAt)
             .HasColumnName("created_at")
+            .IsRequired()
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-        builder.Property(sp => sp.UpdatedAt)
-            .HasColumnName("updated_at")
-            .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-        // Indexes
-        builder.HasIndex(sp => sp.TierId).HasDatabaseName("idx_subscription_plans_tier");
-        builder.HasIndex(sp => sp.BillingCycleId).HasDatabaseName("idx_subscription_plans_billing_cycle");
-        builder.HasIndex(sp => sp.StripePriceId).HasDatabaseName("idx_subscription_plans_stripe_price");
+        builder.Property(s => s.UpdatedAt)
+            .HasColumnName("updated_at");
 
         // Relationships
-        builder.HasOne(sp => sp.Tier)
+        builder.HasOne(s => s.Solution)
             .WithMany(t => t.SubscriptionPlans)
-            .HasForeignKey(sp => sp.TierId)
-            .OnDelete(DeleteBehavior.Restrict)
-            .HasConstraintName("subscription_plans_tier_id_fkey");
+            .HasForeignKey(s => s.SolutionId)
+            .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasOne(sp => sp.BillingCycle)
-            .WithMany(bc => bc.SubscriptionPlans)
-            .HasForeignKey(sp => sp.BillingCycleId)
-            .OnDelete(DeleteBehavior.Restrict)
-            .HasConstraintName("subscription_plans_billing_cycle_id_fkey");
+        builder.HasOne(s => s.BillingCycle)
+            .WithMany(b => b.SubscriptionPlans)
+            .HasForeignKey(s => s.BillingCycleId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(s => s.TenantSubscriptions)
+            .WithOne(ts => ts.SubscriptionPlan)
+            .HasForeignKey(ts => ts.SubscriptionPlanId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

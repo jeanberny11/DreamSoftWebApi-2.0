@@ -4,38 +4,41 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DreamSoft.Infrastructure.Persistence.Configurations;
 
+/// <summary>
+/// Entity Framework Core configuration for Tenant entity
+/// Maps to the 'tenants' table in PostgreSQL
+/// </summary>
 public class TenantConfiguration : IEntityTypeConfiguration<Tenant>
 {
     public void Configure(EntityTypeBuilder<Tenant> builder)
     {
+        // Table mapping
         builder.ToTable("tenants");
 
+        // Primary key
         builder.HasKey(t => t.Id);
-
         builder.Property(t => t.Id)
             .HasColumnName("id")
             .ValueGeneratedOnAdd();
 
-        // Business Identity
-        builder.Property(t => t.TenantNumber)
-            .HasColumnName("tenant_number")
-            .HasMaxLength(20)
-            .IsRequired();
-
+        // Properties mapping
         builder.Property(t => t.CompanyName)
             .HasColumnName("company_name")
             .HasMaxLength(255)
-            .IsRequired();
+            .IsRequired()
+            .HasDefaultValue(string.Empty);
 
         builder.Property(t => t.Subdomain)
             .HasColumnName("subdomain")
-            .HasMaxLength(100)
-            .IsRequired();
+            .HasMaxLength(255)
+            .IsRequired()
+            .HasDefaultValue(string.Empty);
 
-        // Tax/Legal Information
         builder.Property(t => t.TaxId)
             .HasColumnName("tax_id")
-            .HasMaxLength(50);
+            .HasMaxLength(50)
+            .IsRequired()
+            .HasDefaultValue(string.Empty);
 
         builder.Property(t => t.TaxIdVerified)
             .HasColumnName("tax_id_verified")
@@ -47,11 +50,11 @@ public class TenantConfiguration : IEntityTypeConfiguration<Tenant>
         builder.Property(t => t.TaxIdVerifiedBy)
             .HasColumnName("tax_id_verified_by");
 
-        // Contact Information
         builder.Property(t => t.Email)
             .HasColumnName("email")
             .HasMaxLength(255)
-            .IsRequired();
+            .IsRequired()
+            .HasDefaultValue(string.Empty);
 
         builder.Property(t => t.EmailVerified)
             .HasColumnName("email_verified")
@@ -62,20 +65,27 @@ public class TenantConfiguration : IEntityTypeConfiguration<Tenant>
 
         builder.Property(t => t.Phone)
             .HasColumnName("phone")
-            .HasMaxLength(20);
+            .HasMaxLength(20)
+            .IsRequired()
+            .HasDefaultValue(string.Empty);
 
         builder.Property(t => t.Website)
             .HasColumnName("website")
-            .HasMaxLength(255);
+            .HasMaxLength(255)
+            .IsRequired()
+            .HasDefaultValue(string.Empty);
 
-        // Address
         builder.Property(t => t.AddressLine1)
             .HasColumnName("address_line1")
-            .HasMaxLength(255);
+            .HasMaxLength(255)
+            .IsRequired()
+            .HasDefaultValue(string.Empty);
 
         builder.Property(t => t.AddressLine2)
             .HasColumnName("address_line2")
-            .HasMaxLength(255);
+            .HasMaxLength(255)
+            .IsRequired()
+            .HasDefaultValue(string.Empty);
 
         builder.Property(t => t.CountryId)
             .HasColumnName("country_id");
@@ -88,77 +98,94 @@ public class TenantConfiguration : IEntityTypeConfiguration<Tenant>
 
         builder.Property(t => t.PostalCode)
             .HasColumnName("postal_code")
-            .HasMaxLength(20);
+            .HasMaxLength(20)
+            .IsRequired()
+            .HasDefaultValue(string.Empty);
 
-        // Settings
-        builder.Property(t => t.IndustryType)
-            .HasColumnName("industry_type")
-            .HasMaxLength(100);
+        builder.Property(t => t.CurrencyId)
+            .HasColumnName("currency_id")
+            .IsRequired();
 
-        builder.Property(t => t.Timezone)
-            .HasColumnName("timezone")
-            .HasMaxLength(50)
-            .HasDefaultValue("America/Santo_Domingo");
+        builder.Property(t => t.LanguageId)
+            .HasColumnName("language_id")
+            .IsRequired();
 
-        builder.Property(t => t.Currency)
-            .HasColumnName("currency")
-            .HasMaxLength(3)
-            .HasDefaultValue("DOP");
-
-        builder.Property(t => t.DefaultLanguage)
-            .HasColumnName("default_language")
-            .HasMaxLength(10)
-            .HasDefaultValue("es");
-
-        // Branding
         builder.Property(t => t.LogoUrl)
             .HasColumnName("logo_url")
-            .HasMaxLength(500);
+            .HasMaxLength(500)
+            .IsRequired()
+            .HasDefaultValue(string.Empty);
 
-        // Status
         builder.Property(t => t.StatusId)
             .HasColumnName("status_id")
             .IsRequired();
 
-        // Audit Fields (from BaseEntity)
+        // Terms of Service acceptance
+        builder.Property(t => t.TermsVersion)
+            .HasColumnName("terms_version")
+            .HasMaxLength(50);
+
+        builder.Property(t => t.TermsAcceptedAt)
+            .HasColumnName("terms_accepted_at")
+            .HasColumnType("timestamp with time zone");
+
+        builder.Property(t => t.TermsAcceptedIp)
+            .HasColumnName("terms_accepted_ip")
+            .HasMaxLength(50);
+
+        // Audit fields
+        builder.Property(t => t.IsActive)
+            .HasColumnName("is_active")
+            .IsRequired()
+            .HasDefaultValue(true);
+
         builder.Property(t => t.CreatedAt)
             .HasColumnName("created_at")
+            .IsRequired()
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
         builder.Property(t => t.UpdatedAt)
-            .HasColumnName("updated_at")
-            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+            .HasColumnName("updated_at");
 
         // Relationships
+        builder.HasOne(t => t.Country)
+            .WithMany(c => c.Tenants)
+            .HasForeignKey(t => t.CountryId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        builder.HasOne(t => t.Province)
+            .WithMany(p => p.Tenants)
+            .HasForeignKey(t => t.ProvinceId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        builder.HasOne(t => t.Municipality)
+            .WithMany(m => m.Tenants)
+            .HasForeignKey(t => t.MunicipalityId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        builder.HasOne(t => t.Currency)
+            .WithMany(c => c.Tenants)
+            .HasForeignKey(t => t.CurrencyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(t => t.Language)
+            .WithMany(l => l.Tenants)
+            .HasForeignKey(t => t.LanguageId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasOne(t => t.Status)
             .WithMany(s => s.Tenants)
             .HasForeignKey(t => t.StatusId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Indexes
-        builder.HasIndex(t => t.TenantNumber)
-            .IsUnique()
-            .HasDatabaseName("idx_tenants_tenant_number");
+        builder.HasMany(t => t.Users)
+            .WithOne(u => u.Tenant)
+            .HasForeignKey(u => u.TenantId)
+            .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasIndex(t => t.Subdomain)
-            .IsUnique()
-            .HasDatabaseName("idx_tenants_subdomain");
-
-        builder.HasIndex(t => t.TaxId)
-            .IsUnique()
-            .HasDatabaseName("idx_tenants_tax_id")
-            .HasFilter("tax_id IS NOT NULL");
-
-        builder.HasIndex(t => t.Email)
-            .HasDatabaseName("idx_tenants_email");
-
-        builder.HasIndex(t => t.StatusId)
-            .HasDatabaseName("idx_tenants_status_id");
-
-        builder.HasIndex(t => t.CountryId)
-            .HasDatabaseName("idx_tenants_country");
-
-        builder.HasIndex(t => t.ProvinceId)
-            .HasDatabaseName("idx_tenants_province");
+        builder.HasMany(t => t.Roles)
+            .WithOne(r => r.Tenant)
+            .HasForeignKey(r => r.TenantId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

@@ -5,85 +5,51 @@ namespace DreamSoft.Domain.Entities;
 
 public class IdType : LookupEntity
 {
-    public int CountryId { get; private set; }
-    public string Code { get; private set; } = null!;
-    public string? Description { get; private set; }
-    public string? ValidationPattern { get; private set; }
+    public string Code { get; set; } = null!;
+    public int CountryId { get; set; }
+    public string ValidationPattern { get; set; } = null!;
 
     // Navigation properties
-    public ICollection<User> Users { get; private set; } = new List<User>();
-    public ICollection<Customer> Customers { get; private set; } = new List<Customer>();
+    public Country Country { get; set; } = null!;
+    public ICollection<User> Users { get; private set; } = [];
 
-    // Private constructor for EF Core
-    private IdType()
+    private IdType() { }
+
+    public static IdType Create(string code, string name, int countryId, string validationPattern, TranslatedString translations)
     {
-    }
-
-    /// <summary>
-    /// Creates a new ID type (typically used for seeding)
-    /// </summary>
-    public static IdType Create(
-        int countryId,
-        string code,
-        string name,
-        TranslatedString translations,
-        string? description = null,
-        string? validationPattern = null
-        )
-    {
-        if (countryId <= 0)
-            throw new ArgumentException("Country ID must be valid", nameof(countryId));
-
         if (string.IsNullOrWhiteSpace(code))
             throw new ArgumentException("Code is required", nameof(code));
 
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Name is required", nameof(name));
 
+        if (countryId <= 0)
+            throw new ArgumentException("Country ID must be greater than zero", nameof(countryId));
+
+        if (string.IsNullOrWhiteSpace(validationPattern))
+            throw new ArgumentException("Validation pattern is required", nameof(validationPattern));
+
+        ArgumentNullException.ThrowIfNull(translations, nameof(translations));
+
         var idType = new IdType
         {
-            CountryId = countryId,
             Code = code.ToUpper().Trim(),
             Name = name.Trim(),
-            Description = description?.Trim(),
-            ValidationPattern = validationPattern?.Trim(),
+            CountryId = countryId,
+            ValidationPattern = validationPattern.Trim(),
             Translations = translations
         };
 
-        idType.InitializeAudit(); // Initialize base audit fields
-
+        idType.InitializeAudit();
         return idType;
     }
 
-    /// <summary>
-    /// Updates ID type information
-    /// </summary>
-    public void Update(
-        string name,
-        TranslatedString translations,
-        string? description = null,
-        string? validationPattern = null)
+    public void UpdateValidationPattern(string validationPattern)
     {
-        if (string.IsNullOrWhiteSpace(name))
-            throw new ArgumentException("Name is required", nameof(name));
+        if (string.IsNullOrWhiteSpace(validationPattern))
+            throw new ArgumentException("Validation pattern is required", nameof(validationPattern));
 
-        Name = name.Trim();
-        Description = description?.Trim();
-        ValidationPattern = validationPattern?.Trim();
-        UpdateTranslations(translations);
-    }
-
-    /// <summary>
-    /// Validates an ID number against the pattern
-    /// </summary>
-    public bool ValidateIdNumber(string idNumber)
-    {
-        if (string.IsNullOrWhiteSpace(ValidationPattern))
-            return true; // No validation pattern defined
-
-        if (string.IsNullOrWhiteSpace(idNumber))
-            return false;
-
-        return System.Text.RegularExpressions.Regex.IsMatch(idNumber, ValidationPattern);
+        ValidationPattern = validationPattern.Trim();
+        MarkAsUpdated();
     }
 }

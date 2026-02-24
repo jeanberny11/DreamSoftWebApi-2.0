@@ -4,22 +4,48 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DreamSoft.Infrastructure.Persistence.Configurations;
 
+/// <summary>
+/// Entity Framework Core configuration for Role entity
+/// Maps to the 'roles' table in PostgreSQL
+/// </summary>
 public class RoleConfiguration : IEntityTypeConfiguration<Role>
 {
     public void Configure(EntityTypeBuilder<Role> builder)
     {
+        // Table mapping
         builder.ToTable("roles");
 
+        // Primary key
         builder.HasKey(r => r.Id);
-
         builder.Property(r => r.Id)
             .HasColumnName("id")
             .ValueGeneratedOnAdd();
 
-        // TenantEntity fields
+        // Properties mapping
+        builder.Property(r => r.Code)
+            .HasColumnName("code")
+            .HasMaxLength(50)
+            .IsRequired()
+            .HasDefaultValue(string.Empty);
+
+        builder.Property(r => r.Name)
+            .HasColumnName("name")
+            .HasMaxLength(50)
+            .IsRequired()
+            .HasDefaultValue(string.Empty);
+
+        builder.Property(r => r.Description)
+            .HasColumnName("description")
+            .HasMaxLength(200)
+            .IsRequired()
+            .HasDefaultValue(string.Empty);
+
         builder.Property(r => r.TenantId)
             .HasColumnName("tenant_id")
             .IsRequired();
+
+        builder.Property(r => r.RoleTemplateId)
+            .HasColumnName("role_template_id");
 
         builder.Property(r => r.CreatedBy)
             .HasColumnName("created_by");
@@ -27,66 +53,74 @@ public class RoleConfiguration : IEntityTypeConfiguration<Role>
         builder.Property(r => r.UpdatedBy)
             .HasColumnName("updated_by");
 
-        // Role-specific fields
-        builder.Property(r => r.RoleTemplateId)
-            .HasColumnName("role_template_id");
+        // JSONB Translation Configuration (Name + Description)
+        builder.OwnsOne(r => r.Translations, translations =>
+        {
+            translations.ToJson("translations");
 
-        builder.Property(r => r.Name)
-            .HasColumnName("name")
-            .HasMaxLength(100)
-            .IsRequired();
+            translations.OwnsOne(t => t.Spanish, spanish =>
+            {
+                spanish.ToJson("es");
+                spanish.Property(s => s.Name)
+                    .HasJsonPropertyName("name")
+                    .IsRequired();
+                spanish.Property(s => s.Descripcion)
+                    .HasJsonPropertyName("description");
+            });
 
-        builder.Property(r => r.Description)
-            .HasColumnName("description")
-            .HasColumnType("text");
-
-        builder.Property(r => r.IsCustom)
-            .HasColumnName("is_custom")
-            .HasDefaultValue(false);
+            translations.OwnsOne(t => t.English, english =>
+            {
+                english.ToJson("en");
+                english.Property(e => e.Name)
+                    .HasJsonPropertyName("name");
+                english.Property(e => e.Descripcion)
+                    .HasJsonPropertyName("description");
+            });
+        });
 
         // Audit fields
         builder.Property(r => r.IsActive)
             .HasColumnName("is_active")
+            .IsRequired()
             .HasDefaultValue(true);
 
         builder.Property(r => r.CreatedAt)
             .HasColumnName("created_at")
+            .IsRequired()
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
         builder.Property(r => r.UpdatedAt)
-            .HasColumnName("updated_at")
-            .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-        // Indexes
-        builder.HasIndex(r => r.TenantId).HasDatabaseName("idx_roles_tenant");
-        builder.HasIndex(r => r.RoleTemplateId).HasDatabaseName("idx_roles_role_template");
-        builder.HasIndex(r => new { r.TenantId, r.Name })
-            .IsUnique()
-            .HasDatabaseName("roles_tenant_id_name_key");
+            .HasColumnName("updated_at");
 
         // Relationships
         builder.HasOne(r => r.Tenant)
-            .WithMany()
+            .WithMany(t => t.Roles)
             .HasForeignKey(r => r.TenantId)
-            .OnDelete(DeleteBehavior.Cascade)
-            .HasConstraintName("roles_tenant_id_fkey");
-
-        builder.HasOne(r => r.CreatedByUser)
-            .WithMany()
-            .HasForeignKey(r => r.CreatedBy)
-            .OnDelete(DeleteBehavior.SetNull)
-            .HasConstraintName("roles_created_by_fkey");
-
-        builder.HasOne(r => r.UpdatedByUser)
-            .WithMany()
-            .HasForeignKey(r => r.UpdatedBy)
-            .OnDelete(DeleteBehavior.SetNull)
-            .HasConstraintName("roles_updated_by_fkey");
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(r => r.RoleTemplate)
             .WithMany(rt => rt.Roles)
             .HasForeignKey(r => r.RoleTemplateId)
-            .OnDelete(DeleteBehavior.SetNull)
-            .HasConstraintName("roles_role_template_id_fkey");
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne(r => r.CreatedByUser)
+            .WithMany(u => u.CreatedRoles)
+            .HasForeignKey(r => r.CreatedBy)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne(r => r.UpdatedByUser)
+            .WithMany(u => u.UpdatedRoles)
+            .HasForeignKey(r => r.UpdatedBy)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasMany(r => r.RoleMenuOptions)
+            .WithOne(rm => rm.Role)
+            .HasForeignKey(rm => rm.RoleId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(r => r.RoleOptionActions)
+            .WithOne(ro => ro.Role)
+            .HasForeignKey(ro => ro.RoleId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

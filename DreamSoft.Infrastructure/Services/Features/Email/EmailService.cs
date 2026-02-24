@@ -11,10 +11,8 @@ namespace DreamSoft.Infrastructure.Services.Features.Email;
 /// </summary>
 public class EmailService : IEmailService
 {
-    private readonly IConfiguration _configuration;
     private readonly ILogger<EmailService> _logger;
     private readonly HttpClient _httpClient;
-    private readonly string _apiKey;
     private readonly string _fromEmail;
     private readonly string _fromName;
 
@@ -23,24 +21,19 @@ public class EmailService : IEmailService
         ILogger<EmailService> logger,
         IHttpClientFactory httpClientFactory)
     {
-        _configuration = configuration;
         _logger = logger;
         _httpClient = httpClientFactory.CreateClient("Resend");
 
-        _apiKey = configuration["Resend:ResendApiKey"]
+        var apiKey = configuration["Resend:ResendApiKey"]
             ?? throw new InvalidOperationException("Resend API Key not configured");
         _fromEmail = configuration["Resend:FromEmail"]
             ?? throw new InvalidOperationException("Resend FromEmail not configured");
         _fromName = configuration["Resend:FromName"] ?? "DreamSoft ERP";
 
-        // Configure HttpClient
         _httpClient.BaseAddress = new Uri("https://api.resend.com");
-        _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
+        _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
     }
 
-    /// <summary>
-    /// Sends verification code email
-    /// </summary>
     public async Task<bool> SendVerificationCodeAsync(
         string toEmail,
         string code,
@@ -78,9 +71,6 @@ public class EmailService : IEmailService
         }
     }
 
-    /// <summary>
-    /// Sends welcome email after successful registration
-    /// </summary>
     public async Task SendWelcomeEmailAsync(
         string toEmail,
         string firstName,
@@ -119,9 +109,6 @@ public class EmailService : IEmailService
         }
     }
 
-    /// <summary>
-    /// Sends password reset email
-    /// </summary>
     public async Task SendPasswordResetEmailAsync(
         string toEmail,
         string resetToken,
@@ -158,7 +145,7 @@ public class EmailService : IEmailService
         }
     }
 
-    private string GetVerificationEmailHtml(string verificationCode)
+    private static string GetVerificationEmailHtml(string verificationCode)
     {
         return $@"
 <!DOCTYPE html>
@@ -238,7 +225,7 @@ public class EmailService : IEmailService
 </html>";
     }
 
-    private string GetWelcomeEmailHtml(string firstName, string companyName, string subdomain)
+    private static string GetWelcomeEmailHtml(string firstName, string companyName, string subdomain)
     {
         return $@"
 <!DOCTYPE html>
@@ -326,7 +313,7 @@ public class EmailService : IEmailService
 </html>";
     }
 
-    private string GetPasswordResetEmailHtml(string resetToken)
+    private static string GetPasswordResetEmailHtml(string resetToken)
     {
         return $@"
 <!DOCTYPE html>

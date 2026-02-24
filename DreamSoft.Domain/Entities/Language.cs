@@ -1,30 +1,20 @@
 using DreamSoft.Domain.Common;
+using DreamSoft.Domain.ValueObjects;
 
 namespace DreamSoft.Domain.Entities;
 
-public class Language : AuditableEntity
+public class Language : LookupEntity
 {
-    public string Code { get; private set; } = null!;
-    public string Name { get; private set; } = null!;
-    public string NativeName { get; private set; } = null!;
-    public bool IsDefault { get; private set; }
+    public string Code { get; set; } = null!;
+    public bool IsDefault { get; set; }
 
-    // Navigation property
-    public ICollection<User> Users { get; private set; } = new List<User>();
+    // Navigation properties
+    public ICollection<Tenant> Tenants { get; private set; } = [];
+    public ICollection<User> Users { get; private set; } = [];
 
-    // Private constructor for EF Core
-    private Language()
-    {
-    }
+    private Language() { }
 
-    /// <summary>
-    /// Creates a new language (typically used for seeding)
-    /// </summary>
-    public static Language Create(
-        string code,
-        string name,
-        string nativeName,
-        bool isDefault = false)
+    public static Language Create(string code, string name, TranslatedString translations, bool isDefault = false)
     {
         if (string.IsNullOrWhiteSpace(code))
             throw new ArgumentException("Code is required", nameof(code));
@@ -32,50 +22,26 @@ public class Language : AuditableEntity
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Name is required", nameof(name));
 
-        if (string.IsNullOrWhiteSpace(nativeName))
-            throw new ArgumentException("Native name is required", nameof(nativeName));
+        ArgumentNullException.ThrowIfNull(translations, nameof(translations));
 
         var language = new Language
         {
             Code = code.ToLower().Trim(),
             Name = name.Trim(),
-            NativeName = nativeName.Trim(),
+            Translations = translations,
             IsDefault = isDefault
         };
 
-        language.InitializeAudit(); // Initialize base audit fields
-
+        language.InitializeAudit();
         return language;
     }
 
-    /// <summary>
-    /// Updates language information
-    /// </summary>
-    public void Update(string name, string nativeName)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-            throw new ArgumentException("Name is required", nameof(name));
-
-        if (string.IsNullOrWhiteSpace(nativeName))
-            throw new ArgumentException("Native name is required", nameof(nativeName));
-
-        Name = name.Trim();
-        NativeName = nativeName.Trim();
-        MarkAsUpdated();
-    }
-
-    /// <summary>
-    /// Sets as default language
-    /// </summary>
     public void SetAsDefault()
     {
         IsDefault = true;
         MarkAsUpdated();
     }
 
-    /// <summary>
-    /// Removes default flag
-    /// </summary>
     public void RemoveDefault()
     {
         IsDefault = false;

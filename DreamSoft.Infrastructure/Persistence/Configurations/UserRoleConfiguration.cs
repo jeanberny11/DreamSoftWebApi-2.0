@@ -4,15 +4,21 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DreamSoft.Infrastructure.Persistence.Configurations;
 
+/// <summary>
+/// Entity Framework Core configuration for the UserRole join entity.
+/// Maps to the 'user_roles' table with composite PK (user_id, role_id).
+/// </summary>
 public class UserRoleConfiguration : IEntityTypeConfiguration<UserRole>
 {
     public void Configure(EntityTypeBuilder<UserRole> builder)
     {
+        // Table mapping
         builder.ToTable("user_roles");
 
-        // FIXED: Composite primary key matching database structure (no id column)
+        // Composite primary key
         builder.HasKey(ur => new { ur.UserId, ur.RoleId });
 
+        // Properties
         builder.Property(ur => ur.UserId)
             .HasColumnName("user_id")
             .IsRequired();
@@ -21,51 +27,28 @@ public class UserRoleConfiguration : IEntityTypeConfiguration<UserRole>
             .HasColumnName("role_id")
             .IsRequired();
 
-        builder.Property(ur => ur.CreatedBy)
-            .HasColumnName("created_by");
-
-        builder.Property(ur => ur.UpdatedBy)
-            .HasColumnName("updated_by");
-
-        builder.Property(ur => ur.IsActive)
-            .HasColumnName("is_active")
-            .HasDefaultValue(true);
-
-        builder.Property(ur => ur.CreatedAt)
-            .HasColumnName("created_at")
+        builder.Property(ur => ur.AssignedAt)
+            .HasColumnName("assigned_at")
+            .IsRequired()
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-        builder.Property(ur => ur.UpdatedAt)
-            .HasColumnName("updated_at")
-            .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-        // Indexes
-        builder.HasIndex(ur => ur.UserId).HasDatabaseName("idx_user_roles_user");
-        builder.HasIndex(ur => ur.RoleId).HasDatabaseName("idx_user_roles_role");
+        builder.Property(ur => ur.AssignedBy)
+            .HasColumnName("assigned_by");
 
         // Relationships
         builder.HasOne(ur => ur.User)
             .WithMany(u => u.UserRoles)
             .HasForeignKey(ur => ur.UserId)
-            .OnDelete(DeleteBehavior.Cascade)
-            .HasConstraintName("user_roles_user_id_fkey");
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(ur => ur.Role)
             .WithMany(r => r.UserRoles)
             .HasForeignKey(ur => ur.RoleId)
-            .OnDelete(DeleteBehavior.Cascade)
-            .HasConstraintName("user_roles_role_id_fkey");
+            .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasOne(ur => ur.CreatedByUser)
-            .WithMany()
-            .HasForeignKey(ur => ur.CreatedBy)
-            .OnDelete(DeleteBehavior.SetNull)
-            .HasConstraintName("user_roles_created_by_fkey");
-
-        builder.HasOne(ur => ur.UpdatedByUser)
-            .WithMany()
-            .HasForeignKey(ur => ur.UpdatedBy)
-            .OnDelete(DeleteBehavior.SetNull)
-            .HasConstraintName("user_roles_updated_by_fkey");
+        builder.HasOne(ur => ur.AssignedByUser)
+            .WithMany(u => u.AssignedUserRoles)
+            .HasForeignKey(ur => ur.AssignedBy)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

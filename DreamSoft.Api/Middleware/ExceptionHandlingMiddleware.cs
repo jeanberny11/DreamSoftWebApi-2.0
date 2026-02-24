@@ -96,6 +96,10 @@ public class ExceptionHandlingMiddleware(
     {
         var (statusCode, errorCode, errorType) = MapExceptionToHttpStatus(exception);
 
+        // ForbiddenException carries its own specific error code — use it directly
+        if (exception is ForbiddenException forbiddenEx)
+            errorCode = forbiddenEx.ErrorCode;
+
         context.Response.StatusCode = statusCode;
 
         // Get localized message using resource key and parameters
@@ -135,7 +139,9 @@ public class ExceptionHandlingMiddleware(
             StatusCode = (int)HttpStatusCode.InternalServerError,
             ErrorCode = ErrorCodes.InternalError,
             ErrorType = ErrorTypes.InternalError,
-            ErrorMessage = _localizer["InternalServerError"],
+            ErrorMessage = _environment.IsDevelopment()
+                ? $"{exception.GetType().Name}: {exception.Message}{(exception.InnerException != null ? $" | Inner: {exception.InnerException.Message}" : string.Empty)}"
+                : _localizer["InternalServerError"],
             TraceId = traceId,
             Timestamp = timestamp,
             StackTrace = _environment.IsDevelopment() ? exception.StackTrace : null
@@ -168,6 +174,11 @@ public class ExceptionHandlingMiddleware(
                 (int)HttpStatusCode.Unauthorized,
                 ErrorCodes.Unauthorized,
                 ErrorTypes.Unauthorized
+            ),
+            ForbiddenException => (
+                (int)HttpStatusCode.Forbidden,
+                ErrorCodes.Forbidden,
+                ErrorTypes.Forbidden
             ),
             RateLimitExceededException => (
                 (int)HttpStatusCode.TooManyRequests,

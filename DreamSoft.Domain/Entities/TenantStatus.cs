@@ -5,20 +5,19 @@ namespace DreamSoft.Domain.Entities;
 
 public class TenantStatus : LookupEntity
 {
-    public int DisplayOrder { get; private set; }
+    public string Code { get; set; } = null!;
+    public string Description { get; set; } = "";
 
-    // Navigation property
-    public ICollection<Tenant> Tenants { get; private set; } = new List<Tenant>();
+    // Navigation properties
+    public ICollection<Tenant> Tenants { get; private set; } = [];
 
-    // Private constructor for EF Core
-    private TenantStatus()
-    {
-    }
+    private TenantStatus() { }
 
-    /// <summary>
-    /// Creates a new tenant status (typically only used for seeding)
-    /// </summary>
-    public static TenantStatus Create(string code, string name, TranslatedString translations, int displayOrder)
+    public static TenantStatus Create(
+        string code,
+        string name,
+        TranslatedString translations,
+        string description = "")
     {
         if (string.IsNullOrWhiteSpace(code))
             throw new ArgumentException("Code is required", nameof(code));
@@ -26,36 +25,32 @@ public class TenantStatus : LookupEntity
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Name is required", nameof(name));
 
+        ArgumentNullException.ThrowIfNull(translations, nameof(translations));
+
+        // Ensure code is lowercase (database constraint)
+        var lowerCode = code.ToLower().Trim();
+
         var tenantStatus = new TenantStatus
         {
+            Code = lowerCode,
             Name = name.Trim(),
-            Translations = translations,
-            DisplayOrder = displayOrder
+            Description = description.Trim(),
+            Translations = translations
         };
 
-        tenantStatus.InitializeAudit(); // Initialize base audit fields
-
+        tenantStatus.InitializeAudit();
         return tenantStatus;
     }
 
-    /// <summary>
-    /// Updates the name and translations
-    /// </summary>
-    public void UpdateName(string name, TranslatedString translations)
+    public void UpdateDetails(string name, string description, TranslatedString translations)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Name is required", nameof(name));
 
-        Name = name.Trim();
-        UpdateTranslations(translations);
-    }
+        ArgumentNullException.ThrowIfNull(translations, nameof(translations));
 
-    /// <summary>
-    /// Updates display order
-    /// </summary>
-    public void UpdateDisplayOrder(int displayOrder)
-    {
-        DisplayOrder = displayOrder;
-        MarkAsUpdated();
+        Name = name.Trim();
+        Description = description.Trim();
+        UpdateTranslations(translations);
     }
 }

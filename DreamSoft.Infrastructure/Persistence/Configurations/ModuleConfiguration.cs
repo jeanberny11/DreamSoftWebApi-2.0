@@ -4,61 +4,96 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DreamSoft.Infrastructure.Persistence.Configurations;
 
+/// <summary>
+/// Entity Framework Core configuration for Module entity
+/// Maps to the 'modules' table in PostgreSQL
+/// </summary>
 public class ModuleConfiguration : IEntityTypeConfiguration<Module>
 {
     public void Configure(EntityTypeBuilder<Module> builder)
     {
+        // Table mapping
         builder.ToTable("modules");
 
+        // Primary key
         builder.HasKey(m => m.Id);
-
         builder.Property(m => m.Id)
             .HasColumnName("id")
             .ValueGeneratedOnAdd();
 
+        // Properties mapping
         builder.Property(m => m.Code)
             .HasColumnName("code")
             .HasMaxLength(50)
-            .IsRequired();
+            .IsRequired()
+            .HasDefaultValue(string.Empty);
 
         builder.Property(m => m.Name)
             .HasColumnName("name")
-            .HasMaxLength(100)
-            .IsRequired();
+            .HasMaxLength(50)
+            .IsRequired()
+            .HasDefaultValue(string.Empty);
 
         builder.Property(m => m.Description)
             .HasColumnName("description")
-            .HasColumnType("text");
+            .HasMaxLength(200)
+            .IsRequired()
+            .HasDefaultValue(string.Empty);
 
         builder.Property(m => m.Icon)
             .HasColumnName("icon")
-            .HasMaxLength(100);
+            .HasMaxLength(50)
+            .IsRequired()
+            .HasDefaultValue(string.Empty);
 
         builder.Property(m => m.SortOrder)
-            .HasColumnName("sort_order");
+            .HasColumnName("sort_order")
+            .IsRequired()
+            .HasDefaultValue(0);
 
-        // TranslatedString as JSONB (nullable)
+        // JSONB Translation Configuration (Name + Description)
         builder.OwnsOne(m => m.Translations, translations =>
         {
             translations.ToJson("translations");
-            translations.Property(ts => ts.Spanish).HasJsonPropertyName("es").IsRequired();
-            translations.Property(ts => ts.English).HasJsonPropertyName("en");
+
+            translations.OwnsOne(t => t.English, english =>
+            {
+                english.ToJson("en");
+                english.Property(e => e.Name)
+                    .HasJsonPropertyName("name");
+                english.Property(e => e.Descripcion)
+                    .HasJsonPropertyName("description");
+            });
+
+            translations.OwnsOne(t => t.Spanish, spanish =>
+            {
+                spanish.ToJson("es");
+                spanish.Property(s => s.Name)
+                    .HasJsonPropertyName("name")
+                    .IsRequired();
+                spanish.Property(s => s.Descripcion)
+                    .HasJsonPropertyName("description");
+            });
         });
 
+        // Audit fields
         builder.Property(m => m.IsActive)
             .HasColumnName("is_active")
+            .IsRequired()
             .HasDefaultValue(true);
 
         builder.Property(m => m.CreatedAt)
             .HasColumnName("created_at")
+            .IsRequired()
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
         builder.Property(m => m.UpdatedAt)
-            .HasColumnName("updated_at")
-            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+            .HasColumnName("updated_at");
 
-        // Indexes - FIXED: Removed duplicate Code index
-        builder.HasIndex(m => m.Code).IsUnique().HasDatabaseName("modules_code_key");
-        //builder.HasIndex(m => m.Translations).HasDatabaseName("idx_modules_translations");
+        // Relationships
+        builder.HasMany(m => m.MenuOptions)
+            .WithOne(o => o.Module)
+            .HasForeignKey(o => o.ModuleId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

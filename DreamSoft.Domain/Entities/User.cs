@@ -1,205 +1,207 @@
 using DreamSoft.Domain.Common;
-using DreamSoft.Domain.Exceptions;
 
 namespace DreamSoft.Domain.Entities;
 
 public class User : TenantEntity
 {
-    // Identity
-    public string Username { get; private set; } = null!;
-    public string PasswordHash { get; private set; } = null!;
-
-    // Profile
-    public string FirstName { get; private set; } = null!;
-    public string LastName { get; private set; } = null!;
-    public string? Phone { get; private set; }
-    public int? GenderId { get; private set; }
-    public DateTime? DateOfBirth { get; private set; }
-    public int? IdTypeId { get; private set; }
-    public string? IdNumber { get; private set; }
-    public string? Address { get; private set; }
-    public string? AvatarUrl { get; private set; }
-
-    // Settings
-    public int LanguageId { get; private set; }
-
-    // Status
+    public string Username { get; set; } = null!;
+    public string Email { get; set; } = null!;
+    public string PasswordHash { get; set; } = null!;
+    public string FirstName { get; set; } = null!;
+    public string? MiddleName { get; set; }
+    public string LastName { get; set; } = null!;
+    public string? SecondLastName { get; set; }
+    public int? GenderId { get; set; }
+    public DateTime? DateOfBirth { get; set; }
+    public int? IdTypeId { get; set; }
+    public string? IdNumber { get; set; }
+    public string? Phone { get; set; }
+    public string? Mobile { get; set; }
+    public string? AvatarUrl { get; set; }
+    public int? LanguageId { get; set; }
+    public bool IsEmailVerified { get; set; }
     public bool IsAdmin { get; private set; }
-    public DateTime? LastLoginAt { get; private set; }
-    public DateTime? LastPasswordChangeAt { get; private set; }
+    public DateTime? LastLoginAt { get; set; }
+    public int FailedLoginAttempts { get; set; }
+    public DateTime? LockoutUntil { get; set; }
 
-    // Navigation properties - Note: Tenant is inherited from TenantEntity
-    public Language Language { get; private set; } = null!;
-    public Gender? Gender { get; private set; }
-    public IdType? IdType { get; private set; }
-    public ICollection<RefreshToken> RefreshTokens { get; private set; } = [];
+    // Navigation properties
+    public Gender? Gender { get; set; }
+    public IdType? IdType { get; set; }
+    public Language? Language { get; set; }
     public ICollection<UserRole> UserRoles { get; private set; } = [];
+    public ICollection<RefreshToken> RefreshTokens { get; private set; } = [];
 
-    // Private constructor for EF Core
-    private User()
-    {
-    }
+    // Self-referential navigation properties for audit trail
+    public ICollection<User> CreatedUsers { get; private set; } = [];
+    public ICollection<User> UpdatedUsers { get; private set; } = [];
+    public ICollection<Role> CreatedRoles { get; private set; } = [];
+    public ICollection<Role> UpdatedRoles { get; private set; } = [];
+    public ICollection<UserRole> AssignedUserRoles { get; private set; } = [];
 
-    /// <summary>
-    /// Creates a new user
-    /// </summary>
+    private User() { }
+
     public static User Create(
         int tenantId,
         string username,
+        string email,
         string passwordHash,
         string firstName,
         string lastName,
-        int languageId,
-        string? phone = null,
-        bool isAdmin = false,
-        int? createdBy = null)
+        int? languageId = null,
+        int? createdBy = null,
+        bool isAdmin = false)
     {
-        // Validation
         if (string.IsNullOrWhiteSpace(username))
-            throw new DomainException("Username is required");
+            throw new ArgumentException("Username is required", nameof(username));
 
-        if (username.Length < 3)
-            throw new DomainException("Username must be at least 3 characters");
+        if (string.IsNullOrWhiteSpace(email))
+            throw new ArgumentException("Email is required", nameof(email));
 
         if (string.IsNullOrWhiteSpace(passwordHash))
-            throw new DomainException("Password hash is required");
+            throw new ArgumentException("Password hash is required", nameof(passwordHash));
 
         if (string.IsNullOrWhiteSpace(firstName))
-            throw new DomainException("First name is required");
+            throw new ArgumentException("First name is required", nameof(firstName));
 
         if (string.IsNullOrWhiteSpace(lastName))
-            throw new DomainException("Last name is required");
-
-        if (languageId <= 0)
-            throw new DomainException("Language ID is required");
+            throw new ArgumentException("Last name is required", nameof(lastName));
 
         var user = new User
         {
-            Username = username.ToLower().Trim(),
+            Username = username.Trim().ToLower(),
+            Email = email.Trim().ToLower(),
             PasswordHash = passwordHash,
             FirstName = firstName.Trim(),
             LastName = lastName.Trim(),
-            Phone = phone?.Trim(),
             LanguageId = languageId,
-            IsAdmin = isAdmin,
-            LastPasswordChangeAt = DateTime.UtcNow
+            IsEmailVerified = false,
+            IsAdmin = isAdmin
         };
 
-        user.InitializeTenantEntity(tenantId, createdBy); // Initialize tenant + audit fields
-
+        user.InitializeTenantEntity(tenantId, createdBy);
         return user;
     }
 
-    /// <summary>
-    /// Full name of the user
-    /// </summary>
-    public string FullName => $"{FirstName} {LastName}";
-
-    /// <summary>
-    /// Updates user profile
-    /// </summary>
     public void UpdateProfile(
         string firstName,
         string lastName,
-        int? updatedBy = null,
-        string? phone = null,
-        int? genderId = null,
+        string? middleName = null,
+        string? secondLastName = null,
         DateTime? dateOfBirth = null,
-        int? idTypeId = null,
-        string? idNumber = null,
-        string? address = null)
+        int? genderId = null,
+        int? updatedBy = null)
     {
         if (string.IsNullOrWhiteSpace(firstName))
-            throw new DomainException("First name is required");
+            throw new ArgumentException("First name is required", nameof(firstName));
 
         if (string.IsNullOrWhiteSpace(lastName))
-            throw new DomainException("Last name is required");
+            throw new ArgumentException("Last name is required", nameof(lastName));
 
         FirstName = firstName.Trim();
         LastName = lastName.Trim();
-        Phone = phone?.Trim();
-        GenderId = genderId;
+        MiddleName = middleName?.Trim();
+        SecondLastName = secondLastName?.Trim();
         DateOfBirth = dateOfBirth;
+        GenderId = genderId;
+
+        RecordUpdate(updatedBy);
+    }
+
+    public void UpdateIdentification(int? idTypeId, string? idNumber, int? updatedBy = null)
+    {
         IdTypeId = idTypeId;
         IdNumber = idNumber?.Trim();
-        Address = address?.Trim();
-
-        RecordUpdate(updatedBy); // Now tracking who updated
+        RecordUpdate(updatedBy);
     }
 
-    /// <summary>
-    /// Updates username
-    /// </summary>
-    public void UpdateUsername(string newUsername, int? updatedBy = null)
+    public void UpdateContactInfo(string? phone, string? mobile, int? updatedBy = null)
     {
-        if (string.IsNullOrWhiteSpace(newUsername))
-            throw new DomainException("Username is required");
-
-        if (newUsername.Length < 3)
-            throw new DomainException("Username must be at least 3 characters");
-
-        Username = newUsername.ToLower().Trim();
-        RecordUpdate(updatedBy); // Now tracking who updated
+        Phone = phone?.Trim();
+        Mobile = mobile?.Trim();
+        RecordUpdate(updatedBy);
     }
 
-    /// <summary>
-    /// Updates password hash
-    /// </summary>
-    public void UpdatePassword(string newPasswordHash, int? updatedBy = null)
+    public void UpdateEmail(string email, int? updatedBy = null)
     {
-        if (string.IsNullOrWhiteSpace(newPasswordHash))
-            throw new DomainException("Password hash is required");
+        if (string.IsNullOrWhiteSpace(email))
+            throw new ArgumentException("Email is required", nameof(email));
 
-        PasswordHash = newPasswordHash;
-        LastPasswordChangeAt = DateTime.UtcNow;
-        RecordUpdate(updatedBy); // Now tracking who updated
+        Email = email.Trim().ToLower();
+        IsEmailVerified = false; // Reset verification when email changes
+        RecordUpdate(updatedBy);
     }
 
-    /// <summary>
-    /// Updates avatar
-    /// </summary>
-    public void UpdateAvatar(string? avatarUrl, int? updatedBy = null)
+    public void VerifyEmail(int? updatedBy = null)
     {
-        AvatarUrl = avatarUrl?.Trim();
-        RecordUpdate(updatedBy); // Now tracking who updated
+        IsEmailVerified = true;
+        RecordUpdate(updatedBy);
     }
 
-    /// <summary>
-    /// Updates preferred language
-    /// </summary>
+    public void UpdatePassword(string passwordHash, int? updatedBy = null)
+    {
+        if (string.IsNullOrWhiteSpace(passwordHash))
+            throw new ArgumentException("Password hash is required", nameof(passwordHash));
+
+        PasswordHash = passwordHash;
+        RecordUpdate(updatedBy);
+    }
+
+    public void UpdateAvatar(string avatarUrl, int? updatedBy = null)
+    {
+        AvatarUrl = avatarUrl.Trim();
+        RecordUpdate(updatedBy);
+    }
+
     public void UpdateLanguage(int languageId, int? updatedBy = null)
     {
         if (languageId <= 0)
-            throw new DomainException("Language ID must be valid");
+            throw new ArgumentException("Language ID must be greater than zero", nameof(languageId));
 
         LanguageId = languageId;
-        RecordUpdate(updatedBy); // Now tracking who updated
+        RecordUpdate(updatedBy);
     }
 
-    /// <summary>
-    /// Records successful login (doesn't update UpdatedAt or UpdatedBy)
-    /// </summary>
-    public void RecordSuccessfulLogin()
+    // ── Lockout constants ───────────────────────────────────────────────────
+    public const int MaxFailedAttempts = 5;
+    public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
+
+    public bool IsLockedOut()
+        => LockoutUntil.HasValue && DateTime.UtcNow < LockoutUntil.Value;
+
+    public void RecordFailedLogin()
+    {
+        FailedLoginAttempts++;
+        if (FailedLoginAttempts >= MaxFailedAttempts)
+            LockoutUntil = DateTime.UtcNow.Add(LockoutDuration);
+        MarkAsUpdated();
+    }
+
+    public void ResetFailedLoginAttempts()
+    {
+        FailedLoginAttempts = 0;
+        LockoutUntil = null;
+        MarkAsUpdated();
+    }
+
+    public void RecordLogin()
     {
         LastLoginAt = DateTime.UtcNow;
-        // Don't call RecordUpdate - login is not an "update" action
+        MarkAsUpdated();
     }
 
-    /// <summary>
-    /// Promotes user to admin
-    /// </summary>
-    public void PromoteToAdmin(int? updatedBy = null)
+    public string GetFullName()
     {
-        IsAdmin = true;
-        RecordUpdate(updatedBy); // Now tracking who updated
-    }
+        var names = new List<string> { FirstName };
+        
+        if (!string.IsNullOrWhiteSpace(MiddleName))
+            names.Add(MiddleName);
+        
+        names.Add(LastName);
+        
+        if (!string.IsNullOrWhiteSpace(SecondLastName))
+            names.Add(SecondLastName);
 
-    /// <summary>
-    /// Demotes user from admin
-    /// </summary>
-    public void DemoteFromAdmin(int? updatedBy = null)
-    {
-        IsAdmin = false;
-        RecordUpdate(updatedBy); // Now tracking who updated
+        return string.Join(" ", names);
     }
 }

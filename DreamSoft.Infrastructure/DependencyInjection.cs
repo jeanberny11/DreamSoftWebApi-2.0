@@ -2,13 +2,11 @@ using DreamSoft.Application.Common.Interfaces;
 using DreamSoft.Domain.Repositories;
 using DreamSoft.Infrastructure.Persistence;
 using DreamSoft.Infrastructure.Services.Common;
-using DreamSoft.Infrastructure.Services.Features.Authentication;
-using DreamSoft.Infrastructure.Services.Features.Caching;
 using DreamSoft.Infrastructure.Services.Features.Email;
+using DreamSoft.Infrastructure.Services.RateLimit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using StackExchange.Redis;
 
 namespace DreamSoft.Infrastructure;
 
@@ -34,20 +32,16 @@ public static class DependencyInjection
         // Common Services
         services.AddTransient<IDateTime, DateTimeService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<ITenantService, TenantService>();
+        services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IPasswordHasher, PasswordHasherService>();
 
-        // Feature Services - Authentication
-        services.AddScoped<IPasswordHasher, PasswordHasher>();
-        services.AddScoped<IJwtService, JwtService>();
-
-        // Feature Services - Caching (Redis)
-        services.AddSingleton<IConnectionMultiplexer>(sp =>
-            ConnectionMultiplexer.Connect(
-                configuration.GetConnectionString("Redis") ?? "localhost:6379"));
-        services.AddScoped<IRedisService, RedisService>();
-
-        // Feature Services - Email (Resend API)
+        // Email Service (Resend API)
         services.AddHttpClient("Resend");
         services.AddScoped<IEmailService, EmailService>();
+
+        // Rate limiting — singleton so the in-memory window state persists across requests
+        services.AddSingleton<IRateLimitService, InMemoryRateLimitService>();
 
         // Required for CurrentUserService to access HTTP context
         services.AddHttpContextAccessor();

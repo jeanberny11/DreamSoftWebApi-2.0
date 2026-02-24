@@ -1,305 +1,223 @@
 using DreamSoft.Domain.Common;
-using DreamSoft.Domain.Exceptions;
 
 namespace DreamSoft.Domain.Entities;
 
 public class Tenant : AuditableEntity
 {
-    // Business Identity
-    public string TenantNumber { get; private set; } = null!;
-    public string CompanyName { get; private set; } = null!;
-    public string Subdomain { get; private set; } = null!;
+    public string CompanyName { get; set; } = null!;
+    public string Subdomain { get; set; } = null!;
+    public string TaxId { get; set; } = "";
+    public bool TaxIdVerified { get; set; }
+    public DateTime? TaxIdVerifiedAt { get; set; }
+    public int? TaxIdVerifiedBy { get; set; }
+    public string Email { get; set; } = null!;
+    public bool EmailVerified { get; set; }
+    public DateTime? EmailVerifiedAt { get; set; }
+    public string Phone { get; set; } = "";
+    public string Website { get; set; } = "";
+    public string AddressLine1 { get; set; } = "";
+    public string AddressLine2 { get; set; } = "";
+    public int? CountryId { get; set; }
+    public int? ProvinceId { get; set; }
+    public int? MunicipalityId { get; set; }
+    public string PostalCode { get; set; } = "";
+    public int CurrencyId { get; set; }
+    public int LanguageId { get; set; }
+    public string LogoUrl { get; set; } = "";
+    public int StatusId { get; set; }
 
-    // Tax/Legal Information
-    public string? TaxId { get; private set; }
-    public bool TaxIdVerified { get; private set; }
-    public DateTime? TaxIdVerifiedAt { get; private set; }
-    public Guid? TaxIdVerifiedBy { get; private set; }
+    // Terms of Service acceptance
+    /// <summary>Version string of the ToS the tenant accepted (e.g. "2025-01-01").</summary>
+    public string? TermsVersion { get; private set; }
 
-    // Contact Information
-    public string Email { get; private set; } = null!;
-    public bool EmailVerified { get; private set; }
-    public DateTime? EmailVerifiedAt { get; private set; }
-    public string? Phone { get; private set; }
-    public string? Website { get; private set; }
+    /// <summary>UTC timestamp when the tenant accepted the Terms of Service.</summary>
+    public DateTime? TermsAcceptedAt { get; private set; }
 
-    // Address
-    public string? AddressLine1 { get; private set; }
-    public string? AddressLine2 { get; private set; }
-    public int? CountryId { get; private set; }
-    public int? ProvinceId { get; private set; }
-    public int? MunicipalityId { get; private set; }
-    public string? PostalCode { get; private set; }
+    /// <summary>IP address from which the ToS were accepted.</summary>
+    public string? TermsAcceptedIp { get; private set; }
 
-    // Settings
-    public string? IndustryType { get; private set; }
-    public string Timezone { get; private set; } = "America/Santo_Domingo";
-    public string Currency { get; private set; } = "DOP";
-    public string DefaultLanguage { get; private set; } = "es";
+    // Navigation properties
+    public Country? Country { get; set; }
+    public Province? Province { get; set; }
+    public Municipality? Municipality { get; set; }
+    public Language Language { get; set; } = null!;
+    public Currency Currency { get; set; } = null!;
+    public TenantStatus Status { get; set; } = null!;
+    public ICollection<User> Users { get; private set; } = [];
+    public ICollection<Role> Roles { get; private set; } = [];
+    public ICollection<TenantSubscription> TenantSubscriptions { get; private set; } = [];
 
-    // Branding
-    public string? LogoUrl { get; private set; }
+    private Tenant() { }
 
-    // Status (Foreign Key to TenantStatus lookup table)
-    public int StatusId { get; private set; }
-    public TenantStatus Status { get; private set; } = null!;
-
-    // Private constructor for EF Core
-    private Tenant()
-    {
-    }
-
-    /// <summary>
-    /// Creates a new tenant (factory method)
-    /// </summary>
     public static Tenant Create(
-        string tenantNumber,
         string companyName,
         string subdomain,
         string email,
-        int trialStatusId,
-        string? taxId = null,
-        string? phone = null)
-    {
-        // Validation
-        if (string.IsNullOrWhiteSpace(tenantNumber))
-            throw new DomainException("Tenant number is required");
-
-        if (string.IsNullOrWhiteSpace(companyName))
-            throw new DomainException("Company name is required");
-
-        if (string.IsNullOrWhiteSpace(subdomain))
-            throw new DomainException("Subdomain is required");
-
-        if (!IsValidSubdomain(subdomain))
-            throw new DomainException("Subdomain must contain only lowercase letters, numbers, and hyphens");
-
-        if (string.IsNullOrWhiteSpace(email))
-            throw new DomainException("Email is required");
-
-        if (!IsValidEmail(email))
-            throw new DomainException("Invalid email format");
-
-        var tenant = new Tenant
-        {
-            TenantNumber = tenantNumber.Trim(),
-            CompanyName = companyName.Trim(),
-            Subdomain = subdomain.ToLower().Trim(),
-            Email = email.ToLower().Trim(),
-            TaxId = taxId?.Trim(),
-            Phone = phone?.Trim(),
-            StatusId = trialStatusId, // Use the lookup table ID
-            EmailVerified = false,
-            TaxIdVerified = false
-        };
-
-        tenant.InitializeAudit(); // Initialize base audit fields
-
-        // Raise domain event (we'll implement event handling later)
-        // tenant.RaiseDomainEvent(new TenantCreatedEvent(tenant.Id));
-
-        return tenant;
-    }
-
-    /// <summary>
-    /// Updates company information
-    /// </summary>
-    public void UpdateCompanyInfo(
-        string companyName,
+        int currencyId,
+        int languageId,
+        int statusId,
         string? taxId = null,
         string? phone = null,
         string? website = null)
     {
         if (string.IsNullOrWhiteSpace(companyName))
-            throw new DomainException("Company name is required");
+            throw new ArgumentException("Company name is required", nameof(companyName));
+
+        if (string.IsNullOrWhiteSpace(subdomain))
+            throw new ArgumentException("Subdomain is required", nameof(subdomain));
+
+        if (string.IsNullOrWhiteSpace(email))
+            throw new ArgumentException("Email is required", nameof(email));
+
+        if (currencyId <= 0)
+            throw new ArgumentException("Currency ID must be greater than zero", nameof(currencyId));
+
+        if (languageId <= 0)
+            throw new ArgumentException("Language ID must be greater than zero", nameof(languageId));
+
+        if (statusId <= 0)
+            throw new ArgumentException("Status ID must be greater than zero", nameof(statusId));
+
+        var tenant = new Tenant
+        {
+            CompanyName = companyName.Trim(),
+            Subdomain = subdomain.ToLower().Trim(),
+            Email = email.Trim().ToLower(),
+            TaxId = taxId?.Trim() ?? "",
+            Phone = phone?.Trim() ?? "",
+            Website = website?.Trim() ?? "",
+            CurrencyId = currencyId,
+            LanguageId = languageId,
+            StatusId = statusId,
+            EmailVerified = false,
+            TaxIdVerified = false
+        };
+
+        tenant.InitializeAudit();
+        return tenant;
+    }
+
+    public void UpdateCompanyInfo(string companyName, string? taxId = null)
+    {
+        if (string.IsNullOrWhiteSpace(companyName))
+            throw new ArgumentException("Company name is required", nameof(companyName));
 
         CompanyName = companyName.Trim();
-        TaxId = taxId?.Trim();
-        Phone = phone?.Trim();
-        Website = website?.Trim();
-
+        TaxId = taxId?.Trim() ?? "";
         MarkAsUpdated();
     }
 
-    /// <summary>
-    /// Updates contact information
-    /// </summary>
-    public void UpdateContactInfo(string email, string? phone = null)
+    public void UpdateContactInfo(string email, string? phone = null, string? website = null)
     {
         if (string.IsNullOrWhiteSpace(email))
-            throw new DomainException("Email is required");
+            throw new ArgumentException("Email is required", nameof(email));
 
-        if (!IsValidEmail(email))
-            throw new DomainException("Invalid email format");
-
-        // If email changed, reset verification
-        if (Email != email.ToLower().Trim())
-        {
-            EmailVerified = false;
-            EmailVerifiedAt = null;
-        }
-
-        Email = email.ToLower().Trim();
-        Phone = phone?.Trim();
-
+        Email = email.Trim().ToLower();
+        Phone = phone?.Trim() ?? "";
+        Website = website?.Trim() ?? "";
+        EmailVerified = false;
         MarkAsUpdated();
     }
 
-    /// <summary>
-    /// Updates address
-    /// </summary>
-    public void UpdateAddress(
-        string? addressLine1,
-        string? addressLine2,
-        int? countryId,
-        int? provinceId,
-        int? municipalityId,
-        string? postalCode)
+    public void VerifyEmail(DateTime verifiedAt)
     {
-        AddressLine1 = addressLine1?.Trim();
-        AddressLine2 = addressLine2?.Trim();
+        EmailVerified = true;
+        EmailVerifiedAt = verifiedAt;
+        MarkAsUpdated();
+    }
+
+    public void VerifyTaxId(int verifiedByUserId, DateTime verifiedAt)
+    {
+        if (verifiedByUserId <= 0)
+            throw new ArgumentException("Verified by user ID must be greater than zero", nameof(verifiedByUserId));
+
+        TaxIdVerified = true;
+        TaxIdVerifiedAt = verifiedAt;
+        TaxIdVerifiedBy = verifiedByUserId;
+        MarkAsUpdated();
+    }
+
+    public void UpdateAddress(
+        string addressLine1,
+        string? addressLine2 = null,
+        string? postalCode = null,
+        int? countryId = null,
+        int? provinceId = null,
+        int? municipalityId = null)
+    {
+        AddressLine1 = addressLine1?.Trim() ?? "";
+        AddressLine2 = addressLine2?.Trim() ?? "";
+        PostalCode = postalCode?.Trim() ?? "";
         CountryId = countryId;
         ProvinceId = provinceId;
         MunicipalityId = municipalityId;
-        PostalCode = postalCode?.Trim();
-
         MarkAsUpdated();
     }
 
-    /// <summary>
-    /// Updates settings
-    /// </summary>
-    public void UpdateSettings(
-        string? industryType = null,
-        string? timezone = null,
-        string? currency = null,
-        string? defaultLanguage = null)
+    public void UpdatePreferences(int languageId, int currencyId)
     {
-        if (industryType != null)
-            IndustryType = industryType.Trim();
+        if (languageId <= 0)
+            throw new ArgumentException("Language ID must be greater than zero", nameof(languageId));
 
-        if (!string.IsNullOrWhiteSpace(timezone))
-            Timezone = timezone.Trim();
+        if (currencyId <= 0)
+            throw new ArgumentException("Currency ID must be greater than zero", nameof(currencyId));
 
-        if (!string.IsNullOrWhiteSpace(currency))
-            Currency = currency.Trim().ToUpper();
-
-        if (!string.IsNullOrWhiteSpace(defaultLanguage))
-        {
-            var lang = defaultLanguage.ToLower().Trim();
-            if (lang != "es" && lang != "en")
-                throw new DomainException("Supported languages are 'es' and 'en'");
-            DefaultLanguage = lang;
-        }
-
+        LanguageId = languageId;
+        CurrencyId = currencyId;
         MarkAsUpdated();
     }
 
-    /// <summary>
-    /// Updates logo
-    /// </summary>
     public void UpdateLogo(string logoUrl)
     {
-        if (string.IsNullOrWhiteSpace(logoUrl))
-            throw new DomainException("Logo URL cannot be empty");
-
-        LogoUrl = logoUrl.Trim();
-
+        LogoUrl = logoUrl?.Trim() ?? "";
         MarkAsUpdated();
     }
 
-    /// <summary>
-    /// Verifies email
-    /// </summary>
-    public void VerifyEmail()
+    public void UpdateStatus(int statusId)
     {
-        EmailVerified = true;
-        EmailVerifiedAt = DateTime.UtcNow;
+        if (statusId <= 0)
+            throw new ArgumentException("Status ID must be greater than zero", nameof(statusId));
 
+        StatusId = statusId;
         MarkAsUpdated();
     }
 
-    /// <summary>
-    /// Verifies tax ID
-    /// </summary>
-    public void VerifyTaxId(Guid verifiedByUserId)
-    {
-        if (string.IsNullOrWhiteSpace(TaxId))
-            throw new DomainException("Cannot verify empty tax ID");
-
-        TaxIdVerified = true;
-        TaxIdVerifiedAt = DateTime.UtcNow;
-        TaxIdVerifiedBy = verifiedByUserId;
-
-        MarkAsUpdated();
-    }
-
-    /// <summary>
-    /// Changes the tenant status
-    /// </summary>
-    public void ChangeStatus(int newStatusId)
-    {
-        if (newStatusId <= 0)
-            throw new DomainException("Invalid status ID");
-
-        StatusId = newStatusId;
-
-        MarkAsUpdated();
-
-        // Raise domain event based on new status
-        // We'll implement this later when we add domain events
-    }
-
-    /// <summary>
-    /// Activates the tenant (helper method)
-    /// </summary>
-    public void Activate(int activeStatusId)
-    {
-        if (!EmailVerified)
-            throw new DomainException("Email must be verified before activation");
-
-        StatusId = activeStatusId;
-        MarkAsUpdated();
-        // RaiseDomainEvent(new TenantActivatedEvent(Id));
-    }
-
-    /// <summary>
-    /// Suspends the tenant (helper method)
-    /// </summary>
-    public void Suspend(int suspendedStatusId)
-    {
-        StatusId = suspendedStatusId;
-        MarkAsUpdated();
-        // RaiseDomainEvent(new TenantSuspendedEvent(Id));
-    }
-
-    // Private validation helpers
-    private static bool IsValidSubdomain(string subdomain)
+    public void UpdateSubdomain(string subdomain)
     {
         if (string.IsNullOrWhiteSpace(subdomain))
-            return false;
+            throw new ArgumentException("Subdomain is required", nameof(subdomain));
 
-        // Only lowercase letters, numbers, and hyphens
-        // Must start with a letter
-        // Must be between 3-50 characters
-        return System.Text.RegularExpressions.Regex.IsMatch(
-            subdomain,
-            @"^[a-z][a-z0-9-]{2,49}$");
+        Subdomain = subdomain.ToLower().Trim();
+        MarkAsUpdated();
     }
 
-    private static bool IsValidEmail(string email)
+    /// <summary>
+    /// Records that the tenant accepted the Terms of Service.
+    /// Idempotent — re-calling with the same version is a no-op.
+    /// </summary>
+    public void AcceptTerms(string version, DateTime acceptedAt, string? acceptedIp)
     {
-        if (string.IsNullOrWhiteSpace(email))
-            return false;
+        if (string.IsNullOrWhiteSpace(version))
+            throw new ArgumentException("Terms version is required.", nameof(version));
 
-        try
-        {
-            var addr = new System.Net.Mail.MailAddress(email);
-            return addr.Address == email;
-        }
-        catch
-        {
-            return false;
-        }
+        TermsVersion    = version.Trim();
+        TermsAcceptedAt = acceptedAt;
+        TermsAcceptedIp = acceptedIp;
+        MarkAsUpdated();
+    }
+
+    /// <summary>
+    /// Transitions the tenant to a new status.
+    /// Business rules about valid transitions are enforced in the handler,
+    /// not here, keeping the domain simple.
+    /// </summary>
+    public void TransitionStatus(int newStatusId)
+    {
+        if (newStatusId <= 0)
+            throw new ArgumentException(
+                "Status ID must be greater than zero", nameof(newStatusId));
+
+        StatusId = newStatusId;
+        MarkAsUpdated();
     }
 }

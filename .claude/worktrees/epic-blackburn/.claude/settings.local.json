@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell.exe -Command \"Remove-Item -Recurse -Force ''C:\\\\Users\\\\ingbe\\\\Documents\\\\Projects\\\\C# Projects\\\\DreamSoftWebApi\\\\.claude\\\\worktrees\\\\epic-blackburn''\")",
+      "Bash(git worktree add:*)",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet restore:*)",
+      "Bash(dotnet test:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: Replace registration JWT with email-based OTP flow\n\nTenants are now identified by email on verify-email and resend-verification\ninstead of a short-lived registration JWT. This makes the flow resilient to\nbrowser crashes and tab closes, matching the approach used by Supabase / Auth0.\n\nChanges:\n- RegisterTenantResponse: returns { email, subdomain } instead of registrationToken\n- VerifyEmailCommand: Email replaces RegistrationToken; tenant looked up by\n  normalized email instead of JWT decoding\n- VerifyEmailCommandHandler: adds IP-based rate limit \\(verify-email:{ip},\n  5 attempts per 10 min\\) before DB lookup\n- ResendVerificationCommand: Email replaces RegistrationToken\n- ResendVerificationCommandHandler: tenant looked up by email; ITokenService\n  dependency removed entirely\n- ITokenService: GenerateRegistrationToken and GetTenantIdFromRegistrationToken\n  removed — interface now has only GenerateAccessToken and GenerateRefreshToken\n- TokenService: corresponding implementations removed\n- RegistrationController: ExtractBearerToken\\(\\) helper removed; VerifyEmail and\n  ResendVerification now accept { email, code } / { email } body DTOs\n- appsettings.json: add MaxVerifyEmailAttemptsPerWindow and VerifyEmailWindowMinutes\n- Tests: all handler tests updated to use email-based commands; StubTokenService\n  slimmed to match new interface; TokenService registration-token tests removed\n- CompleteOnboardingCommandHandlerTests: updated RegisterAsync helper to use\n  new response shape\n\nAll 73 tests pass.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\nEOF\n\\)\")"
+    ]
+  }
+}
