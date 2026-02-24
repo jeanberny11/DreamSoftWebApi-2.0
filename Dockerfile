@@ -2,18 +2,20 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copy solution and project files first (better layer caching)
-COPY DreamSoftWebApi.sln ./
+# Copy project files first (better layer caching)
 COPY DreamSoft.Api/DreamSoft.Api.csproj                         DreamSoft.Api/
 COPY DreamSoft.Application/DreamSoft.Application.csproj         DreamSoft.Application/
 COPY DreamSoft.Domain/DreamSoft.Domain.csproj                   DreamSoft.Domain/
 COPY DreamSoft.Infrastructure/DreamSoft.Infrastructure.csproj   DreamSoft.Infrastructure/
 
-# Restore dependencies
-RUN dotnet restore
+# Restore only the API project (pulls all referenced projects automatically)
+RUN dotnet restore DreamSoft.Api/DreamSoft.Api.csproj
 
 # Copy the rest of the source code
-COPY . .
+COPY DreamSoft.Api/           DreamSoft.Api/
+COPY DreamSoft.Application/   DreamSoft.Application/
+COPY DreamSoft.Domain/        DreamSoft.Domain/
+COPY DreamSoft.Infrastructure/ DreamSoft.Infrastructure/
 
 # Build and publish in Release mode
 RUN dotnet publish DreamSoft.Api/DreamSoft.Api.csproj \
