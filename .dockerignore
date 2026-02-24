@@ -1,0 +1,12 @@
+**/.vs
+**/.vscode
+**/.git
+**/.gitignore
+**/.claude
+**/bin
+**/obj
+**/tests
+**/*.md
+**/.github
+**/build-output.txt
+**/appsettings.Development.json
