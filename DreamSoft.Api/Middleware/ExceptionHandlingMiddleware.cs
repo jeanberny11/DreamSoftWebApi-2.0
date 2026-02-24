@@ -96,6 +96,10 @@ public class ExceptionHandlingMiddleware(
     {
         var (statusCode, errorCode, errorType) = MapExceptionToHttpStatus(exception);
 
+        // ForbiddenException carries its own specific error code — use it directly
+        if (exception is ForbiddenException forbiddenEx)
+            errorCode = forbiddenEx.ErrorCode;
+
         context.Response.StatusCode = statusCode;
 
         // Get localized message using resource key and parameters
@@ -170,6 +174,11 @@ public class ExceptionHandlingMiddleware(
                 (int)HttpStatusCode.Unauthorized,
                 ErrorCodes.Unauthorized,
                 ErrorTypes.Unauthorized
+            ),
+            ForbiddenException => (
+                (int)HttpStatusCode.Forbidden,
+                ErrorCodes.Forbidden,
+                ErrorTypes.Forbidden
             ),
             RateLimitExceededException => (
                 (int)HttpStatusCode.TooManyRequests,

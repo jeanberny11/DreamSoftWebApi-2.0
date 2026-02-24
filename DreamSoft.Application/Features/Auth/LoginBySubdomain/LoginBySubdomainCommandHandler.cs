@@ -16,7 +16,7 @@ public class LoginBySubdomainCommandHandler(
     : IRequestHandler<LoginBySubdomainCommand, LoginResponse>
 {
     // Short session — no RememberMe
-    private const int DefaultRefreshTokenExpiryDays = 7;
+    private const int DefaultRefreshTokenExpiryDays  = 7;
 
     // Extended session — RememberMe selected
     private const int ExtendedRefreshTokenExpiryDays = 30;
@@ -38,11 +38,7 @@ public class LoginBySubdomainCommandHandler(
                 cancellationToken)
             ?? throw new UnauthorizedException("Invalid credentials.");
 
-        // 3. Tenant must be active to allow logins
-        if (tenant.Status.Code != TenantStatusCodes.Active)
-            throw new UnauthorizedException("Tenant account is not active.");
-
-        // 4. Find the user by username within that tenant
+        // 3. Find the user by username within that tenant
         var user = await context.Users
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(
@@ -52,25 +48,52 @@ public class LoginBySubdomainCommandHandler(
                 cancellationToken)
             ?? throw new UnauthorizedException("Invalid credentials.");
 
-        // 5. Check email verification
-        if (!user.IsEmailVerified)
-            throw new UnauthorizedException("Email address has not been verified.");
-
-        // 6. Check account lockout
-        if (user.IsLockedOut())
-        {
-            var remaining = (int)Math.Ceiling(
-                (user.LockoutUntil!.Value - dateTime.UtcNow).TotalMinutes);
-            throw new UnauthorizedException(
-                $"Account is locked. Try again in {remaining} minute(s).");
-        }
-
-        // 7. Verify password
+        // 4. Verify password — always check before revealing any account/tenant state
         if (!passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
         {
             user.RecordFailedLogin();
             await context.SaveChangesAsync(cancellationToken);
             throw new UnauthorizedException("Invalid credentials.");
+        }
+
+        // 5. Credentials are valid — now check tenant state
+        switch (tenant.Status.Code)
+        {
+            case TenantStatusCodes.PendingEmailVerification:
+                throw new ForbiddenException(
+                    ForbiddenErrorCodes.TenantPendingEmailVerification,
+                    "Tenant email address has not been verified.");
+
+            case TenantStatusCodes.PendingSubscription:
+                throw new ForbiddenException(
+                    ForbiddenErrorCodes.TenantPendingSubscription,
+                    "Tenant subscription setup is not complete.");
+
+            case TenantStatusCodes.Suspended:
+                throw new ForbiddenException(
+                    ForbiddenErrorCodes.TenantSuspended,
+                    "Tenant account has been suspended.");
+
+            case TenantStatusCodes.Cancelled:
+                throw new ForbiddenException(
+                    ForbiddenErrorCodes.TenantCancelled,
+                    "Tenant account has been cancelled.");
+        }
+
+        // 6. Check user email verification
+        if (!user.IsEmailVerified)
+            throw new ForbiddenException(
+                ForbiddenErrorCodes.EmailNotVerified,
+                "Email address has not been verified.");
+
+        // 7. Check account lockout
+        if (user.IsLockedOut())
+        {
+            var remaining = (int)Math.Ceiling(
+                (user.LockoutUntil!.Value - dateTime.UtcNow).TotalMinutes);
+            throw new ForbiddenException(
+                ForbiddenErrorCodes.AccountLocked,
+                $"Account is locked. Try again in {remaining} minute(s).");
         }
 
         // 8. Successful login — reset lockout and record LastLoginAt
