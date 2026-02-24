@@ -131,22 +131,19 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    var apiVersionDescriptionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+var apiVersionDescriptionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
 
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
+app.UseSwagger();
+app.UseSwaggerUI(options =>
+{
+    foreach (var description in apiVersionDescriptionProvider.ApiVersionDescriptions)
     {
-        foreach (var description in apiVersionDescriptionProvider.ApiVersionDescriptions)
-        {
-            options.SwaggerEndpoint(
-                $"/swagger/{description.GroupName}/swagger.json",
-                $"DreamSoft ERP API {description.GroupName.ToUpperInvariant()}");
-        }
-        options.RoutePrefix = string.Empty; // Swagger at root URL
-    });
-}
+        options.SwaggerEndpoint(
+            $"/swagger/{description.GroupName}/swagger.json",
+            $"DreamSoft ERP API {description.GroupName.ToUpperInvariant()}");
+    }
+    options.RoutePrefix = string.Empty; // Swagger at root URL
+});
 
 app.UseHttpsRedirection();
 
