@@ -137,8 +137,9 @@ public record LoginClientResponse(
     DateTime ExpiresAt,
     int UserId,
     string Username,
-    string FullName)
+    string FullName,
+    string TenantSubdomain)
 {
     public static LoginClientResponse From(LoginResponse r) =>
-        new(r.AccessToken, r.ExpiresAt, r.UserId, r.Username, r.FullName);
+        new(r.AccessToken, r.ExpiresAt, r.UserId, r.Username, r.FullName, r.TenantSubdomain);
 }

@@ -80,12 +80,44 @@ public class CompleteOnboardingCommandHandler(
             ?? throw new NotFoundException(
                 "NotFound", "TenantStatus ACTIVE not in database.");
 
+        // 7. Load Solution available menu options.
+        var menuOptions = await context.SolutionMenuOptions
+            .Where(s => s.SolutionId == solution.Id)
+            .Select(s => s.MenuOption)
+            .Where(m => m != null)
+            .ToListAsync(cancellationToken: cancellationToken);
+
+        // 8. Load the admin user for this tenant
+        var adminUser = await context.Users
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.TenantId == tenantId && u.IsAdmin && u.IsActive, cancellationToken)
+            ?? throw new NotFoundException("UserNotFound", tenantId);
+
+        // 9. Create Admin role for the tenant.
+        var adminRoleTemplate = await context.RoleTemplates
+            .FirstOrDefaultAsync(r => r.Code == RoleCodes.Admin, cancellationToken)
+            ?? throw new NotFoundException("NotFound", "The administrator template role was not found in the database.");
+        var adminRole = Role.Create(
+            tenantId: tenant.Id,
+            code: adminRoleTemplate.Code,
+            name: adminRoleTemplate.Name,
+            description: adminRoleTemplate.Description,
+            translatedString: adminRoleTemplate.Translations,
+            roleTemplateId: adminRoleTemplate.Id,
+            createdBy: adminUser.Id);
+
         // ── Begin transaction ────────────────────────────────────────────────
         await unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
             context.TenantSubscriptions.Add(subscription);
             tenant.TransitionStatus(activeStatus.Id);
+            context.Roles.Add(adminRole);
+            foreach (var menuOption in menuOptions)
+            {
+                var roleOption = RoleMenuOption.Create(adminRole.Id, menuOption.Id);
+                context.RoleMenuOptions.Add(roleOption);
+            }
             await context.SaveChangesAsync(cancellationToken);
             await unitOfWork.CommitTransactionAsync(cancellationToken);
         }

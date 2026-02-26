@@ -118,6 +118,7 @@ public class LoginByTenantEmailCommandHandler(
             ExpiresAt:    expiresAt,
             UserId:       user.Id,
             Username:     user.Username,
-            FullName:     user.GetFullName());
+            FullName:     user.GetFullName(),
+            TenantSubdomain: tenant.Subdomain);
     }
 }

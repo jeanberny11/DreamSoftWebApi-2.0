@@ -59,11 +59,12 @@ public class RefreshTokenCommandHandler(
         await context.SaveChangesAsync(cancellationToken);
 
         return new LoginResponse(
-            AccessToken:  newAccessToken,
-            RefreshToken: newRawToken,
-            ExpiresAt:    expiresAt,
-            UserId:       tokenEntity.User.Id,
-            Username:     tokenEntity.User.Username,
-            FullName:     tokenEntity.User.GetFullName());
+            AccessToken:      newAccessToken,
+            RefreshToken:     newRawToken,
+            ExpiresAt:        expiresAt,
+            UserId:           tokenEntity.User.Id,
+            Username:         tokenEntity.User.Username,
+            FullName:         tokenEntity.User.GetFullName(),
+            TenantSubdomain:  tenant.Subdomain);
     }
 }

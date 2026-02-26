@@ -24,6 +24,7 @@ public class Role : TenantEntity
         int tenantId,
         string code,
         string name,
+        TranslatedString translatedString,
         string description = "",
         int? roleTemplateId = null,
         int? createdBy = null)
@@ -39,7 +40,8 @@ public class Role : TenantEntity
             Code = code.ToUpper().Trim(),
             Name = name.Trim(),
             Description = description.Trim(),
-            RoleTemplateId = roleTemplateId
+            RoleTemplateId = roleTemplateId,
+            Translations = translatedString
         };
 
         role.InitializeTenantEntity(tenantId, createdBy);

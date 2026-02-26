@@ -124,6 +124,7 @@ public class LoginBySubdomainCommandHandler(
             ExpiresAt:    expiresAt,
             UserId:       user.Id,
             Username:     user.Username,
-            FullName:     user.GetFullName());
+            FullName:     user.GetFullName(),
+            TenantSubdomain: tenant.Subdomain);
     }
 }

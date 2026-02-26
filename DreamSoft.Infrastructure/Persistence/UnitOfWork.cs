@@ -3,15 +3,10 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace DreamSoft.Infrastructure.Persistence;
 
-public class UnitOfWork : IUnitOfWork
+public class UnitOfWork(ApplicationDbContext context) : IUnitOfWork
 {
-    private readonly ApplicationDbContext _context;
+    private readonly ApplicationDbContext _context = context;
     private IDbContextTransaction? _transaction;
-
-    public UnitOfWork(ApplicationDbContext context)
-    {
-        _context = context;
-    }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
