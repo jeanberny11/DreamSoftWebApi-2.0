@@ -6,4 +6,5 @@ public interface ITenantRegistrationTokenRepository : IRepository<TenantRegistra
 {
     Task<TenantRegistrationToken?> GetActiveByTenantAsync(int tenantId, CancellationToken ct = default);
     Task ConsumeAllByTenantAsync(int tenantId, CancellationToken ct = default);
+    Task<bool> HasRecentTokenAsync(int tenantId, int minutesAgo, CancellationToken ct = default);
 }

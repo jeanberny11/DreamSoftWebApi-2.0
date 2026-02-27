@@ -1,12 +1,13 @@
 using DreamSoft.Application.Common.Exceptions;
 using DreamSoft.Application.Common.Interfaces;
+using DreamSoft.Domain.Repositories;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace DreamSoft.Application.Features.Auth.Logout;
 
 public class LogoutCommandHandler(
-    IApplicationDbContext context,
+    IRefreshTokenRepository refreshTokenRepository,
+    IUnitOfWork unitOfWork,
     ICurrentUserService currentUserService)
     : IRequestHandler<LogoutCommand>
 {
@@ -20,30 +21,27 @@ public class LogoutCommandHandler(
         if (request.RefreshToken is not null)
         {
             // Targeted logout — revoke only the specific session token
-            var tokenEntity = await context.RefreshTokens
-                .FirstOrDefaultAsync(
-                    rt => rt.Token == request.RefreshToken && rt.UserId == userId,
-                    cancellationToken);
+            var tokenEntity = await refreshTokenRepository.GetActiveByTokenAsync(
+                request.RefreshToken, cancellationToken);
 
             // Silently succeed if already revoked / not found (idempotent)
-            if (tokenEntity is { IsRevoked: false })
+            if (tokenEntity is { IsRevoked: false } && tokenEntity.UserId == userId)
             {
                 tokenEntity.Revoke(ip);
-                await context.SaveChangesAsync(cancellationToken);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
             }
         }
         else
         {
             // Global logout — revoke all active sessions for this user
-            var activeTokens = await context.RefreshTokens
-                .Where(rt => rt.UserId == userId && rt.RevokedAt == null && rt.ExpiresAt > DateTime.UtcNow)
-                .ToListAsync(cancellationToken);
+            var activeTokens = await refreshTokenRepository.GetActiveByUserAsync(
+                userId, cancellationToken);
 
             foreach (var token in activeTokens)
                 token.Revoke(ip);
 
             if (activeTokens.Count > 0)
-                await context.SaveChangesAsync(cancellationToken);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
         }
     }
 }

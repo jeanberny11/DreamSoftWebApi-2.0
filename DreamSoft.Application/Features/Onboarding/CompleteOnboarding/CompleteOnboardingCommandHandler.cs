@@ -4,12 +4,21 @@ using DreamSoft.Domain.Constants;
 using DreamSoft.Domain.Entities;
 using DreamSoft.Domain.Repositories;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace DreamSoft.Application.Features.Onboarding.CompleteOnboarding;
 
 public class CompleteOnboardingCommandHandler(
-    IApplicationDbContext context,
+    ITenantRepository tenantRepository,
+    IUserRepository userRepository,
+    ISolutionRepository solutionRepository,
+    ISubscriptionPlanRepository subscriptionPlanRepository,
+    ISubscriptionStatusRepository subscriptionStatusRepository,
+    ITenantStatusRepository tenantStatusRepository,
+    ITenantSubscriptionRepository tenantSubscriptionRepository,
+    ISolutionMenuOptionRepository solutionMenuOptionRepository,
+    IRoleRepository roleRepository,
+    IRoleMenuOptionRepository roleMenuOptionRepository,
+    IRoleTemplateRepository roleTemplateRepository,
     IUnitOfWork unitOfWork,
     ICurrentUserService currentUserService)
     : IRequestHandler<CompleteOnboardingCommand, CompleteOnboardingResponse>
@@ -22,30 +31,25 @@ public class CompleteOnboardingCommandHandler(
             ?? throw new UnauthorizedException("Unauthorized");
 
         // 1. Load tenant — must be PENDING_SUBSCRIPTION
-        var tenant = await context.Tenants
-            .Include(t => t.Status)
-            .FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken)
+        var tenant = await tenantRepository.GetByIdWithStatusAsync(tenantId, cancellationToken)
             ?? throw new NotFoundException("TenantNotFound", tenantId);
 
         if (tenant.Status.Code != TenantStatusCodes.PendingSubscription)
             throw new ConflictException("OnboardingAlreadyComplete");
 
         // 2. Load and validate solution
-        var solution = await context.Solutions
-            .FirstOrDefaultAsync(
-                s => s.Id == request.SolutionId && s.IsActive,
-                cancellationToken)
+        var solution = await solutionRepository.GetByIdAsync(request.SolutionId, cancellationToken)
             ?? throw new NotFoundException("NotFound", "Solution");
 
+        if (!solution.IsActive)
+            throw new NotFoundException("NotFound", "Solution");
+
         // 3. Load and validate plan — must be active and belong to the requested solution
-        var plan = await context.SubscriptionPlans
-            .Include(p => p.BillingCycle)
-            .FirstOrDefaultAsync(
-                p => p.Id == request.SubscriptionPlanId && p.IsActive,
-                cancellationToken)
+        var plan = await subscriptionPlanRepository.GetByIdWithBillingCycleAsync(
+            request.SubscriptionPlanId, cancellationToken)
             ?? throw new NotFoundException("NotFound", "SubscriptionPlan");
 
-        if (plan.SolutionId != request.SolutionId)
+        if (!plan.IsActive || plan.SolutionId != request.SolutionId)
             throw new ConflictException("PlanNotBelongToSolution");
 
         // 4. Determine subscription status — TRIAL if plan has trial days, otherwise ACTIVE
@@ -53,72 +57,70 @@ public class CompleteOnboardingCommandHandler(
             ? SubscriptionStatusCodes.Trial
             : SubscriptionStatusCodes.Active;
 
-        var subscriptionStatus = await context.SubscriptionStatuses
-            .FirstOrDefaultAsync(s => s.Code == statusCode, cancellationToken)
+        var subscriptionStatus = await subscriptionStatusRepository.GetByCodeAsync(
+            statusCode, cancellationToken)
             ?? throw new NotFoundException(
                 "NotFound", $"SubscriptionStatus {statusCode} not in database.");
 
         // 5. Build subscription dates
-        var startDate = DateTime.UtcNow;
+        var startDate  = DateTime.UtcNow;
         DateTime? trialEnd = plan.HasTrial()
             ? startDate.AddDays(plan.TrialDays)
             : null;
 
         var subscription = TenantSubscription.Create(
-            tenantId: tenantId,
-            solutionId: request.SolutionId,
+            tenantId:           tenantId,
+            solutionId:         request.SolutionId,
             subscriptionPlanId: request.SubscriptionPlanId,
-            statusId: subscriptionStatus.Id,
-            startDate: startDate,
-            trialEndDate: trialEnd);
+            statusId:           subscriptionStatus.Id,
+            startDate:          startDate,
+            trialEndDate:       trialEnd);
 
         // 6. Load ACTIVE tenant status
-        var activeStatus = await context.TenantStatuses
-            .FirstOrDefaultAsync(
-                s => s.Code == TenantStatusCodes.Active,
-                cancellationToken)
+        var activeStatus = await tenantStatusRepository.GetByCodeAsync(
+            TenantStatusCodes.Active, cancellationToken)
             ?? throw new NotFoundException(
                 "NotFound", "TenantStatus ACTIVE not in database.");
 
-        // 7. Load Solution available menu options.
-        var menuOptions = await context.SolutionMenuOptions
-            .Where(s => s.SolutionId == solution.Id)
-            .Select(s => s.MenuOption)
-            .Where(m => m != null)
-            .ToListAsync(cancellationToken: cancellationToken);
+        // 7. Load solution menu options (includes MenuOption navigation property)
+        var solutionMenuOptions = await solutionMenuOptionRepository
+            .GetBySolutionAsync(solution.Id, cancellationToken);
 
         // 8. Load the admin user for this tenant
-        var adminUser = await context.Users
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(u => u.TenantId == tenantId && u.IsAdmin && u.IsActive, cancellationToken)
+        var adminUser = await userRepository.GetAdminByTenantAsync(tenantId, cancellationToken)
             ?? throw new NotFoundException("UserNotFound", tenantId);
 
-        // 9. Create Admin role for the tenant.
-        var adminRoleTemplate = await context.RoleTemplates
-            .FirstOrDefaultAsync(r => r.Code == RoleCodes.Admin, cancellationToken)
-            ?? throw new NotFoundException("NotFound", "The administrator template role was not found in the database.");
+        // 9. Load admin role template and build the admin role
+        var adminRoleTemplate = await roleTemplateRepository.GetByCodeAsync(
+            RoleCodes.Admin, cancellationToken)
+            ?? throw new NotFoundException(
+                "NotFound", "The administrator template role was not found in the database.");
+
         var adminRole = Role.Create(
-            tenantId: tenant.Id,
-            code: adminRoleTemplate.Code,
-            name: adminRoleTemplate.Name,
-            description: adminRoleTemplate.Description,
+            tenantId:         tenant.Id,
+            code:             adminRoleTemplate.Code,
+            name:             adminRoleTemplate.Name,
+            description:      adminRoleTemplate.Description,
             translatedString: adminRoleTemplate.Translations,
-            roleTemplateId: adminRoleTemplate.Id,
-            createdBy: adminUser.Id);
+            roleTemplateId:   adminRoleTemplate.Id,
+            createdBy:        adminUser.Id);
 
         // ── Begin transaction ────────────────────────────────────────────────
         await unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
-            context.TenantSubscriptions.Add(subscription);
+            await tenantSubscriptionRepository.AddAsync(subscription, cancellationToken);
             tenant.TransitionStatus(activeStatus.Id);
-            context.Roles.Add(adminRole);
-            foreach (var menuOption in menuOptions)
-            {
-                var roleOption = RoleMenuOption.Create(adminRole.Id, menuOption.Id);
-                context.RoleMenuOptions.Add(roleOption);
-            }
-            await context.SaveChangesAsync(cancellationToken);
+            await roleRepository.AddAsync(adminRole, cancellationToken);
+
+            await unitOfWork.SaveChangesAsync(cancellationToken); // materialise adminRole.Id
+
+            var roleMenuOptions = solutionMenuOptions
+                .Select(smo => RoleMenuOption.Create(adminRole.Id, smo.MenuOption.Id));
+
+            await roleMenuOptionRepository.AddRangeAsync(roleMenuOptions, cancellationToken);
+
+            await unitOfWork.SaveChangesAsync(cancellationToken);
             await unitOfWork.CommitTransactionAsync(cancellationToken);
         }
         catch

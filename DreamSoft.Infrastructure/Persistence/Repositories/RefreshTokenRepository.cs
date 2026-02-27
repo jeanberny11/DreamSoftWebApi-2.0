@@ -13,6 +13,14 @@ public class RefreshTokenRepository(ApplicationDbContext context)
             r.RevokedAt == null &&
             r.ExpiresAt > DateTime.UtcNow, ct);
 
+    public async Task<RefreshToken?> GetActiveByTokenWithUserAsync(string token, CancellationToken ct = default)
+        => await _dbSet
+            .Include(r => r.User)
+            .FirstOrDefaultAsync(r =>
+                r.Token == token &&
+                r.RevokedAt == null &&
+                r.ExpiresAt > DateTime.UtcNow, ct);
+
     public async Task<IReadOnlyList<RefreshToken>> GetActiveByUserAsync(int userId, CancellationToken ct = default)
         => await _dbSet
             .Where(r =>

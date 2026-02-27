@@ -4,13 +4,16 @@ using DreamSoft.Domain.Constants;
 using DreamSoft.Domain.Entities;
 using DreamSoft.Domain.Repositories;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
 namespace DreamSoft.Application.Features.Registration.VerifyEmail;
 
 public class VerifyEmailCommandHandler(
-    IApplicationDbContext context,
+    ITenantRepository tenantRepository,
+    IUserRepository userRepository,
+    ITenantStatusRepository tenantStatusRepository,
+    ITenantRegistrationTokenRepository tokenRepository,
+    IRefreshTokenRepository refreshTokenRepository,
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
     ITokenService tokenService,
@@ -34,13 +37,9 @@ public class VerifyEmailCommandHandler(
             throw new RateLimitExceededException("RateLimitExceeded");
 
         // 2. Lookup tenant by normalized email — same error as wrong code to prevent enumeration
-        var normalizedEmail = request.Email.Trim().ToLower();
-        var tenant = await context.Tenants
-            .Include(t => t.Status)
-            .FirstOrDefaultAsync(t => t.Email == normalizedEmail, cancellationToken)
+        var tenant = await tenantRepository.GetByEmailWithStatusAsync(
+            request.Email, cancellationToken)
             ?? throw new UnauthorizedException("InvalidOtpCode");
-
-        var tenantId = tenant.Id;
 
         // 3. Idempotency guard — if already verified, reject
         if (tenant.Status.Code != TenantStatusCodes.PendingEmailVerification)
@@ -50,10 +49,7 @@ public class VerifyEmailCommandHandler(
         var maxAttempts = int.Parse(
             configuration["RateLimit:MaxVerificationAttemptsPerCode"] ?? "5");
 
-        var otpToken = await context.TenantRegistrationTokens
-            .Where(t => t.TenantId == tenantId && !t.IsConsumed)
-            .OrderByDescending(t => t.CreatedAt)
-            .FirstOrDefaultAsync(cancellationToken)
+        var otpToken = await tokenRepository.GetActiveByTenantAsync(tenant.Id, cancellationToken)
             ?? throw new UnauthorizedException("InvalidOtpCode");
 
         // 5. Validate token state (not expired, not consumed, under attempt limit)
@@ -61,30 +57,23 @@ public class VerifyEmailCommandHandler(
             throw new UnauthorizedException("InvalidOtpCode");
 
         // 6. Verify the submitted code against the stored PBKDF2 hash
-        var codeValid = passwordHasher.VerifyPassword(
-            request.Code, otpToken.CodeHash);
-
-        if (!codeValid)
+        if (!passwordHasher.VerifyPassword(request.Code, otpToken.CodeHash))
         {
             otpToken.IncrementAttempt();
-            await context.SaveChangesAsync(cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
             throw new UnauthorizedException("InvalidOtpCode");
         }
 
         // 7. Load the PENDING_SUBSCRIPTION status
-        var pendingSubStatus = await context.TenantStatuses
-            .FirstOrDefaultAsync(
-                s => s.Code == TenantStatusCodes.PendingSubscription,
-                cancellationToken)
+        var pendingSubStatus = await tenantStatusRepository.GetByCodeAsync(
+            TenantStatusCodes.PendingSubscription, cancellationToken)
             ?? throw new NotFoundException(
                 "NotFound",
                 "TenantStatus PENDING_SUBSCRIPTION not found. Run migration.");
 
         // 8. Load the admin user for this tenant
-        var adminUser = await context.Users
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(u => u.TenantId == tenantId && u.IsAdmin, cancellationToken)
-            ?? throw new NotFoundException("UserNotFound", tenantId);
+        var adminUser = await userRepository.GetAdminByTenantAsync(tenant.Id, cancellationToken)
+            ?? throw new NotFoundException("UserNotFound", tenant.Id);
 
         // ── Begin transaction ────────────────────────────────────────────────
         await unitOfWork.BeginTransactionAsync(cancellationToken);
@@ -95,7 +84,7 @@ public class VerifyEmailCommandHandler(
             tenant.VerifyEmail(DateTime.UtcNow);
             adminUser.VerifyEmail(adminUser.Id);
 
-            await context.SaveChangesAsync(cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
             await unitOfWork.CommitTransactionAsync(cancellationToken);
         }
         catch
@@ -114,8 +103,8 @@ public class VerifyEmailCommandHandler(
             cancellationToken);
 
         // 10. Issue real access + refresh tokens
-        var accessToken  = tokenService.GenerateAccessToken(adminUser, tenant);
-        var rawToken     = tokenService.GenerateRefreshToken();
+        var accessToken = tokenService.GenerateAccessToken(adminUser, tenant);
+        var rawToken    = tokenService.GenerateRefreshToken();
 
         var refreshExpiryDays = int.Parse(
             configuration["Jwt:RefreshTokenExpirationDays"] ?? "7");
@@ -126,8 +115,8 @@ public class VerifyEmailCommandHandler(
             expiresAt:   DateTime.UtcNow.AddDays(refreshExpiryDays),
             createdByIp: currentUserService.IpAddress);
 
-        context.RefreshTokens.Add(refreshTokenEntity);
-        await context.SaveChangesAsync(cancellationToken);
+        await refreshTokenRepository.AddAsync(refreshTokenEntity, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new VerifyEmailResponse(accessToken, rawToken);
     }

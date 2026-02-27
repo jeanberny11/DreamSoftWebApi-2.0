@@ -1,14 +1,17 @@
 using DreamSoft.Application.Common.Exceptions;
 using DreamSoft.Application.Common.Interfaces;
 using DreamSoft.Domain.Constants;
+using DreamSoft.Domain.Entities;
+using DreamSoft.Domain.Repositories;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
-using RefreshTokenEntity = DreamSoft.Domain.Entities.RefreshToken;
 
 namespace DreamSoft.Application.Features.Auth.LoginByTenantEmail;
 
 public class LoginByTenantEmailCommandHandler(
-    IApplicationDbContext context,
+    ITenantRepository tenantRepository,
+    IUserRepository userRepository,
+    IRefreshTokenRepository refreshTokenRepository,
+    IUnitOfWork unitOfWork,
     ICurrentUserService currentUserService,
     IPasswordHasher passwordHasher,
     ITokenService tokenService,
@@ -22,31 +25,21 @@ public class LoginByTenantEmailCommandHandler(
         LoginByTenantEmailCommand request,
         CancellationToken cancellationToken)
     {
-        var tenantEmail = request.TenantEmail.Trim().ToLower();
-
         // 1. Find the tenant by company email — global query (no tenant filter on Tenants)
-        var tenant = await context.Tenants
-            .Include(t => t.Status)
-            .FirstOrDefaultAsync(
-                t => t.Email == tenantEmail,
-                cancellationToken)
+        var tenant = await tenantRepository.GetByEmailWithStatusAsync(
+            request.TenantEmail, cancellationToken)
             ?? throw new UnauthorizedException("Invalid credentials.");
 
         // 2. Find the user by username within that tenant
-        var user = await context.Users
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(
-                u => u.TenantId == tenant.Id &&
-                     u.Username == request.Username.Trim() &&
-                     u.IsActive,
-                cancellationToken)
+        var user = await userRepository.GetByUsernameAndTenantAsync(
+            request.Username, tenant.Id, cancellationToken)
             ?? throw new UnauthorizedException("Invalid credentials.");
 
         // 3. Verify password — always check before revealing any account/tenant state
         if (!passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
         {
             user.RecordFailedLogin();
-            await context.SaveChangesAsync(cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
             throw new UnauthorizedException("Invalid credentials.");
         }
 
@@ -102,23 +95,23 @@ public class LoginByTenantEmailCommandHandler(
         var expiresAt     = dateTime.UtcNow.AddMinutes(60);
 
         // 9. Persist the RefreshToken entity (one row per session — multi-device support)
-        var refreshTokenEntity = RefreshTokenEntity.Create(
+        var refreshTokenEntity = Domain.Entities.RefreshToken.Create(
             userId:      user.Id,
             token:       rawToken,
             expiresAt:   refreshExpiry,
             createdByIp: currentUserService.IpAddress,
             deviceInfo:  request.DeviceInfo);
 
-        context.RefreshTokens.Add(refreshTokenEntity);
-        await context.SaveChangesAsync(cancellationToken);
+        await refreshTokenRepository.AddAsync(refreshTokenEntity, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new LoginResponse(
-            AccessToken:  accessToken,
-            RefreshToken: rawToken,
-            ExpiresAt:    expiresAt,
-            UserId:       user.Id,
-            Username:     user.Username,
-            FullName:     user.GetFullName(),
+            AccessToken:     accessToken,
+            RefreshToken:    rawToken,
+            ExpiresAt:       expiresAt,
+            UserId:          user.Id,
+            Username:        user.Username,
+            FullName:        user.GetFullName(),
             TenantSubdomain: tenant.Subdomain);
     }
 }

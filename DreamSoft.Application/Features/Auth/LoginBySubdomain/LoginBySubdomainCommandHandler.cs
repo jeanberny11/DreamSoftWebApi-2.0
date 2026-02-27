@@ -1,24 +1,24 @@
 using DreamSoft.Application.Common.Exceptions;
 using DreamSoft.Application.Common.Interfaces;
 using DreamSoft.Domain.Constants;
+using DreamSoft.Domain.Entities;
+using DreamSoft.Domain.Repositories;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
-using RefreshTokenEntity = DreamSoft.Domain.Entities.RefreshToken;
 
 namespace DreamSoft.Application.Features.Auth.LoginBySubdomain;
 
 public class LoginBySubdomainCommandHandler(
-    IApplicationDbContext context,
+    ITenantRepository tenantRepository,
+    IUserRepository userRepository,
+    IRefreshTokenRepository refreshTokenRepository,
+    IUnitOfWork unitOfWork,
     ICurrentUserService currentUserService,
     IPasswordHasher passwordHasher,
     ITokenService tokenService,
     IDateTime dateTime)
     : IRequestHandler<LoginBySubdomainCommand, LoginResponse>
 {
-    // Short session — no RememberMe
     private const int DefaultRefreshTokenExpiryDays  = 7;
-
-    // Extended session — RememberMe selected
     private const int ExtendedRefreshTokenExpiryDays = 30;
 
     public async Task<LoginResponse> Handle(
@@ -31,28 +31,19 @@ public class LoginBySubdomainCommandHandler(
             throw new UnauthorizedException("Subdomain could not be resolved from the request.");
 
         // 2. Find the tenant by subdomain — global query (Tenants have no tenant filter)
-        var tenant = await context.Tenants
-            .Include(t => t.Status)
-            .FirstOrDefaultAsync(
-                t => t.Subdomain == subdomain.ToLower(),
-                cancellationToken)
+        var tenant = await tenantRepository.GetBySubdomainWithStatusAsync(subdomain, cancellationToken)
             ?? throw new UnauthorizedException("Invalid credentials.");
 
         // 3. Find the user by username within that tenant
-        var user = await context.Users
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(
-                u => u.TenantId == tenant.Id &&
-                     u.Username == request.Username.Trim().ToLower() &&
-                     u.IsActive,
-                cancellationToken)
+        var user = await userRepository.GetByUsernameAndTenantAsync(
+            request.Username, tenant.Id, cancellationToken)
             ?? throw new UnauthorizedException("Invalid credentials.");
 
         // 4. Verify password — always check before revealing any account/tenant state
         if (!passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
         {
             user.RecordFailedLogin();
-            await context.SaveChangesAsync(cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
             throw new UnauthorizedException("Invalid credentials.");
         }
 
@@ -108,23 +99,23 @@ public class LoginBySubdomainCommandHandler(
         var expiresAt     = dateTime.UtcNow.AddMinutes(60);
 
         // 10. Persist the RefreshToken entity (one row per session — multi-device support)
-        var refreshTokenEntity = RefreshTokenEntity.Create(
+        var refreshTokenEntity = Domain.Entities.RefreshToken.Create(
             userId:      user.Id,
             token:       rawToken,
             expiresAt:   refreshExpiry,
             createdByIp: currentUserService.IpAddress,
             deviceInfo:  request.DeviceInfo);
 
-        context.RefreshTokens.Add(refreshTokenEntity);
-        await context.SaveChangesAsync(cancellationToken);
+        await refreshTokenRepository.AddAsync(refreshTokenEntity, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new LoginResponse(
-            AccessToken:  accessToken,
-            RefreshToken: rawToken,
-            ExpiresAt:    expiresAt,
-            UserId:       user.Id,
-            Username:     user.Username,
-            FullName:     user.GetFullName(),
+            AccessToken:     accessToken,
+            RefreshToken:    rawToken,
+            ExpiresAt:       expiresAt,
+            UserId:          user.Id,
+            Username:        user.Username,
+            FullName:        user.GetFullName(),
             TenantSubdomain: tenant.Subdomain);
     }
 }

@@ -17,4 +17,14 @@ public class TenantRepository(ApplicationDbContext context)
         => await _dbSet
             .Include(t => t.Status)
             .FirstOrDefaultAsync(t => t.Subdomain == subdomain.ToLower().Trim(), ct);
+
+    public async Task<Tenant?> GetByEmailWithStatusAsync(string email, CancellationToken ct = default)
+        => await _dbSet
+            .Include(t => t.Status)
+            .FirstOrDefaultAsync(t => t.Email == email.ToLower().Trim(), ct);
+
+    public async Task<Tenant?> GetByIdWithStatusAsync(int tenantId, CancellationToken ct = default)
+        => await _dbSet
+            .Include(t => t.Status)
+            .FirstOrDefaultAsync(t => t.Id == tenantId, ct);
 }

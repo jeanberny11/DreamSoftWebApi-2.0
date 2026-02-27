@@ -22,4 +22,11 @@ public class TenantRegistrationTokenRepository(ApplicationDbContext context)
         foreach (var token in tokens)
             token.Consume();
     }
+
+    public async Task<bool> HasRecentTokenAsync(int tenantId, int minutesAgo, CancellationToken ct = default)
+    {
+        var threshold = DateTime.UtcNow.AddMinutes(-minutesAgo);
+        return await _dbSet.AnyAsync(
+            t => t.TenantId == tenantId && t.CreatedAt >= threshold, ct);
+    }
 }

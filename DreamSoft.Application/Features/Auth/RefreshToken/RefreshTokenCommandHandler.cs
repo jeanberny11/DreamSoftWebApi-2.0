@@ -1,13 +1,15 @@
 using DreamSoft.Application.Common.Exceptions;
 using DreamSoft.Application.Common.Interfaces;
+using DreamSoft.Domain.Entities;
+using DreamSoft.Domain.Repositories;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
-using RefreshTokenEntity = DreamSoft.Domain.Entities.RefreshToken;
 
 namespace DreamSoft.Application.Features.Auth.RefreshToken;
 
 public class RefreshTokenCommandHandler(
-    IApplicationDbContext context,
+    ITenantRepository tenantRepository,
+    IRefreshTokenRepository refreshTokenRepository,
+    IUnitOfWork unitOfWork,
     ICurrentUserService currentUserService,
     ITokenService tokenService,
     IDateTime dateTime)
@@ -17,54 +19,49 @@ public class RefreshTokenCommandHandler(
         RefreshTokenCommand request,
         CancellationToken cancellationToken)
     {
-        // 1. Look up the RefreshToken entity directly — no user table scan needed.
-        //    Include the user so we can generate an access token.
-        var tokenEntity = await context.RefreshTokens
-            .Include(rt => rt.User)
-            .FirstOrDefaultAsync(
-                rt => rt.Token == request.RefreshToken,
-                cancellationToken)
+        // 1. Look up the RefreshToken entity with its user — no separate user table scan needed
+        var tokenEntity = await refreshTokenRepository.GetActiveByTokenWithUserAsync(
+            request.RefreshToken, cancellationToken)
             ?? throw new UnauthorizedException("Invalid or expired refresh token.");
 
-        // 2. Validate token state (not expired, not revoked, user still active)
-        if (!tokenEntity.IsActive || !tokenEntity.User.IsActive)
+        // 2. Validate user is still active
+        if (!tokenEntity.User.IsActive)
             throw new UnauthorizedException("Invalid or expired refresh token.");
 
         // 3. Load the tenant to generate a valid access token
-        var tenant = await context.Tenants
-            .FirstOrDefaultAsync(t => t.Id == tokenEntity.User.TenantId, cancellationToken)
+        var tenant = await tenantRepository.GetByIdAsync(tokenEntity.User.TenantId, cancellationToken)
             ?? throw new UnauthorizedException("Invalid or expired refresh token.");
 
         // 4. Revoke the consumed token (record which IP triggered rotation)
         tokenEntity.Revoke(currentUserService.IpAddress);
 
         // 5. Preserve the original session window so RememberMe sessions keep their
-        //    30-day expiry even after rotation (rather than resetting to a short window).
-        var originalWindow    = tokenEntity.ExpiresAt - tokenEntity.CreatedAt;
-        var newRefreshExpiry  = dateTime.UtcNow.Add(originalWindow);
+        //    30-day expiry even after rotation
+        var originalWindow   = tokenEntity.ExpiresAt - tokenEntity.CreatedAt;
+        var newRefreshExpiry = dateTime.UtcNow.Add(originalWindow);
 
         // 6. Issue a new token pair
-        var newAccessToken  = tokenService.GenerateAccessToken(tokenEntity.User, tenant);
-        var newRawToken     = tokenService.GenerateRefreshToken();
-        var expiresAt       = dateTime.UtcNow.AddMinutes(60);
+        var newAccessToken = tokenService.GenerateAccessToken(tokenEntity.User, tenant);
+        var newRawToken    = tokenService.GenerateRefreshToken();
+        var expiresAt      = dateTime.UtcNow.AddMinutes(60);
 
-        var newTokenEntity = RefreshTokenEntity.Create(
+        var newTokenEntity = Domain.Entities.RefreshToken.Create(
             userId:      tokenEntity.User.Id,
             token:       newRawToken,
             expiresAt:   newRefreshExpiry,
             createdByIp: currentUserService.IpAddress,
             deviceInfo:  tokenEntity.DeviceInfo);
 
-        context.RefreshTokens.Add(newTokenEntity);
-        await context.SaveChangesAsync(cancellationToken);
+        await refreshTokenRepository.AddAsync(newTokenEntity, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new LoginResponse(
-            AccessToken:      newAccessToken,
-            RefreshToken:     newRawToken,
-            ExpiresAt:        expiresAt,
-            UserId:           tokenEntity.User.Id,
-            Username:         tokenEntity.User.Username,
-            FullName:         tokenEntity.User.GetFullName(),
-            TenantSubdomain:  tenant.Subdomain);
+            AccessToken:     newAccessToken,
+            RefreshToken:    newRawToken,
+            ExpiresAt:       expiresAt,
+            UserId:          tokenEntity.User.Id,
+            Username:        tokenEntity.User.Username,
+            FullName:        tokenEntity.User.GetFullName(),
+            TenantSubdomain: tenant.Subdomain);
     }
 }

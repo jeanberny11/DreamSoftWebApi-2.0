@@ -7,4 +7,6 @@ public interface ITenantRepository : IRepository<Tenant>
     Task<bool> ExistsBySubdomainAsync(string subdomain, CancellationToken ct = default);
     Task<Tenant?> GetBySubdomainAsync(string subdomain, CancellationToken ct = default);
     Task<Tenant?> GetBySubdomainWithStatusAsync(string subdomain, CancellationToken ct = default);
+    Task<Tenant?> GetByEmailWithStatusAsync(string email, CancellationToken ct = default);
+    Task<Tenant?> GetByIdWithStatusAsync(int tenantId, CancellationToken ct = default);
 }
