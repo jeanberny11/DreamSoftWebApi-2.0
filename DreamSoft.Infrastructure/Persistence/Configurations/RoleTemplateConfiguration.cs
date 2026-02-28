@@ -79,7 +79,17 @@ public class RoleTemplateConfiguration : IEntityTypeConfiguration<RoleTemplate>
         builder.Property(r => r.UpdatedAt)
             .HasColumnName("updated_at");
 
+        // Foreign key
+        builder.Property(r => r.SolutionId)
+            .HasColumnName("solution_id")
+            .IsRequired();
+
         // Relationships
+        builder.HasOne(r => r.Solution)
+            .WithMany(s => s.RoleTemplates)
+            .HasForeignKey(r => r.SolutionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasMany(r => r.Roles)
             .WithOne(ro => ro.RoleTemplate)
             .HasForeignKey(ro => ro.RoleTemplateId)

@@ -108,5 +108,10 @@ public class SolutionConfiguration : IEntityTypeConfiguration<Solution>
             .WithOne(sm => sm.Solution)
             .HasForeignKey(sm => sm.SolutionId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(s => s.RoleTemplates)
+            .WithOne(r => r.Solution)
+            .HasForeignKey(r => r.SolutionId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -13,6 +13,7 @@ public class Solution : LookupEntity
     // Navigation properties
     public ICollection<SubscriptionPlan> SubscriptionPlans { get; private set; } = [];
     public ICollection<SolutionMenuOption> SolutionMenuOptions { get; private set; } = [];
+    public ICollection<RoleTemplate> RoleTemplates { get; private set; } = [];
 
     private Solution() { }
 

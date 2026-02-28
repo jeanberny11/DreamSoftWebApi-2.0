@@ -9,4 +9,10 @@ public class RoleTemplateRepository(ApplicationDbContext context)
 {
     public async Task<RoleTemplate?> GetByCodeAsync(string code, CancellationToken ct = default)
         => await _dbSet.FirstOrDefaultAsync(r => r.Code == code.ToUpper().Trim(), ct);
+
+    public Task<RoleTemplate?> GetTemplateBySolutionAndCodeAsync(int solutionId, string code, CancellationToken ct = default)
+    {
+        return _dbSet.FirstOrDefaultAsync(r => r.SolutionId == solutionId && r.Code == code.ToUpper().Trim(), ct);
+    }
+
 }

@@ -91,8 +91,8 @@ public class CompleteOnboardingCommandHandler(
             ?? throw new NotFoundException("UserNotFound", tenantId);
 
         // 9. Load admin role template and build the admin role
-        var adminRoleTemplate = await roleTemplateRepository.GetByCodeAsync(
-            RoleCodes.Admin, cancellationToken)
+        var adminRoleTemplate = await roleTemplateRepository.GetTemplateBySolutionAndCodeAsync(
+            solution.Id, RoleCodes.Admin, cancellationToken)
             ?? throw new NotFoundException(
                 "NotFound", "The administrator template role was not found in the database.");
 
