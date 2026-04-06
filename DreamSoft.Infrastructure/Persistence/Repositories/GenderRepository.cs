@@ -4,4 +4,6 @@ using DreamSoft.Domain.Repositories;
 namespace DreamSoft.Infrastructure.Persistence.Repositories;
 
 public class GenderRepository(ApplicationDbContext context)
-    : Repository<Gender>(context), IGenderRepository { }
+    : Repository<Gender>(context), IGenderRepository
+{
+}

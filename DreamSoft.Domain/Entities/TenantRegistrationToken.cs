@@ -1,3 +1,5 @@
+using DreamSoft.Domain.Common;
+
 namespace DreamSoft.Domain.Entities;
 
 /// <summary>
@@ -5,7 +7,7 @@ namespace DreamSoft.Domain.Entities;
 /// One record is created per registration attempt and per resend.
 /// The plaintext code is NEVER stored — only the PBKDF2 hash.
 /// </summary>
-public class TenantRegistrationToken : Common.AuditableEntity
+public class TenantRegistrationToken : AuditableEntity
 {
     public int TenantId { get; private set; }
 
@@ -15,28 +17,24 @@ public class TenantRegistrationToken : Common.AuditableEntity
     /// <summary>UTC expiry — 24 hours from creation.</summary>
     public DateTime ExpiresAt { get; private set; }
 
-    /// <summary>Incremented on each wrong code attempt. Max: appsettings
-    /// RateLimit:MaxVerificationAttemptsPerCode (default 5).</summary>
+    /// <summary>Incremented on each wrong code attempt.</summary>
     public int AttemptCount { get; private set; }
 
-    /// <summary>Set to true after successful verification or when
-    /// a resend invalidates this token.</summary>
+    /// <summary>Set to true after successful verification or when a resend invalidates this token.</summary>
     public bool IsConsumed { get; private set; }
 
-    // Navigation
+    // Navigation properties
     public Tenant Tenant { get; private set; } = null!;
 
     private TenantRegistrationToken() { }
 
-    public static TenantRegistrationToken Create(
-        int tenantId, string codeHash, DateTime expiresAt)
+    public static TenantRegistrationToken Create(int tenantId, string codeHash, DateTime expiresAt)
     {
         if (tenantId <= 0)
-            throw new ArgumentException(
-                "Tenant ID must be greater than zero", nameof(tenantId));
+            throw new ArgumentException("Tenant ID must be greater than zero", nameof(tenantId));
+
         if (string.IsNullOrWhiteSpace(codeHash))
-            throw new ArgumentException(
-                "Code hash is required", nameof(codeHash));
+            throw new ArgumentException("Code hash is required", nameof(codeHash));
 
         var token = new TenantRegistrationToken
         {
@@ -46,6 +44,7 @@ public class TenantRegistrationToken : Common.AuditableEntity
             AttemptCount = 0,
             IsConsumed = false
         };
+
         token.InitializeAudit();
         return token;
     }

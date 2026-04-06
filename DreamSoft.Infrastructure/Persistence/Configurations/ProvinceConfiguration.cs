@@ -4,24 +4,20 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DreamSoft.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// Entity Framework Core configuration for Province entity
-/// Maps to the 'provinces' table in PostgreSQL
-/// </summary>
 public class ProvinceConfiguration : IEntityTypeConfiguration<Province>
 {
     public void Configure(EntityTypeBuilder<Province> builder)
     {
-        // Table mapping
+        // ── Table ─────────────────────────────────────────────────────────
         builder.ToTable("provinces");
 
-        // Primary key
+        // ── Primary Key ───────────────────────────────────────────────────
         builder.HasKey(p => p.Id);
         builder.Property(p => p.Id)
             .HasColumnName("id")
             .ValueGeneratedOnAdd();
 
-        // Properties mapping
+        // ── Properties ────────────────────────────────────────────────────
         builder.Property(p => p.Code)
             .HasColumnName("code")
             .HasMaxLength(50)
@@ -38,30 +34,8 @@ public class ProvinceConfiguration : IEntityTypeConfiguration<Province>
             .HasColumnName("country_id")
             .IsRequired();
 
-        // JSONB Translation Configuration (Name Only - No Description)
-        builder.OwnsOne(p => p.Translations, translations =>
-        {
-            translations.ToJson("translations");
 
-            translations.OwnsOne(t => t.Spanish, spanish =>
-            {
-                spanish.ToJson("es");
-                spanish.Property(s => s.Name)
-                    .HasJsonPropertyName("name")
-                    .IsRequired();
-                spanish.Ignore(s => s.Descripcion);
-            });
-
-            translations.OwnsOne(t => t.English, english =>
-            {
-                english.ToJson("en");
-                english.Property(e => e.Name)
-                    .HasJsonPropertyName("name");
-                english.Ignore(e => e.Descripcion);
-            });
-        });
-
-        // Audit fields
+        // ── Audit Fields ──────────────────────────────────────────────────
         builder.Property(p => p.IsActive)
             .HasColumnName("is_active")
             .HasDefaultValue(true);
@@ -74,7 +48,7 @@ public class ProvinceConfiguration : IEntityTypeConfiguration<Province>
         builder.Property(p => p.UpdatedAt)
             .HasColumnName("updated_at");
 
-        // Relationships
+        // ── Relationships ─────────────────────────────────────────────────
         builder.HasOne(p => p.Country)
             .WithMany(c => c.Provinces)
             .HasForeignKey(p => p.CountryId)

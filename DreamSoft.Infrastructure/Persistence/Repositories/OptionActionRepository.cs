@@ -4,4 +4,6 @@ using DreamSoft.Domain.Repositories;
 namespace DreamSoft.Infrastructure.Persistence.Repositories;
 
 public class OptionActionRepository(ApplicationDbContext context)
-    : Repository<OptionAction>(context), IOptionActionRepository { }
+    : Repository<OptionAction>(context), IOptionActionRepository
+{
+}

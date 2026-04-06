@@ -15,10 +15,7 @@ public class RoleOptionAction : BaseEntity
 
     private RoleOptionAction() { }
 
-    public static RoleOptionAction Create(
-        int roleId,
-        int menuOptionId,
-        int actionId)
+    public static RoleOptionAction Create(int roleId, int menuOptionId, int actionId)
     {
         if (roleId <= 0)
             throw new ArgumentException("Role ID must be greater than zero", nameof(roleId));
@@ -29,12 +26,6 @@ public class RoleOptionAction : BaseEntity
         if (actionId <= 0)
             throw new ArgumentException("Action ID must be greater than zero", nameof(actionId));
 
-        var roleOptionAction = new RoleOptionAction
-        {
-            RoleId = roleId,
-            MenuOptionId = menuOptionId,
-            ActionId = actionId
-        };
-        return roleOptionAction;
+        return new RoleOptionAction { RoleId = roleId, MenuOptionId = menuOptionId, ActionId = actionId };
     }
 }

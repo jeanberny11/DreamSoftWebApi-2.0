@@ -8,7 +8,7 @@ public class FeatureController(ILogger<FeatureController> logger) : ApiControlle
 {
     private readonly ILogger<FeatureController> _logger = logger;
 
-    [HttpGet]
+    [HttpGet("[action]")]
     [ProducesResponseType(typeof(List<FeatureResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status429TooManyRequests)]

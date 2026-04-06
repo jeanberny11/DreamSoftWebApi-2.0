@@ -1,10 +1,11 @@
 using DreamSoft.Application.Common.Interfaces;
+using DreamSoft.Domain.Repositories;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace DreamSoft.Application.Features.Registration.CheckSubdomainAvailability;
 
-public class CheckSubdomainAvailabilityQueryHandler(IApplicationDbContext context)
+public class CheckSubdomainAvailabilityQueryHandler(ITenantSubdomainRepository repository)
     : IRequestHandler<CheckSubdomainAvailabilityQuery, SubdomainAvailabilityResponse>
 {
     // Subdomains reserved for system use — cannot be registered by tenants
@@ -33,9 +34,8 @@ public class CheckSubdomainAvailabilityQueryHandler(IApplicationDbContext contex
         if (Reserved.Contains(normalised))
             return new SubdomainAvailabilityResponse(normalised, false, "SubdomainReserved");
 
-        // 3. Database uniqueness check (global — no tenant filter on Tenants)
-        var taken = await context.Tenants
-            .AnyAsync(t => t.Subdomain == normalised, cancellationToken);
+        // 3. Database uniqueness check (global — query TenantSubdomains, not Tenants)
+        var taken = await repository.SubdomainExistsAsync(normalised, cancellationToken);
 
         return taken
             ? new SubdomainAvailabilityResponse(normalised, false, "SubdomainTaken")

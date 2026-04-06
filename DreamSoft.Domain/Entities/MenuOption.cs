@@ -16,8 +16,7 @@ public class MenuOption : LookupEntity
     // Navigation properties
     public Module Module { get; set; } = null!;
     public MenuGroup MenuGroup { get; set; } = null!;
-    public ICollection<SolutionMenuOption> SolutionMenuOptions { get; private set; } = [];
-    public ICollection<OptionAction> OptionActions { get; private set; } = [];
+    public ICollection<PlanMenuOption> PlanMenuOptions { get; private set; } = [];
     public ICollection<RoleMenuOption> RoleMenuOptions { get; private set; } = [];
     public ICollection<RoleMenuOptionTemplate> RoleMenuOptionTemplates { get; private set; } = [];
     public ICollection<RoleOptionAction> RoleOptionActions { get; private set; } = [];
@@ -25,16 +24,9 @@ public class MenuOption : LookupEntity
 
     private MenuOption() { }
 
-    public static MenuOption Create(
-        string code,
-        string name,
-        TranslatedString translations,
-        int moduleId,
-        int menuGroupId,
-        string description = "",
-        string route = "",
-        string icon = "",
-        int sortOrder = 0)
+    public static MenuOption Create(string code, string name, TranslatedString translations,
+        int moduleId, int menuGroupId, string description = "",
+        string route = "", string icon = "", int sortOrder = 0)
     {
         if (string.IsNullOrWhiteSpace(code))
             throw new ArgumentException("Code is required", nameof(code));
@@ -79,23 +71,9 @@ public class MenuOption : LookupEntity
         UpdateTranslations(translations);
     }
 
-    public void UpdateRoute(string route)
-    {
-        Route = route.Trim();
-        MarkAsUpdated();
-    }
-
-    public void UpdateIcon(string icon)
-    {
-        Icon = icon.Trim();
-        MarkAsUpdated();
-    }
-
-    public void UpdateSortOrder(int sortOrder)
-    {
-        SortOrder = sortOrder;
-        MarkAsUpdated();
-    }
+    public void UpdateRoute(string route) { Route = route.Trim(); MarkAsUpdated(); }
+    public void UpdateIcon(string icon) { Icon = icon.Trim(); MarkAsUpdated(); }
+    public void UpdateSortOrder(int sortOrder) { SortOrder = sortOrder; MarkAsUpdated(); }
 
     public void MoveToMenuGroup(int menuGroupId)
     {

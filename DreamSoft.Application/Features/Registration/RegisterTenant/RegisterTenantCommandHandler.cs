@@ -10,8 +10,8 @@ namespace DreamSoft.Application.Features.Registration.RegisterTenant;
 
 public class RegisterTenantCommandHandler(
     ITenantRepository tenantRepository,
-    IUserRepository userRepository,
     ITenantStatusRepository tenantStatusRepository,
+    ILanguageRepository languageRepository,
     ITenantRegistrationTokenRepository tokenRepository,
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
@@ -23,51 +23,44 @@ public class RegisterTenantCommandHandler(
         RegisterTenantCommand request,
         CancellationToken cancellationToken)
     {
-        // 1. Subdomain uniqueness (global — no tenant query filter applies to Tenants)
-        var subdomainTaken = await tenantRepository.ExistsBySubdomainAsync(
-            request.Subdomain, cancellationToken);
-        if (subdomainTaken)
-            throw new ConflictException("TenantAlreadyExists", request.Subdomain);
+        var email = request.Email.Trim().ToLower();
 
-        // 2. Admin email uniqueness (global across all tenants)
-        var emailTaken = await userRepository.ExistsByEmailGloballyAsync(
-            request.AdminEmail, cancellationToken);
-        if (emailTaken)
-            throw new ConflictException("EmailAlreadyExists", request.AdminEmail);
+        // 1. Tenant email uniqueness (global)
+        if (await tenantRepository.EmailExistsAsync(email, cancellationToken))
+            throw new ConflictException("EmailAlreadyExists", email);
 
-        // 3. Load PENDING_EMAIL_VERIFICATION status
+        // 2. Load PENDING_EMAIL_VERIFICATION status
         var pendingStatus = await tenantStatusRepository.GetByCodeAsync(
             TenantStatusCodes.PendingEmailVerification, cancellationToken)
-            ?? throw new NotFoundException(
-                "NotFound",
-                "TenantStatus PENDING_EMAIL_VERIFICATION not found. Run migration.");
+            ?? throw new NotFoundException(ErrorMessageKeys.NotFound, "TenantStatus", "Code = PENDING_EMAIL_VERIFICATION");
 
-        // Declare outside the try block so they are accessible after commit
-        string plainCode  = string.Empty;
-        string adminEmail = request.AdminEmail.Trim().ToLower();
+        // 3. Load default language (Spanish)
+        var defaultLanguage = await languageRepository.GetDefaultAsync(cancellationToken);
+        var languageId = defaultLanguage?.Id ?? 0;
+
+        // 4. Hash password
+        var passwordHash = passwordHasher.HashPassword(request.Password);
+
+        // Declare outside try so it's accessible after commit
+        string plainCode = string.Empty;
 
         // ── Begin transaction ────────────────────────────────────────────────
         await unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
-            // 4. Create tenant
+            // 5. Create tenant
             var tenant = Tenant.Create(
+                firstName:    request.FirstName,
+                lastName:     request.LastName,
                 companyName:  request.CompanyName,
-                subdomain:    request.Subdomain,
-                email:        adminEmail,
-                currencyId:   request.CurrencyId,
-                languageId:   request.LanguageId,
+                email:        email,
+                passwordHash: passwordHash,
                 statusId:     pendingStatus.Id,
-                taxId:        request.TaxId,
-                phone:        request.Phone);
+                phone:        "",
+                addressLine1: "",
+                languageId:   languageId);
 
-            tenant.UpdateAddress(
-                addressLine1:   request.AddressLine1,
-                countryId:      request.CountryId,
-                provinceId:     request.ProvinceId,
-                municipalityId: request.MunicipalityId);
-
-            if (!string.IsNullOrWhiteSpace(request.TermsVersion))
+            if (request.AcceptTerms && !string.IsNullOrWhiteSpace(request.TermsVersion))
             {
                 tenant.AcceptTerms(
                     version:    request.TermsVersion,
@@ -78,21 +71,9 @@ public class RegisterTenantCommandHandler(
             await tenantRepository.AddAsync(tenant, cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken); // materialise tenant.Id
 
-            // 5. Create admin user (username = email)
-            var passwordHash = passwordHasher.HashPassword(request.AdminPassword);
-            var user = User.Create(
-                tenantId:     tenant.Id,
-                username:     adminEmail,
-                email:        adminEmail,
-                passwordHash: passwordHash,
-                firstName:    request.AdminFirstName,
-                lastName:     request.AdminLastName,
-                languageId:   request.LanguageId,
-                isAdmin:      true);
-
             // 6. Generate 6-digit OTP and PBKDF2-hash it
-            plainCode        = GenerateSixDigitCode();
-            var codeHash     = passwordHasher.HashPassword(plainCode);
+            plainCode    = RandomNumberGenerator.GetInt32(100_000, 1_000_000).ToString();
+            var codeHash = passwordHasher.HashPassword(plainCode);
 
             // 7. Create OTP token (24-hour expiry)
             var token = TenantRegistrationToken.Create(
@@ -100,10 +81,8 @@ public class RegisterTenantCommandHandler(
                 codeHash:  codeHash,
                 expiresAt: DateTime.UtcNow.AddHours(24));
 
-            await userRepository.AddAsync(user, cancellationToken);
             await tokenRepository.AddAsync(token, cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken);
-
             await unitOfWork.CommitTransactionAsync(cancellationToken);
         }
         catch
@@ -113,13 +92,11 @@ public class RegisterTenantCommandHandler(
         }
         // ── Transaction complete ─────────────────────────────────────────────
 
-        // 8. Send verification email AFTER commit — never for a rolled-back operation
-        await emailService.SendVerificationCodeAsync(
-            adminEmail, plainCode, cancellationToken);
+        // 8. Send verification email AFTER commit
+        var emailResult = await emailService.SendVerificationCodeAsync(email, plainCode, cancellationToken);
+        if (!emailResult.IsSuccess)
+            throw new EmailSendException(emailResult.Error ?? "Unknown error");
 
-        return new RegisterTenantResponse(adminEmail, request.Subdomain.ToLower().Trim());
+        return new RegisterTenantResponse(email, "Verification email sent");
     }
-
-    private static string GenerateSixDigitCode()
-        => RandomNumberGenerator.GetInt32(100_000, 1_000_000).ToString();
 }

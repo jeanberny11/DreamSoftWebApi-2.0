@@ -1,10 +1,12 @@
 using System.Text;
 using Asp.Versioning;
+using Microsoft.EntityFrameworkCore;
 using Asp.Versioning.ApiExplorer;
+using DreamSoft.Api;
 using DreamSoft.Api.Middleware;
 using DreamSoft.Application;
 using DreamSoft.Infrastructure;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using DreamSoft.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Options;
@@ -12,8 +14,6 @@ using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
 
 // Register Application layer services (MediatR, FluentValidation, AutoMapper, Behaviors)
 builder.Services.AddApplication();
@@ -28,37 +28,86 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
 {
     var supportedCultures = new[] { "en", "es" };
 
-    options.SetDefaultCulture("en") // English as default
+    options.SetDefaultCulture("en")
         .AddSupportedCultures(supportedCultures)
         .AddSupportedUICultures(supportedCultures);
 
-    // Read from Accept-Language header
     options.RequestCultureProviders.Insert(0, new AcceptLanguageHeaderRequestCultureProvider());
 });
 
-// Configure JWT Authentication
-var jwtSettings = builder.Configuration.GetSection("Jwt");
-var secretKey = jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret is not configured");
+// ── JWT Authentication — two cryptographically isolated schemes ───────────────
+//
+//  TenantScheme  →  tokens issued by TenantAuthController
+//                   signed with Jwt:Tenant:Secret
+//                   issuer = "dreamsoft-tenant", audience = "dreamsoft-tenant-api"
+//
+//  UserScheme    →  tokens issued by AuthController
+//                   signed with Jwt:User:Secret
+//                   issuer = "dreamsoft-user", audience = "dreamsoft-user-api"
+//
+// Because the secrets, issuers, and audiences differ, a Tenant token cannot
+// pass validation against UserScheme (and vice-versa) — even if one secret leaks.
+// ─────────────────────────────────────────────────────────────────────────────
 
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
+var tenantJwt = builder.Configuration.GetSection("Jwt:Tenant");
+var userJwt = builder.Configuration.GetSection("Jwt:User");
+
+var tenantSecret = tenantJwt["Secret"]
+    ?? throw new InvalidOperationException("Jwt:Tenant:Secret is not configured");
+var userSecret = userJwt["Secret"]
+    ?? throw new InvalidOperationException("Jwt:User:Secret is not configured");
+
+builder.Services
+    .AddAuthentication(options =>
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettings["Issuer"],
-        ValidAudience = jwtSettings["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
-        ClockSkew = TimeSpan.Zero // No tolerance for expired tokens
-    };
-});
+        // No default scheme — each policy specifies which scheme(s) to use.
+        // This prevents accidental cross-scheme validation.
+        options.DefaultAuthenticateScheme = null;
+        options.DefaultChallengeScheme = null;
+    })
+    .AddJwtBearer(AuthSchemes.Tenant, options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = tenantJwt["Issuer"],
+            ValidAudience = tenantJwt["Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(tenantSecret)),
+            ClockSkew = TimeSpan.Zero
+        };
+    })
+    .AddJwtBearer(AuthSchemes.User, options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = userJwt["Issuer"],
+            ValidAudience = userJwt["Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(userSecret)),
+            ClockSkew = TimeSpan.Zero
+        };
+    });
+
+// ── Authorization Policies ────────────────────────────────────────────────────
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy(AuthPolicies.TenantOnly, policy =>
+    {
+        policy.AddAuthenticationSchemes(AuthSchemes.Tenant);
+        policy.RequireAuthenticatedUser();
+        policy.RequireClaim("token_type", "tenant");
+    })
+    .AddPolicy(AuthPolicies.UserOnly, policy =>
+    {
+        policy.AddAuthenticationSchemes(AuthSchemes.User);
+        policy.RequireAuthenticatedUser();
+        policy.RequireClaim("token_type", "user");
+    });
 
 builder.Services.AddControllers();
 
@@ -80,15 +129,24 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddTransient<IConfigureOptions<SwaggerGenOptions>, DreamSoft.Api.Swagger.ConfigureSwaggerOptions>();
 builder.Services.AddSwaggerGen(options =>
 {
-    // Add JWT Authentication to Swagger
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    options.AddSecurityDefinition("TenantBearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
         Type = SecuritySchemeType.Http,
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Bearer {token}\""
+        Description = "Tenant account token. Obtain from POST /api/v1/tenant-auth/login"
+    });
+
+    options.AddSecurityDefinition("UserBearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Solution user token. Obtain from POST /api/v1/auth/login"
     });
 
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -96,18 +154,25 @@ builder.Services.AddSwaggerGen(options =>
         {
             new OpenApiSecurityScheme
             {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "TenantBearer" }
+            },
+            Array.Empty<string>()
+        }
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "UserBearer" }
             },
             Array.Empty<string>()
         }
     });
 });
 
-// Add CORS for subdomain support
+// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("SubdomainPolicy", policy =>
@@ -115,22 +180,28 @@ builder.Services.AddCors(options =>
         policy
             .SetIsOriginAllowed(origin =>
             {
-                // Allow all subdomains of dreamsoft.com
-                // Examples: https://acme.dreamsoft.com, https://techcorp.dreamsoft.com
                 var uri = new Uri(origin);
                 return uri.Host.EndsWith(".dreamsoft.com") ||
-                       uri.Host == "localhost" || // For development
-                       uri.Host == "dreamsoft.com"; // For main domain
+                       uri.Host == "localhost" ||
+                       uri.Host == "dreamsoft.com";
             })
             .AllowAnyMethod()
             .AllowAnyHeader()
-            .AllowCredentials(); // Required for HTTP-only cookies
+            .AllowCredentials();
     });
 });
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// ── Database: apply migrations + seed on startup ──────────────────────────────
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await db.Database.MigrateAsync();
+    await DbSeeder.SeedAsync(db);
+}
+
+// ── HTTP Pipeline ─────────────────────────────────────────────────────────────
 var apiVersionDescriptionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
 
 app.UseSwagger();
@@ -142,28 +213,26 @@ app.UseSwaggerUI(options =>
             $"/swagger/{description.GroupName}/swagger.json",
             $"DreamSoft ERP API {description.GroupName.ToUpperInvariant()}");
     }
-    options.RoutePrefix = string.Empty; // Swagger at root URL
+    options.RoutePrefix = string.Empty;
 });
 
 app.UseHttpsRedirection();
-
-// Use Request Localization Middleware
 app.UseRequestLocalization();
 
-// EXCEPTION HANDLING - Must be early in pipeline
+// Exception handling — early in pipeline
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-// CORS - must be before Authentication/Authorization
+// CORS — before Authentication/Authorization
 app.UseCors("SubdomainPolicy");
 
-// Tenant Resolution — runs before authentication so public endpoints have subdomain context.
-// Populates HttpContext.Items["Subdomain"] from the Host header.
+// Tenant Resolution — populates HttpContext.Items["Subdomain"] from Host header
 app.UseMiddleware<TenantResolutionMiddleware>();
 
-// Authentication & Authorization
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseMiddleware<TenantGatewayMiddleware>(); // ← Blocks ACTIVE-status-required routes for unverified/unsubs tenants
+
+// Blocks routes requiring active subscription/verified status
+app.UseMiddleware<TenantGatewayMiddleware>();
 
 app.MapControllers();
 

@@ -4,23 +4,19 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DreamSoft.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// Entity Framework Core configuration for RoleOptionActionTemplate entity
-/// Maps to the 'role_option_actions_template' table in PostgreSQL
-/// </summary>
 public class RoleOptionActionTemplateConfiguration : IEntityTypeConfiguration<RoleOptionActionTemplate>
 {
     public void Configure(EntityTypeBuilder<RoleOptionActionTemplate> builder)
     {
-        // Table mapping
+        // ── Table ─────────────────────────────────────────────────────────
         builder.ToTable("role_option_actions_template");
 
-        // Composite primary key
-        builder.HasKey(r => new { r.RoleId, r.MenuOptionId, r.ActionId });
+        // ── Primary Key (composite) ───────────────────────────────────────
+        builder.HasKey(r => new { r.RoleTemplateId, r.MenuOptionId, r.ActionId });
 
-        // Properties mapping
-        builder.Property(r => r.RoleId)
-            .HasColumnName("role_id")
+        // ── Properties ────────────────────────────────────────────────────
+        builder.Property(r => r.RoleTemplateId)
+            .HasColumnName("role_template_id")
             .IsRequired();
 
         builder.Property(r => r.MenuOptionId)
@@ -31,10 +27,10 @@ public class RoleOptionActionTemplateConfiguration : IEntityTypeConfiguration<Ro
             .HasColumnName("action_id")
             .IsRequired();
 
-        // Relationships
-        builder.HasOne(r => r.Role)
+        // ── Relationships ─────────────────────────────────────────────────
+        builder.HasOne(r => r.RoleTemplate)
             .WithMany(rt => rt.RoleOptionActionTemplates)
-            .HasForeignKey(r => r.RoleId)
+            .HasForeignKey(r => r.RoleTemplateId)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(r => r.MenuOption)

@@ -4,6 +4,7 @@ namespace DreamSoft.Domain.Repositories;
 
 public interface ISubscriptionPlanRepository : IRepository<SubscriptionPlan>
 {
-    Task<IReadOnlyList<SubscriptionPlan>> GetActiveBySolutionAsync(int solutionId, CancellationToken ct = default);
-    Task<SubscriptionPlan?> GetByIdWithBillingCycleAsync(int planId, CancellationToken ct = default);
+    Task<IReadOnlyList<SubscriptionPlan>> GetBySolutionIdAsync(int solutionId, CancellationToken cancellationToken = default);
+    Task<SubscriptionPlan?> GetByCodeAsync(string code, CancellationToken cancellationToken = default);
+    Task<SubscriptionPlan?> GetWithPricesAndLimitsAsync(int id, CancellationToken cancellationToken = default);
 }

@@ -4,5 +4,5 @@ namespace DreamSoft.Domain.Repositories;
 
 public interface IRoleOptionActionTemplateRepository : IRepository<RoleOptionActionTemplate>
 {
-    Task<IReadOnlyList<RoleOptionActionTemplate>> GetByTemplateAsync(int roleTemplateId, CancellationToken ct = default);
+    Task<IReadOnlyList<RoleOptionActionTemplate>> GetByTemplateIdAsync(int roleTemplateId, CancellationToken cancellationToken = default);
 }

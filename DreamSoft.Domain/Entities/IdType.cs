@@ -11,7 +11,6 @@ public class IdType : LookupEntity
 
     // Navigation properties
     public Country Country { get; set; } = null!;
-    public ICollection<User> Users { get; private set; } = [];
 
     private IdType() { }
 

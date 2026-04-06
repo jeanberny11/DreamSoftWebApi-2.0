@@ -7,13 +7,21 @@ namespace DreamSoft.Infrastructure.Persistence.Repositories;
 public class RoleRepository(ApplicationDbContext context)
     : Repository<Role>(context), IRoleRepository
 {
-    public async Task<IReadOnlyList<Role>> GetByTenantAsync(int tenantId, CancellationToken ct = default)
+    public async Task<Role?> GetByCodeAsync(int tenantId, int solutionId, string code, CancellationToken cancellationToken = default)
         => await _dbSet
-            .Where(r => r.TenantId == tenantId)
-            .ToListAsync(ct);
+            .FirstOrDefaultAsync(r => r.TenantId == tenantId
+                && r.SolutionId == solutionId
+                && r.Code == code.ToUpper().Trim(), cancellationToken);
 
-    public async Task<Role?> GetByCodeAndTenantAsync(string code, int tenantId, CancellationToken ct = default)
-        => await _dbSet.FirstOrDefaultAsync(r =>
-            r.Code == code.ToUpper().Trim() &&
-            r.TenantId == tenantId, ct);
+    public async Task<Role?> GetWithPermissionsAsync(int id, CancellationToken cancellationToken = default)
+        => await _dbSet
+            .Include(r => r.RoleMenuOptions)
+            .Include(r => r.RoleOptionActions)
+            .FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
+
+    public async Task<IReadOnlyList<Role>> GetAllByTenantAndSolutionAsync(int tenantId, int solutionId, CancellationToken cancellationToken = default)
+        => await _dbSet
+            .Where(r => r.TenantId == tenantId && r.SolutionId == solutionId)
+            .OrderBy(r => r.Name)
+            .ToListAsync(cancellationToken);
 }

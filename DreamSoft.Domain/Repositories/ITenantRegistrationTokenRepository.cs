@@ -4,7 +4,7 @@ namespace DreamSoft.Domain.Repositories;
 
 public interface ITenantRegistrationTokenRepository : IRepository<TenantRegistrationToken>
 {
-    Task<TenantRegistrationToken?> GetActiveByTenantAsync(int tenantId, CancellationToken ct = default);
-    Task ConsumeAllByTenantAsync(int tenantId, CancellationToken ct = default);
-    Task<bool> HasRecentTokenAsync(int tenantId, int minutesAgo, CancellationToken ct = default);
+    Task<TenantRegistrationToken?> GetActiveTokenForTenantAsync(int tenantId, CancellationToken cancellationToken = default);
+    Task ConsumeAllForTenantAsync(int tenantId, CancellationToken cancellationToken = default);
+    Task<bool> HasRecentTokenAsync(int tenantId, int minutesAgo, CancellationToken cancellationToken = default);
 }

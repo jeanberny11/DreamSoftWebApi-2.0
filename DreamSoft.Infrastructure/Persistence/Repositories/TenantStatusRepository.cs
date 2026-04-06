@@ -7,6 +7,7 @@ namespace DreamSoft.Infrastructure.Persistence.Repositories;
 public class TenantStatusRepository(ApplicationDbContext context)
     : Repository<TenantStatus>(context), ITenantStatusRepository
 {
-    public async Task<TenantStatus?> GetByCodeAsync(string code, CancellationToken ct = default)
-        => await _dbSet.FirstOrDefaultAsync(s => s.Code == code, ct);
+    public async Task<TenantStatus?> GetByCodeAsync(string code, CancellationToken cancellationToken = default)
+        => await _dbSet
+            .FirstOrDefaultAsync(ts => ts.Code == code.ToUpper().Trim(), cancellationToken);
 }

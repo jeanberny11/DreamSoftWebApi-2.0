@@ -5,7 +5,7 @@ namespace DreamSoft.Domain.Repositories;
 
 public interface IRepository<T> where T : BaseEntity
 {
-    // Query methods
+    // ── Query ─────────────────────────────────────────────────────────────
     Task<T?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<T>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<T>> FindAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default);
@@ -13,7 +13,7 @@ public interface IRepository<T> where T : BaseEntity
     Task<bool> AnyAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default);
     Task<int> CountAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default);
 
-    // Command methods
+    // ── Command ───────────────────────────────────────────────────────────
     Task<T> AddAsync(T entity, CancellationToken cancellationToken = default);
     Task AddRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default);
     Task UpdateAsync(T entity, CancellationToken cancellationToken = default);

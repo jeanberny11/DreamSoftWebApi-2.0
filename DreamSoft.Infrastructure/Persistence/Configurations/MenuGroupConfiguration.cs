@@ -4,24 +4,20 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DreamSoft.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// Entity Framework Core configuration for MenuGroup entity
-/// Maps to the 'menu_groups' table in PostgreSQL
-/// </summary>
 public class MenuGroupConfiguration : IEntityTypeConfiguration<MenuGroup>
 {
     public void Configure(EntityTypeBuilder<MenuGroup> builder)
     {
-        // Table mapping
+        // ── Table ─────────────────────────────────────────────────────────
         builder.ToTable("menu_groups");
 
-        // Primary key
+        // ── Primary Key ───────────────────────────────────────────────────
         builder.HasKey(m => m.Id);
         builder.Property(m => m.Id)
             .HasColumnName("id")
             .ValueGeneratedOnAdd();
 
-        // Properties mapping
+        // ── Properties ────────────────────────────────────────────────────
         builder.Property(m => m.Code)
             .HasColumnName("code")
             .HasMaxLength(50)
@@ -51,7 +47,7 @@ public class MenuGroupConfiguration : IEntityTypeConfiguration<MenuGroup>
             .IsRequired()
             .HasDefaultValue(0);
 
-        // JSONB Translation Configuration (Name + Description)
+        // ── Translations (JSONB) ──────────────────────────────────────────
         builder.OwnsOne(m => m.Translations, translations =>
         {
             translations.ToJson("translations");
@@ -59,24 +55,19 @@ public class MenuGroupConfiguration : IEntityTypeConfiguration<MenuGroup>
             translations.OwnsOne(t => t.Spanish, spanish =>
             {
                 spanish.ToJson("es");
-                spanish.Property(s => s.Name)
-                    .HasJsonPropertyName("name")
-                    .IsRequired();
-                spanish.Property(s => s.Descripcion)
-                    .HasJsonPropertyName("description");
+                spanish.Property(s => s.Name).HasJsonPropertyName("name").IsRequired();
+                spanish.Property(s => s.Descripcion).HasJsonPropertyName("description");
             });
 
             translations.OwnsOne(t => t.English, english =>
             {
                 english.ToJson("en");
-                english.Property(e => e.Name)
-                    .HasJsonPropertyName("name");
-                english.Property(e => e.Descripcion)
-                    .HasJsonPropertyName("description");
+                english.Property(e => e.Name).HasJsonPropertyName("name");
+                english.Property(e => e.Descripcion).HasJsonPropertyName("description");
             });
         });
 
-        // Audit fields
+        // ── Audit Fields ──────────────────────────────────────────────────
         builder.Property(m => m.IsActive)
             .HasColumnName("is_active")
             .IsRequired()
@@ -90,19 +81,12 @@ public class MenuGroupConfiguration : IEntityTypeConfiguration<MenuGroup>
         builder.Property(m => m.UpdatedAt)
             .HasColumnName("updated_at");
 
-        // Unique constraint
+        // ── Indexes ───────────────────────────────────────────────────────
         builder.HasIndex(m => m.Code)
             .IsUnique()
             .HasDatabaseName("menu_groups_code_key");
 
-        // Indexes
-        builder.HasIndex(m => m.IsActive)
-            .HasDatabaseName("idx_menu_groups_active");
-
-        builder.HasIndex(m => m.Code)
-            .HasDatabaseName("idx_menu_groups_code");
-
-        // Relationships
+        // ── Relationships ─────────────────────────────────────────────────
         builder.HasMany(m => m.MenuOptions)
             .WithOne(o => o.MenuGroup)
             .HasForeignKey(o => o.MenuGroupId)

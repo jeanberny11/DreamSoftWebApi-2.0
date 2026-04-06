@@ -4,61 +4,68 @@ namespace DreamSoft.Application.Common.Interfaces;
 /// Service to get current authenticated user information from HTTP context.
 /// </summary>
 /// <remarks>
-/// <para><b>JWT Claim Schema</b> — every access token issued by the auth service MUST include:</para>
+/// <para><b>JWT Claim Schema</b></para>
+/// <para><b>User tokens</b> (AuthController / UserScheme):</para>
 /// <list type="table">
-///   <listheader><term>Claim name</term><description>Source / notes</description></listheader>
-///   <item><term><c>sub</c> (ClaimTypes.NameIdentifier)</term><description>User.Id (int) — primary identity claim</description></item>
-///   <item><term><c>tenant_id</c></term><description>Tenant.Id (int) — drives all tenant-scoped query filters</description></item>
+///   <listheader><term>Claim</term><description>Notes</description></listheader>
+///   <item><term><c>sub</c> (ClaimTypes.NameIdentifier)</term><description>User.Id (int)</description></item>
+///   <item><term><c>tenant_id</c></term><description>Tenant.Id (int)</description></item>
+///   <item><term><c>solution_id</c></term><description>Solution.Id (int)</description></item>
 ///   <item><term><c>email</c></term><description>User.Email</description></item>
 ///   <item><term><c>username</c></term><description>User.Username</description></item>
-///   <item><term><c>is_admin</c></term><description>"true" | "false" — system-level admin flag</description></item>
+///   <item><term><c>is_admin</c></term><description>"true" | "false"</description></item>
+///   <item><term><c>token_type</c></term><description>"user"</description></item>
+/// </list>
+/// <para><b>Tenant tokens</b> (TenantAuthController / TenantScheme):</para>
+/// <list type="table">
+///   <item><term><c>sub</c> (ClaimTypes.NameIdentifier)</term><description>Tenant.Id (int)</description></item>
+///   <item><term><c>tenant_id</c></term><description>Tenant.Id (int)</description></item>
+///   <item><term><c>email</c></term><description>Tenant.Email</description></item>
+///   <item><term><c>token_type</c></term><description>"tenant"</description></item>
 /// </list>
 /// <para>
-/// The <c>tenant_id</c> claim is the authoritative source of tenant context for authenticated requests.
-/// For public (unauthenticated) endpoints the subdomain extracted from the <c>Host</c> header by
-/// <c>TenantResolutionMiddleware</c> is the fallback, stored in <c>HttpContext.Items["Subdomain"]</c>.
+/// Use <see cref="IsTenantIdentity"/> and <see cref="IsUserIdentity"/> to branch logic
+/// by identity type rather than checking claims directly.
 /// </para>
 /// </remarks>
 public interface ICurrentUserService
 {
-    /// <summary>
-    /// Gets current user ID from the <c>sub</c> JWT claim (<see cref="System.Security.Claims.ClaimTypes.NameIdentifier"/>).
-    /// </summary>
+    /// <summary>Gets the subject ID from the <c>sub</c> claim (User.Id for users, Tenant.Id for tenants).</summary>
     int? UserId { get; }
 
-    /// <summary>
-    /// Gets current tenant ID from the <c>tenant_id</c> JWT claim.
-    /// Null when the request is unauthenticated or the token was issued without a tenant context.
-    /// </summary>
+    /// <summary>Gets current tenant ID from the <c>tenant_id</c> JWT claim. Present in both token types.</summary>
     int? TenantId { get; }
 
-    /// <summary>
-    /// Gets current user email from JWT token claims
-    /// </summary>
+    /// <summary>Gets current solution ID from the <c>solution_id</c> claim. Only present in User tokens.</summary>
+    int? SolutionId { get; }
+
+    /// <summary>Gets the email from the JWT token claims.</summary>
     string? Email { get; }
 
-    /// <summary>
-    /// Gets current username from JWT token claims
-    /// </summary>
+    /// <summary>Gets the username from JWT token claims. Only present in User tokens.</summary>
     string? Username { get; }
 
-    /// <summary>
-    /// Checks if current user is admin
-    /// </summary>
+    /// <summary>Checks if current user is an admin. Only meaningful for User tokens.</summary>
     bool IsAdmin { get; }
 
-    /// <summary>
-    /// Checks if user is authenticated
-    /// </summary>
+    /// <summary>Checks if the request is authenticated.</summary>
     bool IsAuthenticated { get; }
 
     /// <summary>
-    /// Gets the IP address of the current request
+    /// Returns true when the current token was issued by TenantAuthController
+    /// (token_type = "tenant"). Use to gate tenant account management endpoints.
     /// </summary>
-    string? IpAddress { get; }
+    bool IsTenantIdentity { get; }
 
     /// <summary>
-    /// Gets the subdomain from the current HTTP request (e.g., acme.dreamsoft.com → "acme")
+    /// Returns true when the current token was issued by AuthController
+    /// (token_type = "user"). Use to gate solution feature endpoints.
     /// </summary>
+    bool IsUserIdentity { get; }
+
+    /// <summary>Gets the IP address of the current request.</summary>
+    string? IpAddress { get; }
+
+    /// <summary>Gets the subdomain from the current HTTP request host header.</summary>
     string? Subdomain { get; }
 }

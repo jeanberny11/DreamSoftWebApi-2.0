@@ -4,5 +4,6 @@ namespace DreamSoft.Domain.Repositories;
 
 public interface ISolutionRepository : IRepository<Solution>
 {
-    Task<IReadOnlyList<Solution>> GetAllActiveAsync(CancellationToken ct = default);
+    Task<Solution?> GetByCodeAsync(string code, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Solution>> GetAllActiveAsync(CancellationToken cancellationToken = default);
 }

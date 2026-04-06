@@ -9,9 +9,6 @@ public class Currency : AuditableEntity
     public string NativeName { get; set; } = null!;
     public bool IsDefault { get; set; }
 
-    // Navigation properties
-    public ICollection<Tenant> Tenants { get; private set; } = [];
-
     private Currency() { }
 
     public static Currency Create(string code, string name, string nativeName, bool isDefault = false)

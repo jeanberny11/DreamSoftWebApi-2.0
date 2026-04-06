@@ -7,26 +7,26 @@ namespace DreamSoft.Infrastructure.Persistence.Repositories;
 public class TenantRegistrationTokenRepository(ApplicationDbContext context)
     : Repository<TenantRegistrationToken>(context), ITenantRegistrationTokenRepository
 {
-    public async Task<TenantRegistrationToken?> GetActiveByTenantAsync(int tenantId, CancellationToken ct = default)
-        => await _dbSet.FirstOrDefaultAsync(t =>
-            t.TenantId == tenantId &&
-            !t.IsConsumed &&
-            t.ExpiresAt > DateTime.UtcNow, ct);
+    public async Task<TenantRegistrationToken?> GetActiveTokenForTenantAsync(int tenantId, CancellationToken cancellationToken = default)
+        => await _dbSet
+            .Where(t => t.TenantId == tenantId && !t.IsConsumed && t.ExpiresAt > DateTime.UtcNow)
+            .OrderByDescending(t => t.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
 
-    public async Task ConsumeAllByTenantAsync(int tenantId, CancellationToken ct = default)
+    public async Task ConsumeAllForTenantAsync(int tenantId, CancellationToken cancellationToken = default)
     {
-        var tokens = await _dbSet
+        var activeTokens = await _dbSet
             .Where(t => t.TenantId == tenantId && !t.IsConsumed)
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken);
 
-        foreach (var token in tokens)
+        foreach (var token in activeTokens)
             token.Consume();
     }
 
-    public async Task<bool> HasRecentTokenAsync(int tenantId, int minutesAgo, CancellationToken ct = default)
+    public async Task<bool> HasRecentTokenAsync(int tenantId, int minutesAgo, CancellationToken cancellationToken = default)
     {
-        var threshold = DateTime.UtcNow.AddMinutes(-minutesAgo);
-        return await _dbSet.AnyAsync(
-            t => t.TenantId == tenantId && t.CreatedAt >= threshold, ct);
+        var cutoff = DateTime.UtcNow.AddMinutes(-minutesAgo);
+        return await _dbSet
+            .AnyAsync(t => t.TenantId == tenantId && t.CreatedAt >= cutoff, cancellationToken);
     }
 }

@@ -4,24 +4,20 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DreamSoft.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// Entity Framework Core configuration for Solution entity
-/// Maps to the 'solutions' table in PostgreSQL
-/// </summary>
 public class SolutionConfiguration : IEntityTypeConfiguration<Solution>
 {
     public void Configure(EntityTypeBuilder<Solution> builder)
     {
-        // Table mapping
+        // ── Table ─────────────────────────────────────────────────────────
         builder.ToTable("solutions");
 
-        // Primary key
+        // ── Primary Key ───────────────────────────────────────────────────
         builder.HasKey(s => s.Id);
         builder.Property(s => s.Id)
             .HasColumnName("id")
             .ValueGeneratedOnAdd();
 
-        // Properties mapping
+        // ── Properties ────────────────────────────────────────────────────
         builder.Property(s => s.Code)
             .HasColumnName("code")
             .HasMaxLength(50)
@@ -47,7 +43,7 @@ public class SolutionConfiguration : IEntityTypeConfiguration<Solution>
             .IsRequired()
             .HasDefaultValue(0);
 
-        // JSONB Translation Configuration
+        // ── Translations (JSONB) ──────────────────────────────────────────
         builder.OwnsOne(s => s.Translations, translations =>
         {
             translations.ToJson("translations");
@@ -55,24 +51,19 @@ public class SolutionConfiguration : IEntityTypeConfiguration<Solution>
             translations.OwnsOne(t => t.Spanish, spanish =>
             {
                 spanish.ToJson("es");
-                spanish.Property(sp => sp.Name)
-                    .HasJsonPropertyName("name")
-                    .IsRequired();
-                spanish.Property(sp => sp.Descripcion)
-                    .HasJsonPropertyName("description");
+                spanish.Property(sp => sp.Name).HasJsonPropertyName("name").IsRequired();
+                spanish.Property(sp => sp.Descripcion).HasJsonPropertyName("description");
             });
 
             translations.OwnsOne(t => t.English, english =>
             {
                 english.ToJson("en");
-                english.Property(e => e.Name)
-                    .HasJsonPropertyName("name");
-                english.Property(e => e.Descripcion)
-                    .HasJsonPropertyName("description");
+                english.Property(e => e.Name).HasJsonPropertyName("name");
+                english.Property(e => e.Descripcion).HasJsonPropertyName("description");
             });
         });
 
-        // Audit fields
+        // ── Audit Fields ──────────────────────────────────────────────────
         builder.Property(s => s.IsActive)
             .HasColumnName("is_active")
             .IsRequired()
@@ -86,32 +77,25 @@ public class SolutionConfiguration : IEntityTypeConfiguration<Solution>
         builder.Property(s => s.UpdatedAt)
             .HasColumnName("updated_at");
 
-        // Unique constraints
+        // ── Indexes ───────────────────────────────────────────────────────
         builder.HasIndex(s => s.Code)
             .IsUnique()
             .HasDatabaseName("solutions_code_key");
 
-        // Indexes
-        builder.HasIndex(s => s.Code)
-            .HasDatabaseName("idx_solutions_code");
-
-        builder.HasIndex(s => s.SortOrder)
-            .HasDatabaseName("idx_solutions_sort_order");
-
-        // Relationships
+        // ── Relationships ─────────────────────────────────────────────────
         builder.HasMany(s => s.SubscriptionPlans)
             .WithOne(p => p.Solution)
             .HasForeignKey(p => p.SolutionId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasMany(s => s.SolutionMenuOptions)
-            .WithOne(sm => sm.Solution)
-            .HasForeignKey(sm => sm.SolutionId)
-            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany(s => s.TenantSubscriptions)
+            .WithOne(ts => ts.Solution)
+            .HasForeignKey(ts => ts.SolutionId)
+            .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasMany(s => s.RoleTemplates)
-            .WithOne(r => r.Solution)
-            .HasForeignKey(r => r.SolutionId)
+        builder.HasMany(s => s.TenantSubdomains)
+            .WithOne(td => td.Solution)
+            .HasForeignKey(td => td.SolutionId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -1,3 +1,4 @@
+using DreamSoft.Application.Features.Registration.CheckOnboardingStatus;
 using DreamSoft.Application.Features.Registration.CheckSubdomainAvailability;
 using DreamSoft.Application.Features.Registration.RegisterTenant;
 using DreamSoft.Application.Features.Registration.ResendVerification;
@@ -63,6 +64,22 @@ public class RegistrationController : ApiControllerBase
     {
         var command = new VerifyEmailCommand(body.Email, body.Code);
         var result = await Mediator.Send(command, cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Check whether a tenant has completed onboarding.
+    /// </summary>
+    [HttpGet("check-onboarding-status")]
+    [ProducesResponseType(typeof(OnboardingStatusResponse), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> CheckOnboardingStatus(
+        [FromQuery] int tenantId,
+        CancellationToken cancellationToken)
+    {
+        var result = await Mediator.Send(
+            new CheckOnboardingStatusQuery(tenantId), cancellationToken);
         return Ok(result);
     }
 

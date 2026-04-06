@@ -4,4 +4,6 @@ using DreamSoft.Domain.Repositories;
 namespace DreamSoft.Infrastructure.Persistence.Repositories;
 
 public class BillingCycleRepository(ApplicationDbContext context)
-    : Repository<BillingCycle>(context), IBillingCycleRepository { }
+    : Repository<BillingCycle>(context), IBillingCycleRepository
+{
+}

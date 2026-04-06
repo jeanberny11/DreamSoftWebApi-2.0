@@ -6,7 +6,7 @@ using MediatR;
 namespace DreamSoft.Application.Features.Auth.Logout;
 
 public class LogoutCommandHandler(
-    IRefreshTokenRepository refreshTokenRepository,
+    IUserRefreshTokenRepository refreshTokenRepository,
     IUnitOfWork unitOfWork,
     ICurrentUserService currentUserService)
     : IRequestHandler<LogoutCommand>
@@ -21,7 +21,7 @@ public class LogoutCommandHandler(
         if (request.RefreshToken is not null)
         {
             // Targeted logout — revoke only the specific session token
-            var tokenEntity = await refreshTokenRepository.GetActiveByTokenAsync(
+            var tokenEntity = await refreshTokenRepository.GetActiveTokenAsync(
                 request.RefreshToken, cancellationToken);
 
             // Silently succeed if already revoked / not found (idempotent)
@@ -34,14 +34,8 @@ public class LogoutCommandHandler(
         else
         {
             // Global logout — revoke all active sessions for this user
-            var activeTokens = await refreshTokenRepository.GetActiveByUserAsync(
-                userId, cancellationToken);
-
-            foreach (var token in activeTokens)
-                token.Revoke(ip);
-
-            if (activeTokens.Count > 0)
-                await unitOfWork.SaveChangesAsync(cancellationToken);
+            await refreshTokenRepository.RevokeAllForUserAsync(userId, ip, cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
         }
     }
 }

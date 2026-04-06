@@ -4,6 +4,17 @@ namespace DreamSoft.Domain.Repositories;
 
 public interface ITenantSubscriptionRepository : IRepository<TenantSubscription>
 {
-    Task<TenantSubscription?> GetActiveByTenantAsync(int tenantId, CancellationToken ct = default);
-    Task<IReadOnlyList<TenantSubscription>> GetAllByTenantAsync(int tenantId, CancellationToken ct = default);
+    Task<TenantSubscription?> GetByIdWithStatusAsync(int id, CancellationToken cancellationToken = default);
+    Task<TenantSubscription?> GetByTenantAndSolutionAsync(int tenantId, int solutionId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TenantSubscription>> GetActiveByTenantAsync(int tenantId, CancellationToken cancellationToken = default);
+    Task<bool> ExistsForTenantAndSolutionAsync(int tenantId, int solutionId, CancellationToken cancellationToken = default);
+    Task<TenantSubscription?> GetByStripeSubscriptionIdAsync(string stripeSubscriptionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Finds the exact subscription that was created for a specific Stripe
+    /// checkout session. This is the safest way to correlate a
+    /// checkout.session.completed webhook to its local subscription record —
+    /// one session ID maps to exactly one subscription.
+    /// </summary>
+    Task<TenantSubscription?> GetByStripeSessionIdAsync(string stripeSessionId, CancellationToken cancellationToken = default);
 }

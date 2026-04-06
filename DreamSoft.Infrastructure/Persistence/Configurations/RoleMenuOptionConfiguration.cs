@@ -4,21 +4,17 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DreamSoft.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// Entity Framework Core configuration for RoleMenuOption entity
-/// Maps to the 'role_menu_options' table in PostgreSQL
-/// </summary>
 public class RoleMenuOptionConfiguration : IEntityTypeConfiguration<RoleMenuOption>
 {
     public void Configure(EntityTypeBuilder<RoleMenuOption> builder)
     {
-        // Table mapping
+        // ── Table ─────────────────────────────────────────────────────────
         builder.ToTable("role_menu_options");
 
-        // Composite primary key
+        // ── Primary Key (composite) ───────────────────────────────────────
         builder.HasKey(r => new { r.RoleId, r.MenuOptionId });
 
-        // Properties mapping
+        // ── Properties ────────────────────────────────────────────────────
         builder.Property(r => r.RoleId)
             .HasColumnName("role_id")
             .IsRequired();
@@ -27,7 +23,7 @@ public class RoleMenuOptionConfiguration : IEntityTypeConfiguration<RoleMenuOpti
             .HasColumnName("menu_option_id")
             .IsRequired();
 
-        // Relationships
+        // ── Relationships ─────────────────────────────────────────────────
         builder.HasOne(r => r.Role)
             .WithMany(ro => ro.RoleMenuOptions)
             .HasForeignKey(r => r.RoleId)

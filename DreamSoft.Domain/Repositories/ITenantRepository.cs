@@ -4,9 +4,11 @@ namespace DreamSoft.Domain.Repositories;
 
 public interface ITenantRepository : IRepository<Tenant>
 {
-    Task<bool> ExistsBySubdomainAsync(string subdomain, CancellationToken ct = default);
-    Task<Tenant?> GetBySubdomainAsync(string subdomain, CancellationToken ct = default);
-    Task<Tenant?> GetBySubdomainWithStatusAsync(string subdomain, CancellationToken ct = default);
-    Task<Tenant?> GetByEmailWithStatusAsync(string email, CancellationToken ct = default);
-    Task<Tenant?> GetByIdWithStatusAsync(int tenantId, CancellationToken ct = default);
+    Task<Tenant?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
+    Task<Tenant?> GetByEmailWithStatusAsync(string email, CancellationToken cancellationToken = default);
+    Task<Tenant?> GetByIdWithStatusAsync(int id, CancellationToken cancellationToken = default);
+    Task<Tenant?> GetBySubdomainWithStatusAsync(string subdomain, CancellationToken cancellationToken = default);
+    Task<Tenant?> GetByIdWithSubscriptionsAsync(int id, CancellationToken cancellationToken = default);
+    Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken = default);
+    Task<Tenant?> GetByStripeCustomerIdAsync(string stripeCustomerId, CancellationToken cancellationToken = default);
 }

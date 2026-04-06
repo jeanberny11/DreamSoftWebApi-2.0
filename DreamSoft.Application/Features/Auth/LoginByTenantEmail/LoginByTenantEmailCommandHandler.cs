@@ -10,7 +10,8 @@ namespace DreamSoft.Application.Features.Auth.LoginByTenantEmail;
 public class LoginByTenantEmailCommandHandler(
     ITenantRepository tenantRepository,
     IUserRepository userRepository,
-    IRefreshTokenRepository refreshTokenRepository,
+    ITenantSubdomainRepository tenantSubdomainRepository,
+    IUserRefreshTokenRepository refreshTokenRepository,
     IUnitOfWork unitOfWork,
     ICurrentUserService currentUserService,
     IPasswordHasher passwordHasher,
@@ -30,9 +31,9 @@ public class LoginByTenantEmailCommandHandler(
             request.TenantEmail, cancellationToken)
             ?? throw new UnauthorizedException("Invalid credentials.");
 
-        // 2. Find the user by username within that tenant
+        // 2. Find the user by username within that tenant (cross-solution search for mobile clients)
         var user = await userRepository.GetByUsernameAndTenantAsync(
-            request.Username, tenant.Id, cancellationToken)
+            tenant.Id, request.Username, cancellationToken)
             ?? throw new UnauthorizedException("Invalid credentials.");
 
         // 3. Verify password — always check before revealing any account/tenant state
@@ -49,53 +50,53 @@ public class LoginByTenantEmailCommandHandler(
             case TenantStatusCodes.PendingEmailVerification:
                 throw new ForbiddenException(
                     ForbiddenErrorCodes.TenantPendingEmailVerification,
-                    "Tenant email address has not been verified.");
+                    ErrorMessageKeys.EmailVerificationRequired);
 
             case TenantStatusCodes.PendingSubscription:
                 throw new ForbiddenException(
                     ForbiddenErrorCodes.TenantPendingSubscription,
-                    "Tenant subscription setup is not complete.");
+                    ErrorMessageKeys.TenantPendingSubscription);
 
             case TenantStatusCodes.Suspended:
                 throw new ForbiddenException(
                     ForbiddenErrorCodes.TenantSuspended,
-                    "Tenant account has been suspended.");
+                    ErrorMessageKeys.AccountSuspended);
 
             case TenantStatusCodes.Cancelled:
                 throw new ForbiddenException(
                     ForbiddenErrorCodes.TenantCancelled,
-                    "Tenant account has been cancelled.");
+                    ErrorMessageKeys.AccountCancelled);
         }
 
-        // 5. Check user email verification
-        if (!user.IsEmailVerified)
-            throw new ForbiddenException(
-                ForbiddenErrorCodes.EmailNotVerified,
-                "Email address has not been verified.");
-
-        // 6. Check account lockout
+        // 5. Check account lockout
         if (user.IsLockedOut())
         {
             var remaining = (int)Math.Ceiling(
                 (user.LockoutUntil!.Value - dateTime.UtcNow).TotalMinutes);
             throw new ForbiddenException(
                 ForbiddenErrorCodes.AccountLocked,
-                $"Account is locked. Try again in {remaining} minute(s).");
+                ErrorMessageKeys.AccountLocked,
+                remaining);
         }
 
         // 7. Successful login — reset lockout and record LastLoginAt
         user.ResetFailedLoginAttempts();
         user.RecordLogin();
 
-        // 8. Issue tokens
+        // 8. Resolve subdomain via TenantSubdomain
+        var tenantSubdomain = await tenantSubdomainRepository
+            .GetByTenantAndSolutionAsync(tenant.Id, user.SolutionId, cancellationToken);
+        var subdomain = tenantSubdomain?.Subdomain ?? string.Empty;
+
+        // 9. Issue tokens
         var accessToken   = tokenService.GenerateAccessToken(user, tenant);
         var rawToken      = tokenService.GenerateRefreshToken();
         var expiryDays    = request.RememberMe ? ExtendedRefreshTokenExpiryDays : DefaultRefreshTokenExpiryDays;
         var refreshExpiry = dateTime.UtcNow.AddDays(expiryDays);
         var expiresAt     = dateTime.UtcNow.AddMinutes(60);
 
-        // 9. Persist the RefreshToken entity (one row per session — multi-device support)
-        var refreshTokenEntity = Domain.Entities.RefreshToken.Create(
+        // 10. Persist the UserRefreshToken entity (one row per session — multi-device support)
+        var refreshTokenEntity = UserRefreshToken.Create(
             userId:      user.Id,
             token:       rawToken,
             expiresAt:   refreshExpiry,
@@ -112,6 +113,6 @@ public class LoginByTenantEmailCommandHandler(
             UserId:          user.Id,
             Username:        user.Username,
             FullName:        user.GetFullName(),
-            TenantSubdomain: tenant.Subdomain);
+            TenantSubdomain: subdomain);
     }
 }

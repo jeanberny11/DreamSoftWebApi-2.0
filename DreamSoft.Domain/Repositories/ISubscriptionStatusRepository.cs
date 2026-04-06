@@ -4,5 +4,5 @@ namespace DreamSoft.Domain.Repositories;
 
 public interface ISubscriptionStatusRepository : IRepository<SubscriptionStatus>
 {
-    Task<SubscriptionStatus?> GetByCodeAsync(string code, CancellationToken ct = default);
+    Task<SubscriptionStatus?> GetByCodeAsync(string code, CancellationToken cancellationToken = default);
 }

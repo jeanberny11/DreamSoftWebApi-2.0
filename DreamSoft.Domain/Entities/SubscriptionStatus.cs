@@ -12,10 +12,7 @@ public class SubscriptionStatus : LookupEntity
 
     private SubscriptionStatus() { }
 
-    public static SubscriptionStatus Create(
-        string code,
-        string name,
-        TranslatedString translations)
+    public static SubscriptionStatus Create(string code, string name, TranslatedString translations)
     {
         if (string.IsNullOrWhiteSpace(code))
             throw new ArgumentException("Code is required", nameof(code));

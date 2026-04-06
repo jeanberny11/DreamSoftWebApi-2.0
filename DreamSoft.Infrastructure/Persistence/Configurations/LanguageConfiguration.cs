@@ -4,24 +4,20 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DreamSoft.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// Entity Framework Core configuration for Language entity
-/// Maps to the 'languages' table in PostgreSQL
-/// </summary>
 public class LanguageConfiguration : IEntityTypeConfiguration<Language>
 {
     public void Configure(EntityTypeBuilder<Language> builder)
     {
-        // Table mapping
+        // ── Table ─────────────────────────────────────────────────────────
         builder.ToTable("languages");
 
-        // Primary key
+        // ── Primary Key ───────────────────────────────────────────────────
         builder.HasKey(l => l.Id);
         builder.Property(l => l.Id)
             .HasColumnName("id")
             .ValueGeneratedOnAdd();
 
-        // Properties mapping
+        // ── Properties ────────────────────────────────────────────────────
         builder.Property(l => l.Code)
             .HasColumnName("code")
             .HasMaxLength(10)
@@ -38,7 +34,7 @@ public class LanguageConfiguration : IEntityTypeConfiguration<Language>
             .HasColumnName("is_default")
             .HasDefaultValue(false);
 
-        // JSONB Translation Configuration (Name Only - No Description)
+        // ── Translations (JSONB) ──────────────────────────────────────────
         builder.OwnsOne(l => l.Translations, translations =>
         {
             translations.ToJson("translations");
@@ -46,22 +42,19 @@ public class LanguageConfiguration : IEntityTypeConfiguration<Language>
             translations.OwnsOne(t => t.Spanish, spanish =>
             {
                 spanish.ToJson("es");
-                spanish.Property(s => s.Name)
-                    .HasJsonPropertyName("name")
-                    .IsRequired();
+                spanish.Property(s => s.Name).HasJsonPropertyName("name").IsRequired();
                 spanish.Ignore(s => s.Descripcion);
             });
 
             translations.OwnsOne(t => t.English, english =>
             {
                 english.ToJson("en");
-                english.Property(e => e.Name)
-                    .HasJsonPropertyName("name");
+                english.Property(e => e.Name).HasJsonPropertyName("name");
                 english.Ignore(e => e.Descripcion);
             });
         });
 
-        // Audit fields
+        // ── Audit Fields ──────────────────────────────────────────────────
         builder.Property(l => l.IsActive)
             .HasColumnName("is_active")
             .HasDefaultValue(true);
@@ -74,7 +67,12 @@ public class LanguageConfiguration : IEntityTypeConfiguration<Language>
         builder.Property(l => l.UpdatedAt)
             .HasColumnName("updated_at");
 
-        // Relationships
+        // ── Indexes ───────────────────────────────────────────────────────
+        builder.HasIndex(l => l.Code)
+            .IsUnique()
+            .HasDatabaseName("languages_code_key");
+
+        // ── Relationships ─────────────────────────────────────────────────
         builder.HasMany(l => l.Tenants)
             .WithOne(t => t.Language)
             .HasForeignKey(t => t.LanguageId)

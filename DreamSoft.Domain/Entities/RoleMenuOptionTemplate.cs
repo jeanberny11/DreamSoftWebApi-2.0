@@ -4,26 +4,26 @@ namespace DreamSoft.Domain.Entities;
 
 public class RoleMenuOptionTemplate : BaseEntity
 {
-    public int RoleId { get; set; }
+    public int RoleTemplateId { get; set; }
     public int MenuOptionId { get; set; }
 
     // Navigation properties
-    public RoleTemplate Role { get; set; } = null!;
+    public RoleTemplate RoleTemplate { get; set; } = null!;
     public MenuOption MenuOption { get; set; } = null!;
 
     private RoleMenuOptionTemplate() { }
 
-    public static RoleMenuOptionTemplate Create(int roleId, int menuOptionId)
+    public static RoleMenuOptionTemplate Create(int roleTemplateId, int menuOptionId)
     {
-        if (roleId <= 0)
-            throw new ArgumentException("Role ID must be greater than zero", nameof(roleId));
+        if (roleTemplateId <= 0)
+            throw new ArgumentException("Role template ID must be greater than zero", nameof(roleTemplateId));
 
         if (menuOptionId <= 0)
             throw new ArgumentException("Menu option ID must be greater than zero", nameof(menuOptionId));
 
         return new RoleMenuOptionTemplate
         {
-            RoleId = roleId,
+            RoleTemplateId = roleTemplateId,
             MenuOptionId = menuOptionId
         };
     }

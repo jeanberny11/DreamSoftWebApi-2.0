@@ -43,7 +43,16 @@ public class TenantGatewayMiddleware(
             return;
         }
 
-        // No tenant claim — let the request through (auth middleware will handle it)
+        // Skip User tokens — the gateway only governs Tenant account status.
+        // A User token already implies the tenant had an active subscription
+        // at the time the user account was provisioned.
+        if (currentUser.IsUserIdentity)
+        {
+            await next(context);
+            return;
+        }
+
+        // No tenant claim — let the request through (auth middleware handles it)
         var tenantId = currentUser.TenantId;
         if (tenantId == null)
         {
@@ -65,9 +74,6 @@ public class TenantGatewayMiddleware(
             TenantStatusCodes.PendingEmailVerification =>
                 (true, "EMAIL_VERIFICATION_REQUIRED",
                     "Please verify your email address to continue"),
-            TenantStatusCodes.PendingSubscription =>
-                (true, "ONBOARDING_REQUIRED",
-                    "Please complete onboarding to access this resource"),
             TenantStatusCodes.Suspended =>
                 (true, "ACCOUNT_SUSPENDED",
                     "Your account has been suspended"),
@@ -92,12 +98,12 @@ public class TenantGatewayMiddleware(
 
         var response = new ErrorResponse
         {
-            StatusCode = (int)HttpStatusCode.Forbidden,
-            ErrorCode = errorCode,
-            ErrorType = ErrorTypes.Forbidden,
+            StatusCode   = (int)HttpStatusCode.Forbidden,
+            ErrorCode    = errorCode,
+            ErrorType    = ErrorTypes.Forbidden,
             ErrorMessage = message,
-            TraceId = context.TraceIdentifier,
-            Timestamp = DateTime.UtcNow
+            TraceId      = context.TraceIdentifier,
+            Timestamp    = DateTime.UtcNow
         };
 
         await context.Response.WriteAsync(

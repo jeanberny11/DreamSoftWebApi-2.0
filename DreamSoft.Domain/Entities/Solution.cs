@@ -12,18 +12,13 @@ public class Solution : LookupEntity
 
     // Navigation properties
     public ICollection<SubscriptionPlan> SubscriptionPlans { get; private set; } = [];
-    public ICollection<SolutionMenuOption> SolutionMenuOptions { get; private set; } = [];
-    public ICollection<RoleTemplate> RoleTemplates { get; private set; } = [];
+    public ICollection<TenantSubscription> TenantSubscriptions { get; private set; } = [];
+    public ICollection<TenantSubdomain> TenantSubdomains { get; private set; } = [];
 
     private Solution() { }
 
-    public static Solution Create(
-        string code,
-        string name,
-        TranslatedString translations,
-        string description = "",
-        string icon = "",
-        int sortOrder = 0)
+    public static Solution Create(string code, string name, TranslatedString translations,
+        string description = "", string icon = "", int sortOrder = 0)
     {
         if (string.IsNullOrWhiteSpace(code))
             throw new ArgumentException("Code is required", nameof(code));
@@ -59,15 +54,6 @@ public class Solution : LookupEntity
         UpdateTranslations(translations);
     }
 
-    public void UpdateIcon(string icon)
-    {
-        Icon = icon.Trim();
-        MarkAsUpdated();
-    }
-
-    public void UpdateSortOrder(int sortOrder)
-    {
-        SortOrder = sortOrder;
-        MarkAsUpdated();
-    }
+    public void UpdateIcon(string icon) { Icon = icon.Trim(); MarkAsUpdated(); }
+    public void UpdateSortOrder(int sortOrder) { SortOrder = sortOrder; MarkAsUpdated(); }
 }

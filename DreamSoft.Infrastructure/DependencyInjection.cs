@@ -4,10 +4,16 @@ using DreamSoft.Infrastructure.Persistence;
 using DreamSoft.Infrastructure.Persistence.Repositories;
 using DreamSoft.Infrastructure.Services.Common;
 using DreamSoft.Infrastructure.Services.Features.Email;
+using DreamSoft.Infrastructure.Services.Payment;
+using DreamSoft.Infrastructure.Services.Payment.Stripe;
 using DreamSoft.Infrastructure.Services.RateLimit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using StackExchange.Redis;
+using Stripe;
+using TokenService = DreamSoft.Infrastructure.Services.Common.TokenService;
 
 namespace DreamSoft.Infrastructure;
 
@@ -17,43 +23,44 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // Register DbContext with PostgreSQL
+        // ── Database ──────────────────────────────────────────────────────────
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(
                 configuration.GetConnectionString("DefaultConnection"),
                 b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
 
-        // Register IApplicationDbContext
         services.AddScoped<IApplicationDbContext>(provider =>
             provider.GetRequiredService<ApplicationDbContext>());
 
-        // Register UnitOfWork for complex transactions
+        // ── Unit of Work ──────────────────────────────────────────────────────
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-        // ── Repositories ────────────────────────────────────────────────────
-
-        // Core business repositories
+        // ── Tenant Account Repositories ───────────────────────────────────────
         services.AddScoped<ITenantRepository, TenantRepository>();
-        services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<ITenantRefreshTokenRepository, TenantRefreshTokenRepository>();
         services.AddScoped<ITenantRegistrationTokenRepository, TenantRegistrationTokenRepository>();
-        services.AddScoped<IRoleRepository, RoleRepository>();
-        services.AddScoped<IRoleTemplateRepository, RoleTemplateRepository>();
         services.AddScoped<ITenantSubscriptionRepository, TenantSubscriptionRepository>();
-        services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
-        services.AddScoped<ISolutionRepository, SolutionRepository>();
-        services.AddScoped<ITenantStatusRepository, TenantStatusRepository>();
-        services.AddScoped<ISubscriptionStatusRepository, SubscriptionStatusRepository>();
+        services.AddScoped<ITenantSubdomainRepository, TenantSubdomainRepository>();
+        services.AddScoped<ISubscriptionInvoiceRepository, SubscriptionInvoiceRepository>();
+        services.AddScoped<ISubscriptionPaymentRepository, SubscriptionPaymentRepository>();
 
-        // Junction entity repositories
+        // ── Tenant + Solution Scoped Repositories ─────────────────────────────
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IUserRefreshTokenRepository, UserRefreshTokenRepository>();
+        services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<IRoleMenuOptionRepository, RoleMenuOptionRepository>();
-        services.AddScoped<IRoleMenuOptionTemplateRepository, RoleMenuOptionTemplateRepository>();
         services.AddScoped<IRoleOptionActionRepository, RoleOptionActionRepository>();
-        services.AddScoped<IRoleOptionActionTemplateRepository, RoleOptionActionTemplateRepository>();
-        services.AddScoped<ISolutionMenuOptionRepository, SolutionMenuOptionRepository>();
-        services.AddScoped<IUserRoleRepository, UserRoleRepository>();
 
-        // Lookup repositories
+        // ── Global Business Repositories ──────────────────────────────────────
+        services.AddScoped<ISolutionRepository, SolutionRepository>();
+        services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
+        services.AddScoped<IPlanPriceRepository, PlanPriceRepository>();
+        services.AddScoped<IPlanMenuOptionRepository, PlanMenuOptionRepository>();
+        services.AddScoped<IRoleTemplateRepository, RoleTemplateRepository>();
+        services.AddScoped<IRoleMenuOptionTemplateRepository, RoleMenuOptionTemplateRepository>();
+        services.AddScoped<IRoleOptionActionTemplateRepository, RoleOptionActionTemplateRepository>();
+
+        // ── Lookup Repositories ───────────────────────────────────────────────
         services.AddScoped<IBillingCycleRepository, BillingCycleRepository>();
         services.AddScoped<ICountryRepository, CountryRepository>();
         services.AddScoped<ICurrencyRepository, CurrencyRepository>();
@@ -66,22 +73,42 @@ public static class DependencyInjection
         services.AddScoped<IMunicipalityRepository, MunicipalityRepository>();
         services.AddScoped<IOptionActionRepository, OptionActionRepository>();
         services.AddScoped<IProvinceRepository, ProvinceRepository>();
+        services.AddScoped<ITenantStatusRepository, TenantStatusRepository>();
+        services.AddScoped<ISubscriptionStatusRepository, SubscriptionStatusRepository>();
 
-        // ── Common Services ──────────────────────────────────────────────────
+        // ── Common Services ───────────────────────────────────────────────────
         services.AddTransient<IDateTime, DateTimeService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<ITenantService, TenantService>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IPasswordHasher, PasswordHasherService>();
 
-        // Email Service (Resend API)
+        // ── Email Service ─────────────────────────────────────────────────────
         services.AddHttpClient("Resend");
         services.AddScoped<IEmailService, EmailService>();
 
-        // Rate limiting — singleton so the in-memory window state persists across requests
+        // ── Payment Gateway ───────────────────────────────────────────────────
+        services.Configure<StripeSettings>(
+            configuration.GetSection(StripeSettings.SectionName));
+        StripeConfiguration.ApiKey =
+            configuration[$"{StripeSettings.SectionName}:SecretKey"];
+        services.AddScoped<IPaymentGateway, StripePaymentGateway>();
+        services.AddSingleton<IPaymentSettings>(sp =>
+            sp.GetRequiredService<IOptions<StripeSettings>>().Value);
+
+        // ── Redis + Webhook Event Store ───────────────────────────────────────
+        // Singleton: StackExchange.Redis ConnectionMultiplexer is thread-safe
+        // and designed to be shared across the application lifetime.
+        var redisConnection = configuration.GetConnectionString("Redis") ?? "localhost:6379";
+        services.AddSingleton<IConnectionMultiplexer>(
+            ConnectionMultiplexer.Connect(redisConnection));
+        services.AddScoped<IWebhookEventStore, RedisWebhookEventStore>();
+
+        // ── Rate Limiting ─────────────────────────────────────────────────────
+        // Singleton so the in-memory window state persists across requests
         services.AddSingleton<IRateLimitService, InMemoryRateLimitService>();
 
-        // Required for CurrentUserService to access HTTP context
+        // ── HTTP Context ──────────────────────────────────────────────────────
         services.AddHttpContextAccessor();
 
         return services;

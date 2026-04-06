@@ -8,7 +8,8 @@ namespace DreamSoft.Application.Features.Auth.RefreshToken;
 
 public class RefreshTokenCommandHandler(
     ITenantRepository tenantRepository,
-    IRefreshTokenRepository refreshTokenRepository,
+    ITenantSubdomainRepository tenantSubdomainRepository,
+    IUserRefreshTokenRepository refreshTokenRepository,
     IUnitOfWork unitOfWork,
     ICurrentUserService currentUserService,
     ITokenService tokenService,
@@ -19,8 +20,8 @@ public class RefreshTokenCommandHandler(
         RefreshTokenCommand request,
         CancellationToken cancellationToken)
     {
-        // 1. Look up the RefreshToken entity with its user — no separate user table scan needed
-        var tokenEntity = await refreshTokenRepository.GetActiveByTokenWithUserAsync(
+        // 1. Look up the UserRefreshToken entity with its user — includes User nav property
+        var tokenEntity = await refreshTokenRepository.GetActiveTokenAsync(
             request.RefreshToken, cancellationToken)
             ?? throw new UnauthorizedException("Invalid or expired refresh token.");
 
@@ -40,12 +41,17 @@ public class RefreshTokenCommandHandler(
         var originalWindow   = tokenEntity.ExpiresAt - tokenEntity.CreatedAt;
         var newRefreshExpiry = dateTime.UtcNow.Add(originalWindow);
 
-        // 6. Issue a new token pair
+        // 6. Resolve subdomain via TenantSubdomain
+        var tenantSubdomain = await tenantSubdomainRepository
+            .GetByTenantAndSolutionAsync(tenant.Id, tokenEntity.User.SolutionId, cancellationToken);
+        var subdomain = tenantSubdomain?.Subdomain ?? string.Empty;
+
+        // 7. Issue a new token pair
         var newAccessToken = tokenService.GenerateAccessToken(tokenEntity.User, tenant);
         var newRawToken    = tokenService.GenerateRefreshToken();
         var expiresAt      = dateTime.UtcNow.AddMinutes(60);
 
-        var newTokenEntity = Domain.Entities.RefreshToken.Create(
+        var newTokenEntity = UserRefreshToken.Create(
             userId:      tokenEntity.User.Id,
             token:       newRawToken,
             expiresAt:   newRefreshExpiry,
@@ -62,6 +68,6 @@ public class RefreshTokenCommandHandler(
             UserId:          tokenEntity.User.Id,
             Username:        tokenEntity.User.Username,
             FullName:        tokenEntity.User.GetFullName(),
-            TenantSubdomain: tenant.Subdomain);
+            TenantSubdomain: subdomain);
     }
 }

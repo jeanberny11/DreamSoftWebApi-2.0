@@ -1,9 +1,9 @@
 using DreamSoft.Domain.Common;
-
 namespace DreamSoft.Domain.Entities;
 
-public class Province : LookupEntity
+public class Province : AuditableEntity
 {
+    public string Name { get; set; } = null!;
     public string Code { get; set; } = null!;
     public int CountryId { get; set; }
 
@@ -29,8 +29,7 @@ public class Province : LookupEntity
         {
             Code = code.ToUpper().Trim(),
             Name = name.Trim(),
-            CountryId = countryId,
-            Translations = null! // Provinces may not have translations in the DB schema
+            CountryId = countryId
         };
 
         province.InitializeAudit();

@@ -4,24 +4,24 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DreamSoft.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// Entity Framework Core configuration for RoleTemplate entity
-/// Maps to the 'role_templates' table in PostgreSQL
-/// </summary>
 public class RoleTemplateConfiguration : IEntityTypeConfiguration<RoleTemplate>
 {
     public void Configure(EntityTypeBuilder<RoleTemplate> builder)
     {
-        // Table mapping
+        // ── Table ─────────────────────────────────────────────────────────
         builder.ToTable("role_templates");
 
-        // Primary key
+        // ── Primary Key ───────────────────────────────────────────────────
         builder.HasKey(r => r.Id);
         builder.Property(r => r.Id)
             .HasColumnName("id")
             .ValueGeneratedOnAdd();
 
-        // Properties mapping
+        // ── Properties ────────────────────────────────────────────────────
+        builder.Property(r => r.PlanId)
+            .HasColumnName("plan_id")
+            .IsRequired();
+
         builder.Property(r => r.Code)
             .HasColumnName("code")
             .HasMaxLength(50)
@@ -40,7 +40,7 @@ public class RoleTemplateConfiguration : IEntityTypeConfiguration<RoleTemplate>
             .IsRequired()
             .HasDefaultValue(string.Empty);
 
-        // JSONB Translation Configuration (Name + Description)
+        // ── Translations (JSONB) ──────────────────────────────────────────
         builder.OwnsOne(r => r.Translations, translations =>
         {
             translations.ToJson("translations");
@@ -48,24 +48,19 @@ public class RoleTemplateConfiguration : IEntityTypeConfiguration<RoleTemplate>
             translations.OwnsOne(t => t.Spanish, spanish =>
             {
                 spanish.ToJson("es");
-                spanish.Property(s => s.Name)
-                    .HasJsonPropertyName("name")
-                    .IsRequired();
-                spanish.Property(s => s.Descripcion)
-                    .HasJsonPropertyName("description");
+                spanish.Property(s => s.Name).HasJsonPropertyName("name").IsRequired();
+                spanish.Property(s => s.Descripcion).HasJsonPropertyName("description");
             });
 
             translations.OwnsOne(t => t.English, english =>
             {
                 english.ToJson("en");
-                english.Property(e => e.Name)
-                    .HasJsonPropertyName("name");
-                english.Property(e => e.Descripcion)
-                    .HasJsonPropertyName("description");
+                english.Property(e => e.Name).HasJsonPropertyName("name");
+                english.Property(e => e.Descripcion).HasJsonPropertyName("description");
             });
         });
 
-        // Audit fields
+        // ── Audit Fields ──────────────────────────────────────────────────
         builder.Property(r => r.IsActive)
             .HasColumnName("is_active")
             .IsRequired()
@@ -79,15 +74,15 @@ public class RoleTemplateConfiguration : IEntityTypeConfiguration<RoleTemplate>
         builder.Property(r => r.UpdatedAt)
             .HasColumnName("updated_at");
 
-        // Foreign key
-        builder.Property(r => r.SolutionId)
-            .HasColumnName("solution_id")
-            .IsRequired();
+        // ── Indexes ───────────────────────────────────────────────────────
+        builder.HasIndex(r => new { r.PlanId, r.Code })
+            .IsUnique()
+            .HasDatabaseName("role_templates_plan_code_key");
 
-        // Relationships
-        builder.HasOne(r => r.Solution)
-            .WithMany(s => s.RoleTemplates)
-            .HasForeignKey(r => r.SolutionId)
+        // ── Relationships ─────────────────────────────────────────────────
+        builder.HasOne(r => r.Plan)
+            .WithMany(p => p.RoleTemplates)
+            .HasForeignKey(r => r.PlanId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasMany(r => r.Roles)
@@ -96,13 +91,13 @@ public class RoleTemplateConfiguration : IEntityTypeConfiguration<RoleTemplate>
             .OnDelete(DeleteBehavior.SetNull);
 
         builder.HasMany(r => r.RoleMenuOptionTemplates)
-            .WithOne(rm => rm.Role)
-            .HasForeignKey(rm => rm.RoleId)
+            .WithOne(rm => rm.RoleTemplate)
+            .HasForeignKey(rm => rm.RoleTemplateId)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasMany(r => r.RoleOptionActionTemplates)
-            .WithOne(ro => ro.Role)
-            .HasForeignKey(ro => ro.RoleId)
+            .WithOne(ro => ro.RoleTemplate)
+            .HasForeignKey(ro => ro.RoleTemplateId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

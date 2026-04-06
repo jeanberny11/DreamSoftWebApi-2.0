@@ -361,3 +361,7 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# ── Sensitive local configuration — never commit these ────────────────────────
+appsettings.Development.json
+appsettings.Local.json

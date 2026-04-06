@@ -4,64 +4,52 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DreamSoft.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// Entity Framework Core configuration for Tenant entity
-/// Maps to the 'tenants' table in PostgreSQL
-/// </summary>
 public class TenantConfiguration : IEntityTypeConfiguration<Tenant>
 {
     public void Configure(EntityTypeBuilder<Tenant> builder)
     {
-        // Table mapping
+        // ── Table ─────────────────────────────────────────────────────────
         builder.ToTable("tenants");
 
-        // Primary key
+        // ── Primary Key ───────────────────────────────────────────────────
         builder.HasKey(t => t.Id);
         builder.Property(t => t.Id)
             .HasColumnName("id")
             .ValueGeneratedOnAdd();
 
-        // Properties mapping
+        // ── Properties ────────────────────────────────────────────────────
+        builder.Property(t => t.FirstName)
+            .HasColumnName("first_name")
+            .HasMaxLength(100)
+            .IsRequired();
+
+        builder.Property(t => t.LastName)
+            .HasColumnName("last_name")
+            .HasMaxLength(100)
+            .IsRequired();
+
         builder.Property(t => t.CompanyName)
             .HasColumnName("company_name")
             .HasMaxLength(255)
-            .IsRequired()
-            .HasDefaultValue(string.Empty);
-
-        builder.Property(t => t.Subdomain)
-            .HasColumnName("subdomain")
-            .HasMaxLength(255)
-            .IsRequired()
-            .HasDefaultValue(string.Empty);
-
-        builder.Property(t => t.TaxId)
-            .HasColumnName("tax_id")
-            .HasMaxLength(50)
-            .IsRequired()
-            .HasDefaultValue(string.Empty);
-
-        builder.Property(t => t.TaxIdVerified)
-            .HasColumnName("tax_id_verified")
-            .HasDefaultValue(false);
-
-        builder.Property(t => t.TaxIdVerifiedAt)
-            .HasColumnName("tax_id_verified_at");
-
-        builder.Property(t => t.TaxIdVerifiedBy)
-            .HasColumnName("tax_id_verified_by");
+            .IsRequired();
 
         builder.Property(t => t.Email)
             .HasColumnName("email")
             .HasMaxLength(255)
-            .IsRequired()
-            .HasDefaultValue(string.Empty);
+            .IsRequired();
+
+        builder.Property(t => t.PasswordHash)
+            .HasColumnName("password_hash")
+            .HasMaxLength(500)
+            .IsRequired();
 
         builder.Property(t => t.EmailVerified)
             .HasColumnName("email_verified")
             .HasDefaultValue(false);
 
         builder.Property(t => t.EmailVerifiedAt)
-            .HasColumnName("email_verified_at");
+            .HasColumnName("email_verified_at")
+            .HasColumnType("timestamp with time zone");
 
         builder.Property(t => t.Phone)
             .HasColumnName("phone")
@@ -102,10 +90,6 @@ public class TenantConfiguration : IEntityTypeConfiguration<Tenant>
             .IsRequired()
             .HasDefaultValue(string.Empty);
 
-        builder.Property(t => t.CurrencyId)
-            .HasColumnName("currency_id")
-            .IsRequired();
-
         builder.Property(t => t.LanguageId)
             .HasColumnName("language_id")
             .IsRequired();
@@ -120,7 +104,10 @@ public class TenantConfiguration : IEntityTypeConfiguration<Tenant>
             .HasColumnName("status_id")
             .IsRequired();
 
-        // Terms of Service acceptance
+        builder.Property(t => t.StripeCustomerId)
+            .HasColumnName("stripe_customer_id")
+            .HasMaxLength(100);
+
         builder.Property(t => t.TermsVersion)
             .HasColumnName("terms_version")
             .HasMaxLength(50);
@@ -133,7 +120,25 @@ public class TenantConfiguration : IEntityTypeConfiguration<Tenant>
             .HasColumnName("terms_accepted_ip")
             .HasMaxLength(50);
 
-        // Audit fields
+        builder.Property(t => t.OnboardingCompleted)
+            .HasColumnName("onboarding_completed")
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(t => t.FailedLoginAttempts)
+            .HasColumnName("failed_login_attempts")
+            .IsRequired()
+            .HasDefaultValue(0);
+
+        builder.Property(t => t.LockoutUntil)
+            .HasColumnName("lockout_until")
+            .HasColumnType("timestamp with time zone");
+
+        builder.Property(t => t.LastLoginAt)
+            .HasColumnName("last_login_at")
+            .HasColumnType("timestamp with time zone");
+
+        // ── Audit Fields ──────────────────────────────────────────────────
         builder.Property(t => t.IsActive)
             .HasColumnName("is_active")
             .IsRequired()
@@ -147,7 +152,15 @@ public class TenantConfiguration : IEntityTypeConfiguration<Tenant>
         builder.Property(t => t.UpdatedAt)
             .HasColumnName("updated_at");
 
-        // Relationships
+        // ── Indexes ───────────────────────────────────────────────────────
+        builder.HasIndex(t => t.Email)
+            .IsUnique()
+            .HasDatabaseName("tenants_email_key");
+
+        builder.HasIndex(t => t.StripeCustomerId)
+            .HasDatabaseName("idx_tenants_stripe_customer_id");
+
+        // ── Relationships ─────────────────────────────────────────────────
         builder.HasOne(t => t.Country)
             .WithMany(c => c.Tenants)
             .HasForeignKey(t => t.CountryId)
@@ -163,11 +176,6 @@ public class TenantConfiguration : IEntityTypeConfiguration<Tenant>
             .HasForeignKey(t => t.MunicipalityId)
             .OnDelete(DeleteBehavior.NoAction);
 
-        builder.HasOne(t => t.Currency)
-            .WithMany(c => c.Tenants)
-            .HasForeignKey(t => t.CurrencyId)
-            .OnDelete(DeleteBehavior.Restrict);
-
         builder.HasOne(t => t.Language)
             .WithMany(l => l.Tenants)
             .HasForeignKey(t => t.LanguageId)
@@ -178,14 +186,24 @@ public class TenantConfiguration : IEntityTypeConfiguration<Tenant>
             .HasForeignKey(t => t.StatusId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasMany(t => t.Users)
-            .WithOne(u => u.Tenant)
-            .HasForeignKey(u => u.TenantId)
+        builder.HasMany(t => t.TenantSubdomains)
+            .WithOne(td => td.Tenant)
+            .HasForeignKey(td => td.TenantId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasMany(t => t.Roles)
-            .WithOne(r => r.Tenant)
-            .HasForeignKey(r => r.TenantId)
+        builder.HasMany(t => t.TenantSubscriptions)
+            .WithOne(ts => ts.Tenant)
+            .HasForeignKey(ts => ts.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(t => t.RefreshTokens)
+            .WithOne(rt => rt.Tenant)
+            .HasForeignKey(rt => rt.TenantId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(t => t.RegistrationTokens)
+            .WithOne(rt => rt.Tenant)
+            .HasForeignKey(rt => rt.TenantId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

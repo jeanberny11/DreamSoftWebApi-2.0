@@ -14,11 +14,7 @@ public class OptionAction : LookupEntity
 
     private OptionAction() { }
 
-    public static OptionAction Create(
-        string code,
-        string name,
-        TranslatedString translations,
-        string description = "")
+    public static OptionAction Create(string code, string name, TranslatedString translations, string description = "")
     {
         if (string.IsNullOrWhiteSpace(code))
             throw new ArgumentException("Code is required", nameof(code));

@@ -4,118 +4,105 @@ namespace DreamSoft.Domain.Entities;
 
 public class Tenant : AuditableEntity
 {
-    public string CompanyName { get; set; } = null!;
-    public string Subdomain { get; set; } = null!;
-    public string TaxId { get; set; } = "";
-    public bool TaxIdVerified { get; set; }
-    public DateTime? TaxIdVerifiedAt { get; set; }
-    public int? TaxIdVerifiedBy { get; set; }
-    public string Email { get; set; } = null!;
-    public bool EmailVerified { get; set; }
-    public DateTime? EmailVerifiedAt { get; set; }
-    public string Phone { get; set; } = "";
-    public string Website { get; set; } = "";
-    public string AddressLine1 { get; set; } = "";
-    public string AddressLine2 { get; set; } = "";
-    public int? CountryId { get; set; }
-    public int? ProvinceId { get; set; }
-    public int? MunicipalityId { get; set; }
-    public string PostalCode { get; set; } = "";
-    public int CurrencyId { get; set; }
-    public int LanguageId { get; set; }
-    public string LogoUrl { get; set; } = "";
-    public int StatusId { get; set; }
-
-    // Terms of Service acceptance
-    /// <summary>Version string of the ToS the tenant accepted (e.g. "2025-01-01").</summary>
+    public string FirstName { get; private set; } = null!;
+    public string LastName { get; private set; } = null!;
+    public string CompanyName { get; private set; } = null!;
+    public string Email { get; private set; } = null!;
+    public string PasswordHash { get; private set; } = null!;
+    public bool EmailVerified { get; private set; }
+    public DateTime? EmailVerifiedAt { get; private set; }
+    public string Phone { get; private set; } = "";
+    public string Website { get; private set; } = "";
+    public string AddressLine1 { get; private set; } = "";
+    public string AddressLine2 { get; private set; } = "";
+    public int? CountryId { get; private set; }
+    public int? ProvinceId { get; private set; }
+    public int? MunicipalityId { get; private set; }
+    public string PostalCode { get; private set; } = "";
+    public int LanguageId { get; private set; }
+    public string LogoUrl { get; private set; } = "";
+    public int StatusId { get; private set; }
+    public string? StripeCustomerId { get; private set; }
     public string? TermsVersion { get; private set; }
-
-    /// <summary>UTC timestamp when the tenant accepted the Terms of Service.</summary>
     public DateTime? TermsAcceptedAt { get; private set; }
-
-    /// <summary>IP address from which the ToS were accepted.</summary>
     public string? TermsAcceptedIp { get; private set; }
+    public bool OnboardingCompleted { get; private set; }
+
+    // Account lockout
+    private const int MaxFailedAttempts = 5;
+    private static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
+
+    public int FailedLoginAttempts { get; private set; }
+    public DateTime? LockoutUntil { get; private set; }
+    public DateTime? LastLoginAt { get; private set; }
 
     // Navigation properties
-    public Country? Country { get; set; }
-    public Province? Province { get; set; }
-    public Municipality? Municipality { get; set; }
-    public Language Language { get; set; } = null!;
-    public Currency Currency { get; set; } = null!;
-    public TenantStatus Status { get; set; } = null!;
-    public ICollection<User> Users { get; private set; } = [];
-    public ICollection<Role> Roles { get; private set; } = [];
+    public Country? Country { get; private set; }
+    public Province? Province { get; private set; }
+    public Municipality? Municipality { get; private set; }
+    public Language Language { get; private set; } = null!;
+    public TenantStatus Status { get; private set; } = null!;
+    public ICollection<TenantSubdomain> TenantSubdomains { get; private set; } = [];
     public ICollection<TenantSubscription> TenantSubscriptions { get; private set; } = [];
+    public ICollection<TenantRefreshToken> RefreshTokens { get; private set; } = [];
+    public ICollection<TenantRegistrationToken> RegistrationTokens { get; private set; } = [];
 
     private Tenant() { }
 
     public static Tenant Create(
+        string firstName,
+        string lastName,
         string companyName,
-        string subdomain,
         string email,
-        int currencyId,
-        int languageId,
+        string passwordHash,
         int statusId,
-        string? taxId = null,
         string? phone = null,
-        string? website = null)
+        string? addressLine1 = null,
+        int languageId = 0)
     {
+        if (string.IsNullOrWhiteSpace(firstName))
+            throw new ArgumentException("First name is required", nameof(firstName));
+
+        if (string.IsNullOrWhiteSpace(lastName))
+            throw new ArgumentException("Last name is required", nameof(lastName));
+
         if (string.IsNullOrWhiteSpace(companyName))
             throw new ArgumentException("Company name is required", nameof(companyName));
-
-        if (string.IsNullOrWhiteSpace(subdomain))
-            throw new ArgumentException("Subdomain is required", nameof(subdomain));
 
         if (string.IsNullOrWhiteSpace(email))
             throw new ArgumentException("Email is required", nameof(email));
 
-        if (currencyId <= 0)
-            throw new ArgumentException("Currency ID must be greater than zero", nameof(currencyId));
-
-        if (languageId <= 0)
-            throw new ArgumentException("Language ID must be greater than zero", nameof(languageId));
+        if (string.IsNullOrWhiteSpace(passwordHash))
+            throw new ArgumentException("Password hash is required", nameof(passwordHash));
 
         if (statusId <= 0)
             throw new ArgumentException("Status ID must be greater than zero", nameof(statusId));
 
         var tenant = new Tenant
         {
+            FirstName = firstName.Trim(),
+            LastName = lastName.Trim(),
             CompanyName = companyName.Trim(),
-            Subdomain = subdomain.ToLower().Trim(),
             Email = email.Trim().ToLower(),
-            TaxId = taxId?.Trim() ?? "",
-            Phone = phone?.Trim() ?? "",
-            Website = website?.Trim() ?? "",
-            CurrencyId = currencyId,
+            PasswordHash = passwordHash,
             LanguageId = languageId,
             StatusId = statusId,
+            Phone = phone?.Trim() ?? "",
+            AddressLine1 = addressLine1?.Trim() ?? "",
             EmailVerified = false,
-            TaxIdVerified = false
+            OnboardingCompleted = false
         };
 
         tenant.InitializeAudit();
         return tenant;
     }
 
-    public void UpdateCompanyInfo(string companyName, string? taxId = null)
+    public void UpdateCompanyName(string companyName)
     {
         if (string.IsNullOrWhiteSpace(companyName))
             throw new ArgumentException("Company name is required", nameof(companyName));
 
         CompanyName = companyName.Trim();
-        TaxId = taxId?.Trim() ?? "";
-        MarkAsUpdated();
-    }
-
-    public void UpdateContactInfo(string email, string? phone = null, string? website = null)
-    {
-        if (string.IsNullOrWhiteSpace(email))
-            throw new ArgumentException("Email is required", nameof(email));
-
-        Email = email.Trim().ToLower();
-        Phone = phone?.Trim() ?? "";
-        Website = website?.Trim() ?? "";
-        EmailVerified = false;
         MarkAsUpdated();
     }
 
@@ -126,14 +113,19 @@ public class Tenant : AuditableEntity
         MarkAsUpdated();
     }
 
-    public void VerifyTaxId(int verifiedByUserId, DateTime verifiedAt)
+    public void UpdateProfile(string firstName, string lastName,
+        string? phone = null, string? website = null)
     {
-        if (verifiedByUserId <= 0)
-            throw new ArgumentException("Verified by user ID must be greater than zero", nameof(verifiedByUserId));
+        if (string.IsNullOrWhiteSpace(firstName))
+            throw new ArgumentException("First name is required", nameof(firstName));
 
-        TaxIdVerified = true;
-        TaxIdVerifiedAt = verifiedAt;
-        TaxIdVerifiedBy = verifiedByUserId;
+        if (string.IsNullOrWhiteSpace(lastName))
+            throw new ArgumentException("Last name is required", nameof(lastName));
+
+        FirstName = firstName.Trim();
+        LastName = lastName.Trim();
+        Phone = phone?.Trim() ?? "";
+        Website = website?.Trim() ?? "";
         MarkAsUpdated();
     }
 
@@ -154,16 +146,21 @@ public class Tenant : AuditableEntity
         MarkAsUpdated();
     }
 
-    public void UpdatePreferences(int languageId, int currencyId)
+    public void UpdatePassword(string passwordHash)
+    {
+        if (string.IsNullOrWhiteSpace(passwordHash))
+            throw new ArgumentException("Password hash is required", nameof(passwordHash));
+
+        PasswordHash = passwordHash;
+        MarkAsUpdated();
+    }
+
+    public void UpdateLanguage(int languageId)
     {
         if (languageId <= 0)
             throw new ArgumentException("Language ID must be greater than zero", nameof(languageId));
 
-        if (currencyId <= 0)
-            throw new ArgumentException("Currency ID must be greater than zero", nameof(currencyId));
-
         LanguageId = languageId;
-        CurrencyId = currencyId;
         MarkAsUpdated();
     }
 
@@ -182,42 +179,55 @@ public class Tenant : AuditableEntity
         MarkAsUpdated();
     }
 
-    public void UpdateSubdomain(string subdomain)
+    public void SetStripeCustomerId(string stripeCustomerId)
     {
-        if (string.IsNullOrWhiteSpace(subdomain))
-            throw new ArgumentException("Subdomain is required", nameof(subdomain));
+        if (string.IsNullOrWhiteSpace(stripeCustomerId))
+            throw new ArgumentException("Stripe customer ID is required", nameof(stripeCustomerId));
 
-        Subdomain = subdomain.ToLower().Trim();
+        StripeCustomerId = stripeCustomerId.Trim();
         MarkAsUpdated();
     }
 
-    /// <summary>
-    /// Records that the tenant accepted the Terms of Service.
-    /// Idempotent — re-calling with the same version is a no-op.
-    /// </summary>
     public void AcceptTerms(string version, DateTime acceptedAt, string? acceptedIp)
     {
         if (string.IsNullOrWhiteSpace(version))
-            throw new ArgumentException("Terms version is required.", nameof(version));
+            throw new ArgumentException("Terms version is required", nameof(version));
 
-        TermsVersion    = version.Trim();
+        TermsVersion = version.Trim();
         TermsAcceptedAt = acceptedAt;
         TermsAcceptedIp = acceptedIp;
         MarkAsUpdated();
     }
 
-    /// <summary>
-    /// Transitions the tenant to a new status.
-    /// Business rules about valid transitions are enforced in the handler,
-    /// not here, keeping the domain simple.
-    /// </summary>
-    public void TransitionStatus(int newStatusId)
+    public void CompleteOnboarding()
     {
-        if (newStatusId <= 0)
-            throw new ArgumentException(
-                "Status ID must be greater than zero", nameof(newStatusId));
-
-        StatusId = newStatusId;
+        OnboardingCompleted = true;
         MarkAsUpdated();
+    }
+
+    public string GetFullName() => $"{FirstName} {LastName}";
+
+    public bool IsLockedOut() =>
+        LockoutUntil.HasValue && LockoutUntil.Value > DateTime.UtcNow;
+
+    public void RecordFailedLogin()
+    {
+        FailedLoginAttempts++;
+        if (FailedLoginAttempts >= MaxFailedAttempts)
+            LockoutUntil = DateTime.UtcNow.Add(LockoutDuration);
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ResetFailedLoginAttempts()
+    {
+        FailedLoginAttempts = 0;
+        LockoutUntil = null;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void RecordLogin()
+    {
+        LastLoginAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
     }
 }

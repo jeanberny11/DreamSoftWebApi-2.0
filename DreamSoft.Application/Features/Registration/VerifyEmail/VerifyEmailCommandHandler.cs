@@ -10,14 +10,12 @@ namespace DreamSoft.Application.Features.Registration.VerifyEmail;
 
 public class VerifyEmailCommandHandler(
     ITenantRepository tenantRepository,
-    IUserRepository userRepository,
     ITenantStatusRepository tenantStatusRepository,
     ITenantRegistrationTokenRepository tokenRepository,
-    IRefreshTokenRepository refreshTokenRepository,
+    ITenantRefreshTokenRepository refreshTokenRepository,
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
     ITokenService tokenService,
-    IEmailService emailService,
     ICurrentUserService currentUserService,
     IRateLimitService rateLimitService,
     IConfiguration configuration)
@@ -34,7 +32,7 @@ public class VerifyEmailCommandHandler(
         // 1. IP-based rate limit — prevents brute-force from a single IP
         var ip = currentUserService.IpAddress ?? "unknown";
         if (!rateLimitService.IsAllowed($"verify-email:{ip}", MaxVerifyPerWindow, VerifyWindowMinutes))
-            throw new RateLimitExceededException("RateLimitExceeded");
+            throw new RateLimitExceededException();
 
         // 2. Lookup tenant by normalized email — same error as wrong code to prevent enumeration
         var tenant = await tenantRepository.GetByEmailWithStatusAsync(
@@ -49,7 +47,7 @@ public class VerifyEmailCommandHandler(
         var maxAttempts = int.Parse(
             configuration["RateLimit:MaxVerificationAttemptsPerCode"] ?? "5");
 
-        var otpToken = await tokenRepository.GetActiveByTenantAsync(tenant.Id, cancellationToken)
+        var otpToken = await tokenRepository.GetActiveTokenForTenantAsync(tenant.Id, cancellationToken)
             ?? throw new UnauthorizedException("InvalidOtpCode");
 
         // 5. Validate token state (not expired, not consumed, under attempt limit)
@@ -67,22 +65,15 @@ public class VerifyEmailCommandHandler(
         // 7. Load the PENDING_SUBSCRIPTION status
         var pendingSubStatus = await tenantStatusRepository.GetByCodeAsync(
             TenantStatusCodes.PendingSubscription, cancellationToken)
-            ?? throw new NotFoundException(
-                "NotFound",
-                "TenantStatus PENDING_SUBSCRIPTION not found. Run migration.");
-
-        // 8. Load the admin user for this tenant
-        var adminUser = await userRepository.GetAdminByTenantAsync(tenant.Id, cancellationToken)
-            ?? throw new NotFoundException("UserNotFound", tenant.Id);
+            ?? throw new NotFoundException(ErrorMessageKeys.NotFound, "TenantStatus", "Code = PENDING_SUBSCRIPTION");
 
         // ── Begin transaction ────────────────────────────────────────────────
         await unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
             otpToken.Consume();
-            tenant.TransitionStatus(pendingSubStatus.Id);
+            tenant.UpdateStatus(pendingSubStatus.Id);
             tenant.VerifyEmail(DateTime.UtcNow);
-            adminUser.VerifyEmail(adminUser.Id);
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
             await unitOfWork.CommitTransactionAsync(cancellationToken);
@@ -94,23 +85,15 @@ public class VerifyEmailCommandHandler(
         }
         // ── Transaction complete ─────────────────────────────────────────────
 
-        // 9. Send welcome email — strictly after commit
-        await emailService.SendWelcomeEmailAsync(
-            adminUser.Email,
-            adminUser.FirstName,
-            tenant.CompanyName,
-            tenant.Subdomain,
-            cancellationToken);
-
-        // 10. Issue real access + refresh tokens
-        var accessToken = tokenService.GenerateAccessToken(adminUser, tenant);
+        // 8. Issue tenant-tier access + refresh tokens
+        var accessToken = tokenService.GenerateTenantAccessToken(tenant);
         var rawToken    = tokenService.GenerateRefreshToken();
 
         var refreshExpiryDays = int.Parse(
             configuration["Jwt:RefreshTokenExpirationDays"] ?? "7");
 
-        var refreshTokenEntity = RefreshToken.Create(
-            userId:      adminUser.Id,
+        var refreshTokenEntity = TenantRefreshToken.Create(
+            tenantId:    tenant.Id,
             token:       rawToken,
             expiresAt:   DateTime.UtcNow.AddDays(refreshExpiryDays),
             createdByIp: currentUserService.IpAddress);

@@ -17,127 +17,113 @@ public class ApplicationDbContext(
     private readonly ITenantService _tenantService = tenantService;
     private readonly IDateTime _dateTime = dateTime;
 
-    // ============================================
-    // LOOKUP ENTITIES
-    // ============================================
-
-    /// <summary>Billing cycle options (monthly, quarterly, annual)</summary>
+    // =====================================================================
+    // GLOBAL — LOOKUP ENTITIES
+    // =====================================================================
     public DbSet<BillingCycle> BillingCycles => Set<BillingCycle>();
-
-    /// <summary>Countries lookup table</summary>
     public DbSet<Country> Countries => Set<Country>();
-
-    /// <summary>Currencies lookup table</summary>
     public DbSet<Currency> Currencies => Set<Currency>();
-
-    /// <summary>Gender types</summary>
     public DbSet<Gender> Genders => Set<Gender>();
-
-    /// <summary>ID/Document types by country</summary>
     public DbSet<IdType> IdTypes => Set<IdType>();
-
-    /// <summary>Supported languages</summary>
     public DbSet<Language> Languages => Set<Language>();
-
-    /// <summary>Menu groupings for UI organization</summary>
     public DbSet<MenuGroup> MenuGroups => Set<MenuGroup>();
-
-    /// <summary>Menu options/items in the application</summary>
     public DbSet<MenuOption> MenuOptions => Set<MenuOption>();
-
-    /// <summary>Application modules</summary>
     public DbSet<Module> Modules => Set<Module>();
-
-    /// <summary>Municipalities within provinces</summary>
     public DbSet<Municipality> Municipalities => Set<Municipality>();
-
-    /// <summary>Permission action types (view, create, edit, delete, etc.)</summary>
     public DbSet<OptionAction> OptionActions => Set<OptionAction>();
-
-    /// <summary>Provinces/states within countries</summary>
     public DbSet<Province> Provinces => Set<Province>();
-
-    /// <summary>Business solutions (POS, Restaurant, Financial, etc.)</summary>
-    public DbSet<Solution> Solutions => Set<Solution>();
-
-    /// <summary>Subscription status types (Active, Trial, Suspended, etc.)</summary>
     public DbSet<SubscriptionStatus> SubscriptionStatuses => Set<SubscriptionStatus>();
-
-    /// <summary>Tenant status types</summary>
     public DbSet<TenantStatus> TenantStatuses => Set<TenantStatus>();
 
-    // ============================================
-    // BUSINESS ENTITIES
-    // ============================================
-
-    /// <summary>Role templates for quick role setup</summary>
-    public DbSet<RoleTemplate> RoleTemplates => Set<RoleTemplate>();
-
-    /// <summary>Subscription plans combining solutions and billing cycles</summary>
+    // =====================================================================
+    // GLOBAL — BUSINESS ENTITIES
+    // =====================================================================
+    public DbSet<Solution> Solutions => Set<Solution>();
     public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
-
-    /// <summary>Tenant organizations</summary>
-    public DbSet<Tenant> Tenants => Set<Tenant>();
-
-    /// <summary>Tenant subscription history</summary>
-    public DbSet<TenantSubscription> TenantSubscriptions => Set<TenantSubscription>();
-
-    /// <summary>Email verification OTP sessions for tenant registration.</summary>
-    public DbSet<TenantRegistrationToken> TenantRegistrationTokens => Set<TenantRegistrationToken>();
-
-    /// <summary>Users within tenants</summary>
-    public DbSet<User> Users => Set<User>();
-
-    /// <summary>Persisted refresh token sessions (one per login, supports multi-device).</summary>
-    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
-
-    /// <summary>Roles within tenants</summary>
-    public DbSet<Role> Roles => Set<Role>();
-
-    // ============================================
-    // JUNCTION/RELATIONSHIP TABLES
-    // ============================================
-
-    /// <summary>Solution to menu option assignments (many-to-many)</summary>
-    public DbSet<SolutionMenuOption> SolutionMenuOptions => Set<SolutionMenuOption>();
-
-    /// <summary>Role to menu option assignments (many-to-many)</summary>
-    public DbSet<RoleMenuOption> RoleMenuOptions => Set<RoleMenuOption>();
-
-    /// <summary>Role template to menu option assignments (many-to-many)</summary>
+    public DbSet<PlanPrice> PlanPrices => Set<PlanPrice>();
+    public DbSet<PlanLimit> PlanLimits => Set<PlanLimit>();
+    public DbSet<PlanMenuOption> PlanMenuOptions => Set<PlanMenuOption>();
+    public DbSet<RoleTemplate> RoleTemplates => Set<RoleTemplate>();
     public DbSet<RoleMenuOptionTemplate> RoleMenuOptionTemplates => Set<RoleMenuOptionTemplate>();
-
-    /// <summary>Role permissions for specific menu option actions</summary>
-    public DbSet<RoleOptionAction> RoleOptionActions => Set<RoleOptionAction>();
-
-    /// <summary>Role template permissions for specific menu option actions</summary>
     public DbSet<RoleOptionActionTemplate> RoleOptionActionTemplates => Set<RoleOptionActionTemplate>();
 
-    /// <summary>User-role assignments (many-to-many with extra payload)</summary>
-    public DbSet<UserRole> UserRoles => Set<UserRole>();
+    // =====================================================================
+    // TENANT-SCOPED
+    // =====================================================================
+    public DbSet<Tenant> Tenants => Set<Tenant>();
+    public DbSet<TenantSubdomain> TenantSubdomains => Set<TenantSubdomain>();
+    public DbSet<TenantSubscription> TenantSubscriptions => Set<TenantSubscription>();
+    public DbSet<TenantRefreshToken> TenantRefreshTokens => Set<TenantRefreshToken>();
+    public DbSet<TenantRegistrationToken> TenantRegistrationTokens => Set<TenantRegistrationToken>();
+    public DbSet<SubscriptionInvoice> SubscriptionInvoices => Set<SubscriptionInvoice>();
+    public DbSet<SubscriptionPayment> SubscriptionPayments => Set<SubscriptionPayment>();
 
-    // ============================================
-    // DATABASE CONFIGURATION
-    // ============================================
+    // =====================================================================
+    // TENANT + SOLUTION SCOPED
+    // =====================================================================
+    public DbSet<User> Users => Set<User>();
+    public DbSet<UserRefreshToken> UserRefreshTokens => Set<UserRefreshToken>();
+    public DbSet<Role> Roles => Set<Role>();
+    public DbSet<RoleMenuOption> RoleMenuOptions => Set<RoleMenuOption>();
+    public DbSet<RoleOptionAction> RoleOptionActions => Set<RoleOptionAction>();
 
+    // =====================================================================
+    // MODEL CONFIGURATION
+    // =====================================================================
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
 
-        // Global query filters for tenant isolation.
-        // Only applied when a tenant context exists (null check allows system-level queries).
+        // ── Tenant-scoped filters ─────────────────────────────────────────
+        // Null check allows system-level queries to bypass the filter
+
+        modelBuilder.Entity<TenantSubdomain>()
+            .HasQueryFilter(e => _tenantService.CurrentTenantId == null
+                || e.TenantId == _tenantService.CurrentTenantId);
+
+        modelBuilder.Entity<TenantSubscription>()
+            .HasQueryFilter(e => _tenantService.CurrentTenantId == null
+                || e.TenantId == _tenantService.CurrentTenantId);
+
+        modelBuilder.Entity<TenantRefreshToken>()
+            .HasQueryFilter(e => _tenantService.CurrentTenantId == null
+                || e.TenantId == _tenantService.CurrentTenantId);
+
+        modelBuilder.Entity<TenantRegistrationToken>()
+            .HasQueryFilter(e => _tenantService.CurrentTenantId == null
+                || e.TenantId == _tenantService.CurrentTenantId);
+
+        modelBuilder.Entity<SubscriptionInvoice>()
+            .HasQueryFilter(e => _tenantService.CurrentTenantId == null
+                || e.TenantId == _tenantService.CurrentTenantId);
+
+        modelBuilder.Entity<SubscriptionPayment>()
+            .HasQueryFilter(e => _tenantService.CurrentTenantId == null
+                || e.TenantId == _tenantService.CurrentTenantId);
+
+        // ── Tenant + Solution scoped filters ─────────────────────────────
+        // Both TenantId AND SolutionId must match — critical for solution data isolation
+        // RoleMenuOption, RoleOptionAction and UserRefreshToken are excluded —
+        // their isolation is inherited through Role and User which are already filtered
+
         modelBuilder.Entity<User>()
-            .HasQueryFilter(e => _tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId);
+            .HasQueryFilter(e => (_tenantService.CurrentTenantId == null
+                || e.TenantId == _tenantService.CurrentTenantId)
+                && (_tenantService.CurrentSolutionId == null
+                || e.SolutionId == _tenantService.CurrentSolutionId));
 
         modelBuilder.Entity<Role>()
-            .HasQueryFilter(e => _tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId);
-
-        modelBuilder.Entity<UserRole>()
-            .HasQueryFilter(e => _tenantService.CurrentTenantId == null || e.User.TenantId == _tenantService.CurrentTenantId);
+            .HasQueryFilter(e => (_tenantService.CurrentTenantId == null
+                || e.TenantId == _tenantService.CurrentTenantId)
+                && (_tenantService.CurrentSolutionId == null
+                || e.SolutionId == _tenantService.CurrentSolutionId));
 
         base.OnModelCreating(modelBuilder);
     }
 
+    // =====================================================================
+    // SAVE + AUDIT STAMPING
+    // =====================================================================
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         StampAuditFields();
@@ -173,8 +159,6 @@ public class ApplicationDbContext(
         {
             if (entry.State == EntityState.Added)
             {
-                // Only overwrite TenantId when the domain hasn't set one yet,
-                // so explicit factory-provided values are respected.
                 if (entry.Property(nameof(TenantEntity.TenantId)).CurrentValue is 0 or null && tenantId.HasValue)
                     entry.Property(nameof(TenantEntity.TenantId)).CurrentValue = tenantId.Value;
 
@@ -184,19 +168,10 @@ public class ApplicationDbContext(
 
             if (entry.State == EntityState.Modified && userId.HasValue)
             {
-                // Only overwrite UpdatedBy when an authenticated user is present.
-                // When no user is in context (e.g. registration flow), the domain
-                // is responsible for setting UpdatedBy explicitly via RecordUpdate().
                 entry.Property(nameof(TenantEntity.UpdatedBy)).CurrentValue = userId;
             }
         }
     }
 
-    /// <summary>
-    /// Helper method to get current user ID for audit trail
-    /// </summary>
-    public int? GetCurrentUserId()
-    {
-        return _currentUserService.UserId;
-    }
+    public int? GetCurrentUserId() => _currentUserService.UserId;
 }

@@ -7,14 +7,21 @@ namespace DreamSoft.Infrastructure.Persistence.Repositories;
 public class SubscriptionPlanRepository(ApplicationDbContext context)
     : Repository<SubscriptionPlan>(context), ISubscriptionPlanRepository
 {
-    public async Task<IReadOnlyList<SubscriptionPlan>> GetActiveBySolutionAsync(int solutionId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<SubscriptionPlan>> GetBySolutionIdAsync(int solutionId, CancellationToken cancellationToken = default)
         => await _dbSet
-            .Include(p => p.BillingCycle)
             .Where(p => p.SolutionId == solutionId && p.IsActive)
-            .ToListAsync(ct);
+            .OrderBy(p => p.TierLevel)
+            .ToListAsync(cancellationToken);
 
-    public async Task<SubscriptionPlan?> GetByIdWithBillingCycleAsync(int planId, CancellationToken ct = default)
+    public async Task<SubscriptionPlan?> GetByCodeAsync(string code, CancellationToken cancellationToken = default)
         => await _dbSet
-            .Include(p => p.BillingCycle)
-            .FirstOrDefaultAsync(p => p.Id == planId, ct);
+            .FirstOrDefaultAsync(p => p.Code == code.ToUpper().Trim(), cancellationToken);
+
+    public async Task<SubscriptionPlan?> GetWithPricesAndLimitsAsync(int id, CancellationToken cancellationToken = default)
+        => await _dbSet
+            .Include(p => p.PlanPrices)
+                .ThenInclude(pp => pp.BillingCycle)
+            .Include(p => p.PlanLimits)
+            .Include(p => p.PlanMenuOptions)
+            .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 }
