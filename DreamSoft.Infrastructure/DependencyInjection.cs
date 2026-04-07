@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<ITenantSubdomainRepository, TenantSubdomainRepository>();
         services.AddScoped<ISubscriptionInvoiceRepository, SubscriptionInvoiceRepository>();
         services.AddScoped<ISubscriptionPaymentRepository, SubscriptionPaymentRepository>();
+        services.AddScoped<ISubscriptionCancellationLogRepository, SubscriptionCancellationLogRepository>();
 
         // ── Tenant + Solution Scoped Repositories ─────────────────────────────
         services.AddScoped<IUserRepository, UserRepository>();

@@ -1,6 +1,7 @@
 using DreamSoft.Application.Common.Exceptions;
 using DreamSoft.Application.Common.Interfaces;
 using DreamSoft.Domain.Constants;
+using DreamSoft.Domain.Entities;
 using DreamSoft.Domain.Repositories;
 using MediatR;
 
@@ -10,7 +11,9 @@ public class CancelSubscriptionCommandHandler(
     ITenantRepository tenantRepository,
     ITenantSubscriptionRepository tenantSubscriptionRepository,
     ISubscriptionStatusRepository subscriptionStatusRepository,
+    ISubscriptionCancellationLogRepository cancellationLogRepository,
     IPaymentGateway paymentGateway,
+    IEmailService emailService,
     IUnitOfWork unitOfWork,
     ICurrentUserService currentUserService)
     : IRequestHandler<CancelSubscriptionCommand, CancelSubscriptionResponse>
@@ -35,7 +38,7 @@ public class CancelSubscriptionCommandHandler(
             .GetByTenantAndSolutionAsync(tenantId, request.SolutionId, cancellationToken)
             ?? throw new NotFoundException(ErrorMessageKeys.TenantSubscriptionNotFound, tenantId, request.SolutionId);
 
-        // 4. Only ACTIVE or TRIAL subscriptions can be cancelled
+        // 4. Only ACTIVE, TRIAL or PAST_DUE subscriptions can be cancelled
         var cancellableStatuses = new[]
         {
             SubscriptionStatusCodes.Active,
@@ -56,12 +59,12 @@ public class CancelSubscriptionCommandHandler(
             request.CancelImmediately,
             cancellationToken);
 
-        // 7. If immediate — update local status to CANCELLED now.
-        //    If at period end — Stripe will fire customer.subscription.deleted
-        //    when the period expires and our webhook handler will update it then.
-        //    We still mark it locally so the tenant UI can reflect the intent.
+        // 7. Apply local changes depending on cancellation type
+        DateTime? scheduledEndDate = null;
+
         if (request.CancelImmediately)
         {
+            // Immediately cancelled — update status and set EndDate = now
             var cancelledStatus = await subscriptionStatusRepository
                 .GetByCodeAsync(SubscriptionStatusCodes.Cancelled, cancellationToken)
                 ?? throw new NotFoundException(ErrorMessageKeys.NotFound, "SubscriptionStatus", "Code = CANCELLED");
@@ -71,18 +74,47 @@ public class CancelSubscriptionCommandHandler(
         }
         else
         {
-            // Set EndDate to signal cancellation is pending — actual status
-            // update happens via the Stripe webhook when the period ends
-            subscription.Cancel(DateTime.UtcNow); // sets EndDate = now as a flag
+            // Period-end cancellation — fetch the real period end date from Stripe
+            // so the local record shows the exact date the subscription will stop.
+            scheduledEndDate = await paymentGateway.GetSubscriptionPeriodEndAsync(
+                subscription.StripeSubscriptionId,
+                cancellationToken);
+
+            // Mark the subscription as pending cancellation.
+            // Status stays ACTIVE/TRIAL — the tenant can still use the product.
+            // The Stripe webhook (customer.subscription.deleted) will set the final
+            // CANCELLED status when the billing period expires.
+            subscription.ScheduleCancellation(scheduledEndDate.Value);
         }
 
+        // 8. Write cancellation audit log
+        var cancellationLog = SubscriptionCancellationLog.Create(
+            tenantSubscriptionId: subscription.Id,
+            tenantId:             tenantId,
+            cancellationType:     request.CancelImmediately ? "immediate" : "at_period_end",
+            cancelledAt:          DateTime.UtcNow,
+            scheduledEndDate:     request.CancelImmediately ? DateTime.UtcNow : scheduledEndDate,
+            cancellationReason:   request.CancellationReason,
+            cancellationFeedback: request.CancellationFeedback);
+
         await tenantSubscriptionRepository.UpdateAsync(subscription, cancellationToken);
+        await cancellationLogRepository.AddAsync(cancellationLog, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // 9. Send cancellation email — never throws
+        await emailService.SendSubscriptionCancelledAsync(
+            toEmail:          tenant.Email,
+            firstName:        tenant.FirstName,
+            companyName:      tenant.CompanyName,
+            planName:         subscription.SubscriptionPlan?.Name ?? string.Empty,
+            cancellationType: request.CancelImmediately ? "immediate" : "at_period_end",
+            scheduledEndDate: request.CancelImmediately ? null : scheduledEndDate,
+            cancellationToken: cancellationToken);
 
         var message = request.CancelImmediately
             ? "Subscription cancelled immediately."
-            : "Subscription will be cancelled at the end of the current billing period.";
+            : $"Subscription will be cancelled at the end of the current billing period ({scheduledEndDate:yyyy-MM-dd}).";
 
-        return new CancelSubscriptionResponse(message);
+        return new CancelSubscriptionResponse(message, scheduledEndDate);
     }
 }

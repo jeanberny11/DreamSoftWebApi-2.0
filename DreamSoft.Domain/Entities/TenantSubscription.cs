@@ -12,6 +12,7 @@ public class TenantSubscription : AuditableEntity
     public DateTime StartDate { get; private set; }
     public DateTime? EndDate { get; private set; }
     public DateTime? TrialEndDate { get; private set; }
+    public DateTime? CancellationScheduledAt { get; private set; }
     public string? StripeSubscriptionId { get; private set; }
     public string? StripeSessionId { get; private set; }
     public string? Notes { get; private set; }
@@ -23,6 +24,7 @@ public class TenantSubscription : AuditableEntity
     public PlanPrice PlanPrice { get; private set; } = null!;
     public SubscriptionStatus Status { get; private set; } = null!;
     public ICollection<SubscriptionInvoice> Invoices { get; private set; } = [];
+    public ICollection<SubscriptionCancellationLog> CancellationLogs { get; private set; } = [];
 
     private TenantSubscription() { }
 
@@ -97,9 +99,27 @@ public class TenantSubscription : AuditableEntity
         MarkAsUpdated();
     }
 
+    /// <summary>
+    /// Immediately cancels the subscription by setting EndDate.
+    /// Used for: immediate cancellations and when the Stripe webhook confirms
+    /// a period-end cancellation has completed.
+    /// </summary>
     public void Cancel(DateTime endDate)
     {
         EndDate = endDate;
+        CancellationScheduledAt = null; // Clear any pending schedule — now fully cancelled
+        MarkAsUpdated();
+    }
+
+    /// <summary>
+    /// Marks the subscription as scheduled for cancellation at the end of the
+    /// current billing period. The subscription remains active until that date.
+    /// CancellationScheduledAt being non-null signals to the UI that
+    /// a cancellation is pending.
+    /// </summary>
+    public void ScheduleCancellation(DateTime scheduledAt)
+    {
+        CancellationScheduledAt = scheduledAt;
         MarkAsUpdated();
     }
 
@@ -121,4 +141,6 @@ public class TenantSubscription : AuditableEntity
     public void UpdateNotes(string? notes) { Notes = notes?.Trim(); MarkAsUpdated(); }
 
     public bool IsExpired() => EndDate.HasValue && EndDate.Value < DateTime.UtcNow;
+
+    public bool HasPendingCancellation() => CancellationScheduledAt.HasValue;
 }

@@ -236,6 +236,52 @@ public class EmailService : IEmailService
         }
     }
 
+    // ── SendSubscriptionCancelledAsync ────────────────────────────────────
+
+    public async Task SendSubscriptionCancelledAsync(
+        string toEmail,
+        string firstName,
+        string companyName,
+        string planName,
+        string cancellationType,
+        DateTime? scheduledEndDate,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var isImmediate = cancellationType == "immediate";
+            var subject = isImmediate
+                ? $"Tu suscripción a DreamSoft ha sido cancelada - {companyName}"
+                : $"Tu suscripción a DreamSoft será cancelada el {scheduledEndDate:dd/MM/yyyy} - {companyName}";
+
+            var emailRequest = new ResendEmailRequest
+            {
+                From    = $"{_fromName} <{_fromEmail}>",
+                To      = new[] { toEmail },
+                Subject = subject,
+                Html    = GetSubscriptionCancelledHtml(firstName, companyName, planName, cancellationType, scheduledEndDate)
+            };
+
+            var response = await _httpClient.PostAsJsonAsync("/emails", emailRequest, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+                _logger.LogInformation(
+                    "Subscription cancelled email sent to: {Email}", toEmail);
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogError(
+                    "Failed to send subscription cancelled email to {Email}. Status: {StatusCode}, Error: {Error}",
+                    toEmail, response.StatusCode, errorContent);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Never throw — subscription state is already updated, email is informational
+            _logger.LogError(ex, "Error sending subscription cancelled email to: {Email}", toEmail);
+        }
+    }
+
     // ── HTML Templates ────────────────────────────────────────────────────
 
     private static string GetVerificationEmailHtml(string verificationCode) => $@"
@@ -478,6 +524,94 @@ public class EmailService : IEmailService
     </div>
 </body>
 </html>";
+
+    private static string GetSubscriptionCancelledHtml(
+        string firstName,
+        string companyName,
+        string planName,
+        string cancellationType,
+        DateTime? scheduledEndDate)
+    {
+        var isImmediate = cancellationType == "immediate";
+        var statusText = isImmediate
+            ? "Tu suscripción ha sido cancelada inmediatamente."
+            : $"Tu suscripción ha sido programada para cancelarse el <strong>{scheduledEndDate:dd/MM/yyyy}</strong>.";
+
+        var accessText = isImmediate
+            ? "Ya no tienes acceso a la plataforma DreamSoft ERP."
+            : $"Puedes seguir usando la plataforma hasta el <strong>{scheduledEndDate:dd/MM/yyyy}</strong>.";
+
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .container {{ background-color: #f9f9f9; border-radius: 10px; padding: 30px; border: 1px solid #e0e0e0; }}
+        .logo {{ font-size: 24px; font-weight: bold; color: #14b8a6; }}
+        .warning-banner {{ background-color: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px; padding: 16px; text-align: center; margin: 20px 0; color: #92400e; font-weight: bold; font-size: 16px; }}
+        .section {{ background-color: #ffffff; border-radius: 8px; padding: 20px; margin: 16px 0; border: 1px solid #e5e7eb; }}
+        .section h3 {{ margin: 0 0 12px 0; color: #374151; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; }}
+        .info-table {{ width: 100%; border-collapse: collapse; }}
+        .info-table td {{ padding: 8px 0; font-size: 14px; }}
+        .info-table td:last-child {{ text-align: right; font-weight: bold; }}
+        .footer {{ text-align: center; margin-top: 30px; font-size: 12px; color: #666; }}
+        .label {{ color: #6b7280; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div style='text-align:center;margin-bottom:24px;'>
+            <div class='logo'>DreamSoft</div>
+            <h2 style='color:#92400e;'>Suscripción Cancelada</h2>
+        </div>
+
+        <p>Hola <strong>{firstName}</strong>,</p>
+        <p>Lamentamos verte partir. Confirmamos que la suscripción de <strong>{companyName}</strong> ha sido cancelada.</p>
+
+        <div class='warning-banner'>
+            ⚠ {statusText}
+        </div>
+
+        <div class='section'>
+            <h3>Detalles de la cancelación</h3>
+            <table class='info-table'>
+                <tr>
+                    <td class='label'>Empresa</td>
+                    <td>{companyName}</td>
+                </tr>
+                <tr>
+                    <td class='label'>Plan cancelado</td>
+                    <td>{planName}</td>
+                </tr>
+                <tr>
+                    <td class='label'>Tipo de cancelación</td>
+                    <td>{(isImmediate ? "Inmediata" : "Al final del período")}</td>
+                </tr>
+                {(scheduledEndDate.HasValue && !isImmediate ? $@"
+                <tr>
+                    <td class='label'>Fecha de cancelación</td>
+                    <td>{scheduledEndDate:dd/MM/yyyy}</td>
+                </tr>" : "")}
+            </table>
+        </div>
+
+        <div class='section'>
+            <h3>¿Qué significa esto?</h3>
+            <p style='font-size:14px;margin:0;'>{accessText}</p>
+            <p style='font-size:14px;margin:12px 0 0 0;'>Si cancelaste por error o deseas reactivar tu suscripción, inicia sesión en tu cuenta y ve a la sección <strong>Suscripciones</strong>.</p>
+        </div>
+
+        <p style='font-size:13px;color:#6b7280;'>Si tienes alguna pregunta o necesitas ayuda, responde a este correo y estaremos encantados de asistirte.</p>
+
+        <div class='footer'>
+            <p>© 2025 DreamSoft. Todos los derechos reservados.</p>
+            <p>Este es un correo electrónico automatizado. Para soporte, responde a este mensaje.</p>
+        </div>
+    </div>
+</body>
+</html>";
+    }
 }
 
 /// <summary>

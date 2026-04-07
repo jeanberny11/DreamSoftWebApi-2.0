@@ -57,6 +57,7 @@ public class ApplicationDbContext(
     public DbSet<TenantRegistrationToken> TenantRegistrationTokens => Set<TenantRegistrationToken>();
     public DbSet<SubscriptionInvoice> SubscriptionInvoices => Set<SubscriptionInvoice>();
     public DbSet<SubscriptionPayment> SubscriptionPayments => Set<SubscriptionPayment>();
+    public DbSet<SubscriptionCancellationLog> SubscriptionCancellationLogs => Set<SubscriptionCancellationLog>();
 
     // =====================================================================
     // TENANT + SOLUTION SCOPED
@@ -98,6 +99,10 @@ public class ApplicationDbContext(
                 || e.TenantId == _tenantService.CurrentTenantId);
 
         modelBuilder.Entity<SubscriptionPayment>()
+            .HasQueryFilter(e => _tenantService.CurrentTenantId == null
+                || e.TenantId == _tenantService.CurrentTenantId);
+
+        modelBuilder.Entity<SubscriptionCancellationLog>()
             .HasQueryFilter(e => _tenantService.CurrentTenantId == null
                 || e.TenantId == _tenantService.CurrentTenantId);
 

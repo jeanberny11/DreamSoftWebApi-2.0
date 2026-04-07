@@ -222,6 +222,33 @@ public class StripePaymentGateway(
         }
     }
 
+    // ── GetSubscriptionPeriodEndAsync ─────────────────────────────────────
+
+    /// <inheritdoc />
+    public async Task<DateTime> GetSubscriptionPeriodEndAsync(
+        string gatewaySubscriptionId,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var subscription = await _subscriptionService.GetAsync(
+                gatewaySubscriptionId, cancellationToken: ct);
+
+            _logger.LogInformation(
+                "Retrieved period end {PeriodEnd} for Stripe subscription {SubscriptionId}",
+                subscription.CurrentPeriodEnd, gatewaySubscriptionId);
+
+            return subscription.CurrentPeriodEnd;
+        }
+        catch (StripeException ex)
+        {
+            _logger.LogError(ex,
+                "Stripe error retrieving period end for subscription {SubscriptionId}",
+                gatewaySubscriptionId);
+            throw;
+        }
+    }
+
     // ── ParseWebhookAsync ─────────────────────────────────────────────────
 
     /// <inheritdoc />

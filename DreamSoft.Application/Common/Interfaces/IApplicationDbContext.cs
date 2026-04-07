@@ -50,6 +50,7 @@ public interface IApplicationDbContext
     DbSet<TenantRegistrationToken> TenantRegistrationTokens { get; }
     DbSet<SubscriptionInvoice> SubscriptionInvoices { get; }
     DbSet<SubscriptionPayment> SubscriptionPayments { get; }
+    DbSet<SubscriptionCancellationLog> SubscriptionCancellationLogs { get; }
 
     // =====================================================================
     // TENANT + SOLUTION SCOPED

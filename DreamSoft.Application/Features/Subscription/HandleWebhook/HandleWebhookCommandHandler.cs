@@ -474,6 +474,15 @@ public class HandleWebhookCommandHandler(
             return;
         }
 
+        // Guard: already cancelled — duplicate webhook delivery
+        if (subscription.Status.Code == SubscriptionStatusCodes.Cancelled)
+        {
+            logger.LogWarning(
+                "Webhook customer.subscription.deleted: subscription {SubscriptionId} already CANCELLED, skipping duplicate.",
+                subscription.Id);
+            return;
+        }
+
         var cancelledStatus = await subscriptionStatusRepository
             .GetByCodeAsync(SubscriptionStatusCodes.Cancelled, cancellationToken);
 
@@ -483,11 +492,14 @@ public class HandleWebhookCommandHandler(
             return;
         }
 
+        var tenant = await tenantRepository.GetByIdAsync(
+            subscription.TenantId, cancellationToken);
+
         await unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
             subscription.UpdateStatus(cancelledStatus.Id);
-            subscription.Cancel(DateTime.UtcNow);
+            subscription.Cancel(DateTime.UtcNow); // Sets EndDate and clears CancellationScheduledAt
             await tenantSubscriptionRepository.UpdateAsync(subscription, cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken);
             await unitOfWork.CommitTransactionAsync(cancellationToken);
@@ -499,8 +511,21 @@ public class HandleWebhookCommandHandler(
         }
 
         logger.LogInformation(
-            "Subscription {SubscriptionId} cancelled for tenant {TenantId}.",
+            "Subscription {SubscriptionId} cancelled via webhook for tenant {TenantId}.",
             subscription.Id, subscription.TenantId);
+
+        // Send cancellation email for period-end completions — never throws
+        if (tenant is not null)
+        {
+            await emailService.SendSubscriptionCancelledAsync(
+                toEmail:          tenant.Email,
+                firstName:        tenant.FirstName,
+                companyName:      tenant.CompanyName,
+                planName:         subscription.SubscriptionPlan?.Name ?? string.Empty,
+                cancellationType: "at_period_end",
+                scheduledEndDate: null,
+                cancellationToken: cancellationToken);
+        }
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────

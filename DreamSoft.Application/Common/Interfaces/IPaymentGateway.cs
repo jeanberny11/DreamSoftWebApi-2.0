@@ -111,6 +111,15 @@ public interface IPaymentGateway
         CancellationToken ct = default);
 
     /// <summary>
+    /// Returns the current billing period end date (UTC) for the given subscription.
+    /// Used when scheduling a period-end cancellation so the local record
+    /// reflects the exact date the subscription will stop.
+    /// </summary>
+    Task<DateTime> GetSubscriptionPeriodEndAsync(
+        string gatewaySubscriptionId,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// Parses and validates the raw webhook payload and signature header.
     /// Throws an exception if the signature is invalid or the payload is malformed.
     /// Returns a normalised PaymentWebhookEvent ready for the handler to process.

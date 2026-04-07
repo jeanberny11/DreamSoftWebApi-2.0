@@ -63,4 +63,20 @@ public interface IEmailService
         string planName,
         string? failureReason,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Notifies the tenant that their subscription has been cancelled.
+    /// Sent both for immediate cancellations (from the handler) and for
+    /// period-end completions (from the webhook handler).
+    /// cancellationType: "immediate" | "at_period_end"
+    /// scheduledEndDate: null for immediate, the period-end date for scheduled.
+    /// </summary>
+    Task SendSubscriptionCancelledAsync(
+        string toEmail,
+        string firstName,
+        string companyName,
+        string planName,
+        string cancellationType,
+        DateTime? scheduledEndDate,
+        CancellationToken cancellationToken = default);
 }

@@ -9,5 +9,13 @@ public class CancelSubscriptionCommandValidator : AbstractValidator<CancelSubscr
     {
         RuleFor(x => x.SolutionId)
             .PositiveId();
+
+        RuleFor(x => x.CancellationReason)
+            .MaximumLength(100)
+            .When(x => x.CancellationReason is not null);
+
+        RuleFor(x => x.CancellationFeedback)
+            .MaximumLength(1000)
+            .When(x => x.CancellationFeedback is not null);
     }
 }
