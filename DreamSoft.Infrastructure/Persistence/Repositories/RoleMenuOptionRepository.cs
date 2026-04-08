@@ -12,6 +12,15 @@ public class RoleMenuOptionRepository(ApplicationDbContext context)
             .Where(rm => rm.RoleId == roleId)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<RoleMenuOption>> GetByRoleIdWithMenuDataAsync(int roleId, CancellationToken cancellationToken = default)
+        => await _dbSet
+            .Where(rm => rm.RoleId == roleId)
+            .Include(rm => rm.MenuOption)
+                .ThenInclude(mo => mo.Module)
+            .Include(rm => rm.MenuOption)
+                .ThenInclude(mo => mo.MenuGroup)
+            .ToListAsync(cancellationToken);
+
     public async Task ReplaceForRoleAsync(int roleId, IEnumerable<RoleMenuOption> menuOptions, CancellationToken cancellationToken = default)
     {
         var existing = await _dbSet

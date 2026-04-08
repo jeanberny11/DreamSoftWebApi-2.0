@@ -13,4 +13,13 @@ public static class ForbiddenErrorCodes
     public const string TenantPendingSubscription      = "TENANT_PENDING_SUBSCRIPTION";
     public const string TenantSuspended                = "TENANT_SUSPENDED";
     public const string TenantCancelled                = "TENANT_CANCELLED";
+
+    public const string SubscriptionNotFound      = "SUBSCRIPTION_NOT_FOUND";
+    public const string SubscriptionPastDue       = "SUBSCRIPTION_PAST_DUE";
+    public const string SubscriptionSuspended     = "SUBSCRIPTION_SUSPENDED";
+    public const string SubscriptionCancelled     = "SUBSCRIPTION_CANCELLED";
+    public const string SubscriptionExpired       = "SUBSCRIPTION_EXPIRED";
+    public const string SubscriptionPaymentFailed = "SUBSCRIPTION_PAYMENT_FAILED";
+
+    public const string RoleNotAuthorized = "ROLE_NOT_AUTHORIZED";
 }

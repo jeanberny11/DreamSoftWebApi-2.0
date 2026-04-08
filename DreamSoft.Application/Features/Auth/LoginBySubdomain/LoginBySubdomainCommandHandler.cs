@@ -10,6 +10,7 @@ namespace DreamSoft.Application.Features.Auth.LoginBySubdomain;
 public class LoginBySubdomainCommandHandler(
     ITenantRepository tenantRepository,
     ITenantSubdomainRepository tenantSubdomainRepository,
+    ITenantSubscriptionRepository tenantSubscriptionRepository,
     IUserRepository userRepository,
     IUserRefreshTokenRepository refreshTokenRepository,
     IUnitOfWork unitOfWork,
@@ -76,7 +77,47 @@ public class LoginBySubdomainCommandHandler(
                     ErrorMessageKeys.AccountCancelled);
         }
 
-        // 6. Check account lockout
+        // 6. Validate subscription status for this tenant + solution
+        var subscription = await tenantSubscriptionRepository
+            .GetByTenantAndSolutionAsync(tenantSubdomain.TenantId, tenantSubdomain.SolutionId, cancellationToken)
+            ?? throw new ForbiddenException(
+                ForbiddenErrorCodes.SubscriptionNotFound,
+                ErrorMessageKeys.SubscriptionNotActive);
+
+        switch (subscription.Status.Code)
+        {
+            case SubscriptionStatusCodes.Trial:
+            case SubscriptionStatusCodes.Active:
+                break;
+
+            case SubscriptionStatusCodes.PastDue:
+                throw new ForbiddenException(
+                    ForbiddenErrorCodes.SubscriptionPastDue,
+                    ErrorMessageKeys.SubscriptionPastDue);
+
+            case SubscriptionStatusCodes.Suspended:
+                throw new ForbiddenException(
+                    ForbiddenErrorCodes.SubscriptionSuspended,
+                    ErrorMessageKeys.SubscriptionSuspended);
+
+            case SubscriptionStatusCodes.Cancelled:
+                throw new ForbiddenException(
+                    ForbiddenErrorCodes.SubscriptionCancelled,
+                    ErrorMessageKeys.SubscriptionCancelled);
+
+            case SubscriptionStatusCodes.Expired:
+                throw new ForbiddenException(
+                    ForbiddenErrorCodes.SubscriptionExpired,
+                    ErrorMessageKeys.SubscriptionExpired);
+
+            default:
+                // Covers PROCESSING_PAYMENT, PAYMENT_FAILED, and any future states
+                throw new ForbiddenException(
+                    ForbiddenErrorCodes.SubscriptionPaymentFailed,
+                    ErrorMessageKeys.SubscriptionPaymentFailed);
+        }
+
+        // 7. Check account lockout
         if (user.IsLockedOut())
         {
             var remaining = (int)Math.Ceiling(

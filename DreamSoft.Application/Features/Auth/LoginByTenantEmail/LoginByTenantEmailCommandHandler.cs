@@ -9,6 +9,7 @@ namespace DreamSoft.Application.Features.Auth.LoginByTenantEmail;
 
 public class LoginByTenantEmailCommandHandler(
     ITenantRepository tenantRepository,
+    ITenantSubscriptionRepository tenantSubscriptionRepository,
     IUserRepository userRepository,
     ITenantSubdomainRepository tenantSubdomainRepository,
     IUserRefreshTokenRepository refreshTokenRepository,
@@ -68,7 +69,47 @@ public class LoginByTenantEmailCommandHandler(
                     ErrorMessageKeys.AccountCancelled);
         }
 
-        // 5. Check account lockout
+        // 5. Validate subscription status for this tenant + solution
+        var subscription = await tenantSubscriptionRepository
+            .GetByTenantAndSolutionAsync(tenant.Id, user.SolutionId, cancellationToken)
+            ?? throw new ForbiddenException(
+                ForbiddenErrorCodes.SubscriptionNotFound,
+                ErrorMessageKeys.SubscriptionNotActive);
+
+        switch (subscription.Status.Code)
+        {
+            case SubscriptionStatusCodes.Trial:
+            case SubscriptionStatusCodes.Active:
+                break;
+
+            case SubscriptionStatusCodes.PastDue:
+                throw new ForbiddenException(
+                    ForbiddenErrorCodes.SubscriptionPastDue,
+                    ErrorMessageKeys.SubscriptionPastDue);
+
+            case SubscriptionStatusCodes.Suspended:
+                throw new ForbiddenException(
+                    ForbiddenErrorCodes.SubscriptionSuspended,
+                    ErrorMessageKeys.SubscriptionSuspended);
+
+            case SubscriptionStatusCodes.Cancelled:
+                throw new ForbiddenException(
+                    ForbiddenErrorCodes.SubscriptionCancelled,
+                    ErrorMessageKeys.SubscriptionCancelled);
+
+            case SubscriptionStatusCodes.Expired:
+                throw new ForbiddenException(
+                    ForbiddenErrorCodes.SubscriptionExpired,
+                    ErrorMessageKeys.SubscriptionExpired);
+
+            default:
+                // Covers PROCESSING_PAYMENT, PAYMENT_FAILED, and any future states
+                throw new ForbiddenException(
+                    ForbiddenErrorCodes.SubscriptionPaymentFailed,
+                    ErrorMessageKeys.SubscriptionPaymentFailed);
+        }
+
+        // 6. Check account lockout
         if (user.IsLockedOut())
         {
             var remaining = (int)Math.Ceiling(

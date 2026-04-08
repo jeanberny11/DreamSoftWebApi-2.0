@@ -57,6 +57,13 @@ public static class ErrorMessageKeys
     public const string SubscriptionNotFound  = "SubscriptionNotFound";
     public const string SubscriptionNotActive = "SubscriptionNotActive";
 
+    // ── Subscription login-gate states ──────────────────────────────────────
+    public const string SubscriptionPastDue       = "SubscriptionPastDue";
+    public const string SubscriptionSuspended     = "SubscriptionSuspended";
+    public const string SubscriptionCancelled     = "SubscriptionCancelled";
+    public const string SubscriptionExpired       = "SubscriptionExpired";
+    public const string SubscriptionPaymentFailed = "SubscriptionPaymentFailed";
+
     // ── Subscription state / business rules ─────────────────────────────────
     public const string SubscriptionNotOwnedByTenant      = "SubscriptionNotOwnedByTenant";
     public const string SubscriptionNotRetryable          = "SubscriptionNotRetryable";
@@ -79,4 +86,6 @@ public static class ErrorMessageKeys
 
     // ── Menu / Roles ─────────────────────────────────────────────────────────
     public const string UserRoleNotAssigned = "UserRoleNotAssigned";
+    /// <summary>Requires {0} = role id.</summary>
+    public const string RoleNotFound = "RoleNotFound";
 }
