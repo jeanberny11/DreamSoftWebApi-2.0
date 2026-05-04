@@ -28,8 +28,8 @@ public static class DependencyInjection
         // connection string. Falls back to ConnectionStrings:DefaultConnection
         // for local development.
         var databaseUrl =
-            configuration["DATABASE_URL"] ??
-            configuration.GetConnectionString("DefaultConnection") ??
+            configuration["DATABASE_URL"].NullIfEmpty() ??
+            configuration.GetConnectionString("DefaultConnection").NullIfEmpty() ??
             throw new InvalidOperationException(
                 "No database connection configured. Set DATABASE_URL or ConnectionStrings:DefaultConnection.");
 
@@ -121,8 +121,8 @@ public static class DependencyInjection
         // and designed to be shared across the application lifetime.
         // Prefer REDIS_URL (injected by Railway) over ConnectionStrings:Redis.
         var redisConnection =
-            configuration["REDIS_URL"] ??
-            configuration.GetConnectionString("Redis") ??
+            configuration["REDIS_URL"].NullIfEmpty() ??
+            configuration.GetConnectionString("Redis").NullIfEmpty() ??
             "localhost:6379";
         var redisOptions = ConfigurationOptions.Parse(redisConnection);
         redisOptions.AbortOnConnectFail = false;
