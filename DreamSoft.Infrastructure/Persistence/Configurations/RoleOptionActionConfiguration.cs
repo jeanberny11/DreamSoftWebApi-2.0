@@ -4,21 +4,17 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DreamSoft.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// Entity Framework Core configuration for RoleOptionAction entity
-/// Maps to the 'role_option_actions' table in PostgreSQL
-/// </summary>
 public class RoleOptionActionConfiguration : IEntityTypeConfiguration<RoleOptionAction>
 {
     public void Configure(EntityTypeBuilder<RoleOptionAction> builder)
     {
-        // Table mapping
+        // ── Table ─────────────────────────────────────────────────────────
         builder.ToTable("role_option_actions");
 
-        // Composite primary key
+        // ── Primary Key (composite) ───────────────────────────────────────
         builder.HasKey(r => new { r.RoleId, r.MenuOptionId, r.ActionId });
 
-        // Properties mapping
+        // ── Properties ────────────────────────────────────────────────────
         builder.Property(r => r.RoleId)
             .HasColumnName("role_id")
             .IsRequired();
@@ -31,6 +27,7 @@ public class RoleOptionActionConfiguration : IEntityTypeConfiguration<RoleOption
             .HasColumnName("action_id")
             .IsRequired();
 
+        // ── Relationships ─────────────────────────────────────────────────
         builder.HasOne(r => r.Role)
             .WithMany(ro => ro.RoleOptionActions)
             .HasForeignKey(r => r.RoleId)

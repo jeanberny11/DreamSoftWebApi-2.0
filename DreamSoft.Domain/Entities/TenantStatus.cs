@@ -13,11 +13,7 @@ public class TenantStatus : LookupEntity
 
     private TenantStatus() { }
 
-    public static TenantStatus Create(
-        string code,
-        string name,
-        TranslatedString translations,
-        string description = "")
+    public static TenantStatus Create(string code, string name, TranslatedString translations, string description = "")
     {
         if (string.IsNullOrWhiteSpace(code))
             throw new ArgumentException("Code is required", nameof(code));
@@ -27,12 +23,9 @@ public class TenantStatus : LookupEntity
 
         ArgumentNullException.ThrowIfNull(translations, nameof(translations));
 
-        // Ensure code is lowercase (database constraint)
-        var lowerCode = code.ToLower().Trim();
-
         var tenantStatus = new TenantStatus
         {
-            Code = lowerCode,
+            Code = code.ToLower().Trim(),
             Name = name.Trim(),
             Description = description.Trim(),
             Translations = translations

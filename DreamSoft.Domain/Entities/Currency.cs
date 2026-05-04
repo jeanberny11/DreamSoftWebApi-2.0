@@ -9,9 +9,6 @@ public class Currency : AuditableEntity
     public string NativeName { get; set; } = null!;
     public bool IsDefault { get; set; }
 
-    // Navigation properties
-    public ICollection<Tenant> Tenants { get; private set; } = [];
-
     private Currency() { }
 
     public static Currency Create(string code, string name, string nativeName, bool isDefault = false)
@@ -35,6 +32,26 @@ public class Currency : AuditableEntity
 
         currency.InitializeAudit();
         return currency;
+    }
+
+    public void UpdateDetails(string name, string nativeName, bool isDefault, bool isActive)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Name is required", nameof(name));
+
+        if (string.IsNullOrWhiteSpace(nativeName))
+            throw new ArgumentException("Native name is required", nameof(nativeName));
+
+        Name = name.Trim();
+        NativeName = nativeName.Trim();
+        IsDefault = isDefault;
+
+        if (isActive && !IsActive)
+            Activate();
+        else if (!isActive && IsActive)
+            Deactivate();
+
+        MarkAsUpdated();
     }
 
     public void SetAsDefault()

@@ -17,48 +17,26 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
     }
 
     public virtual async Task<T?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
-    {
-        return await _dbSet.FindAsync(id,cancellationToken);
-    }
+        => await _dbSet.FindAsync([id], cancellationToken);
 
     public virtual async Task<IReadOnlyList<T>> GetAllAsync(CancellationToken cancellationToken = default)
-    {
-        return await _dbSet
-            .ToListAsync(cancellationToken);
-    }
+        => await _dbSet.ToListAsync(cancellationToken);
 
     public virtual async Task<IReadOnlyList<T>> FindAsync(
-        Expression<Func<T, bool>> predicate,
-        CancellationToken cancellationToken = default)
-    {
-        return await _dbSet
-            .Where(predicate)
-            .ToListAsync(cancellationToken);
-    }
+        Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
+        => await _dbSet.Where(predicate).ToListAsync(cancellationToken);
 
     public virtual async Task<T?> FirstOrDefaultAsync(
-        Expression<Func<T, bool>> predicate,
-        CancellationToken cancellationToken = default)
-    {
-        return await _dbSet
-            .FirstOrDefaultAsync(predicate, cancellationToken);
-    }
+        Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
+        => await _dbSet.FirstOrDefaultAsync(predicate, cancellationToken);
 
     public virtual async Task<bool> AnyAsync(
-        Expression<Func<T, bool>> predicate,
-        CancellationToken cancellationToken = default)
-    {
-        return await _dbSet
-            .AnyAsync(predicate, cancellationToken);
-    }
+        Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
+        => await _dbSet.AnyAsync(predicate, cancellationToken);
 
     public virtual async Task<int> CountAsync(
-        Expression<Func<T, bool>> predicate,
-        CancellationToken cancellationToken = default)
-    {
-        return await _dbSet
-            .CountAsync(predicate, cancellationToken);
-    }
+        Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
+        => await _dbSet.CountAsync(predicate, cancellationToken);
 
     public virtual async Task<T> AddAsync(T entity, CancellationToken cancellationToken = default)
     {
@@ -67,9 +45,7 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
     }
 
     public virtual async Task AddRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
-    {
-        await _dbSet.AddRangeAsync(entities, cancellationToken);
-    }
+        => await _dbSet.AddRangeAsync(entities, cancellationToken);
 
     public virtual Task UpdateAsync(T entity, CancellationToken cancellationToken = default)
     {
@@ -77,15 +53,15 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
         return Task.CompletedTask;
     }
 
-    public virtual async Task DeleteAsync(T entity, CancellationToken cancellationToken = default)
+    public virtual Task DeleteAsync(T entity, CancellationToken cancellationToken = default)
     {
         _dbSet.Remove(entity);
-        await _context.SaveChangesAsync(cancellationToken);
+        return Task.CompletedTask;
     }
 
-    public virtual async Task DeleteRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
+    public virtual Task DeleteRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
     {
         _dbSet.RemoveRange(entities);
-        await _context.SaveChangesAsync(cancellationToken);
+        return Task.CompletedTask;
     }
 }

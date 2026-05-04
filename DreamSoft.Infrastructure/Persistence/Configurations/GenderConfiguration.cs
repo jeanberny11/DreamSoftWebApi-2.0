@@ -4,24 +4,20 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DreamSoft.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// Entity Framework Core configuration for Gender entity
-/// Maps to the 'genders' table in PostgreSQL
-/// </summary>
 public class GenderConfiguration : IEntityTypeConfiguration<Gender>
 {
     public void Configure(EntityTypeBuilder<Gender> builder)
     {
-        // Table mapping
+        // ── Table ─────────────────────────────────────────────────────────
         builder.ToTable("genders");
 
-        // Primary key
+        // ── Primary Key ───────────────────────────────────────────────────
         builder.HasKey(g => g.Id);
         builder.Property(g => g.Id)
             .HasColumnName("id")
             .ValueGeneratedOnAdd();
 
-        // Properties mapping
+        // ── Properties ────────────────────────────────────────────────────
         builder.Property(g => g.Code)
             .HasColumnName("code")
             .HasMaxLength(50)
@@ -33,7 +29,7 @@ public class GenderConfiguration : IEntityTypeConfiguration<Gender>
             .IsRequired()
             .HasDefaultValue(string.Empty);
 
-        // JSONB Translation Configuration (Name Only - No Description)
+        // ── Translations (JSONB) ──────────────────────────────────────────
         builder.OwnsOne(g => g.Translations, translations =>
         {
             translations.ToJson("translations");
@@ -41,22 +37,19 @@ public class GenderConfiguration : IEntityTypeConfiguration<Gender>
             translations.OwnsOne(t => t.Spanish, spanish =>
             {
                 spanish.ToJson("es");
-                spanish.Property(s => s.Name)
-                    .HasJsonPropertyName("name")
-                    .IsRequired();
+                spanish.Property(s => s.Name).HasJsonPropertyName("name").IsRequired();
                 spanish.Ignore(s => s.Descripcion);
             });
 
             translations.OwnsOne(t => t.English, english =>
             {
                 english.ToJson("en");
-                english.Property(e => e.Name)
-                    .HasJsonPropertyName("name");
+                english.Property(e => e.Name).HasJsonPropertyName("name");
                 english.Ignore(e => e.Descripcion);
             });
         });
 
-        // Audit fields
+        // ── Audit Fields ──────────────────────────────────────────────────
         builder.Property(g => g.IsActive)
             .HasColumnName("is_active")
             .HasDefaultValue(true);
@@ -69,16 +62,12 @@ public class GenderConfiguration : IEntityTypeConfiguration<Gender>
         builder.Property(g => g.UpdatedAt)
             .HasColumnName("updated_at");
 
-        // Indexes
-        builder.HasIndex(g => g.Name)
-            .HasDatabaseName("idx_genders_name");
-
-        // Unique constraint
+        // ── Indexes ───────────────────────────────────────────────────────
         builder.HasIndex(g => g.Code)
             .IsUnique()
             .HasDatabaseName("genders_code_key");
 
-        // Relationships
+        // ── Relationships ─────────────────────────────────────────────────
         builder.HasMany(g => g.Users)
             .WithOne(u => u.Gender)
             .HasForeignKey(u => u.GenderId)

@@ -5,16 +5,17 @@ namespace DreamSoft.Domain.Entities;
 
 public class Role : TenantEntity
 {
-    public string Code { get; set; } = null!;
-    public string Name { get; set; } = null!;
-    public string Description { get; set; } = "";
-    public TranslatedString Translations { get; protected set; } = null!;
-    public bool IsCustom { get; set; }
-    public int? RoleTemplateId { get; set; }
+    // SolutionId is now inherited from TenantEntity
+    public string Code { get; private set; } = null!;
+    public string Name { get; private set; } = null!;
+    public string Description { get; private set; } = "";
+    public TranslatedString Translations { get; private set; } = null!;
+    public bool IsCustom { get; private set; }
+    public int? RoleTemplateId { get; private set; }
 
     // Navigation properties
-    public RoleTemplate? RoleTemplate { get; set; }
-    public ICollection<UserRole> UserRoles { get; private set; } = [];
+    public RoleTemplate? RoleTemplate { get; private set; }
+    public ICollection<User> Users { get; private set; } = [];
     public ICollection<RoleMenuOption> RoleMenuOptions { get; private set; } = [];
     public ICollection<RoleOptionAction> RoleOptionActions { get; private set; } = [];
 
@@ -22,10 +23,13 @@ public class Role : TenantEntity
 
     public static Role Create(
         int tenantId,
+        int solutionId,
         string code,
         string name,
+        TranslatedString translations,
         string description = "",
         int? roleTemplateId = null,
+        bool isCustom = false,
         int? createdBy = null)
     {
         if (string.IsNullOrWhiteSpace(code))
@@ -34,40 +38,33 @@ public class Role : TenantEntity
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Name is required", nameof(name));
 
+        ArgumentNullException.ThrowIfNull(translations, nameof(translations));
+
         var role = new Role
         {
             Code = code.ToUpper().Trim(),
             Name = name.Trim(),
             Description = description.Trim(),
-            RoleTemplateId = roleTemplateId
+            Translations = translations,
+            RoleTemplateId = roleTemplateId,
+            IsCustom = isCustom
         };
 
-        role.InitializeTenantEntity(tenantId, createdBy);
+        role.InitializeTenantEntity(tenantId, solutionId, createdBy);
         return role;
     }
 
-    public void UpdateDetails(string name, string description, int? updatedBy = null)
+    public void UpdateDetails(string name, string description,
+        TranslatedString translations, int? updatedBy = null)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Name is required", nameof(name));
 
+        ArgumentNullException.ThrowIfNull(translations, nameof(translations));
+
         Name = name.Trim();
         Description = description.Trim();
-        RecordUpdate(updatedBy);
-    }
-
-    public void AssignTemplate(int roleTemplateId, int? updatedBy = null)
-    {
-        if (roleTemplateId <= 0)
-            throw new ArgumentException("Role template ID must be greater than zero", nameof(roleTemplateId));
-
-        RoleTemplateId = roleTemplateId;
-        RecordUpdate(updatedBy);
-    }
-
-    public void RemoveTemplate(int? updatedBy = null)
-    {
-        RoleTemplateId = null;
+        Translations = translations;
         RecordUpdate(updatedBy);
     }
 }

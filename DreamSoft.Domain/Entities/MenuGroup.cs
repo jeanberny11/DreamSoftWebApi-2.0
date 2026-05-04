@@ -15,13 +15,8 @@ public class MenuGroup : LookupEntity
 
     private MenuGroup() { }
 
-    public static MenuGroup Create(
-        string code,
-        string name,
-        TranslatedString translations,
-        string description = "",
-        string icon = "",
-        int sortOrder = 0)
+    public static MenuGroup Create(string code, string name, TranslatedString translations,
+        string description = "", string icon = "", int sortOrder = 0)
     {
         if (string.IsNullOrWhiteSpace(code))
             throw new ArgumentException("Code is required", nameof(code));
@@ -57,15 +52,6 @@ public class MenuGroup : LookupEntity
         UpdateTranslations(translations);
     }
 
-    public void UpdateIcon(string icon)
-    {
-        Icon = icon.Trim();
-        MarkAsUpdated();
-    }
-
-    public void UpdateSortOrder(int sortOrder)
-    {
-        SortOrder = sortOrder;
-        MarkAsUpdated();
-    }
+    public void UpdateIcon(string icon) { Icon = icon.Trim(); MarkAsUpdated(); }
+    public void UpdateSortOrder(int sortOrder) { SortOrder = sortOrder; MarkAsUpdated(); }
 }

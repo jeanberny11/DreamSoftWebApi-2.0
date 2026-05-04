@@ -4,7 +4,8 @@ namespace DreamSoft.Application.Common.Exceptions;
 /// Exception thrown when credentials are valid but access is blocked due to account or tenant state.
 /// Maps to HTTP 403 Forbidden.
 /// </summary>
-public class ForbiddenException(string errorCode, string message) : ApplicationException(message)
+public class ForbiddenException(string errorCode, string resourceKey, params object[] parameters)
+    : ApplicationException(resourceKey, parameters)
 {
     /// <summary>
     /// Programmatic error code for the client to react to the specific blocked state.

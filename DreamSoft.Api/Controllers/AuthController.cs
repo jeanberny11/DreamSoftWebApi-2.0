@@ -10,7 +10,6 @@ namespace DreamSoft.Api.Controllers;
 
 public class AuthController : ApiControllerBase
 {
-    // Cookie name — __Host- prefix enforces Secure + no Domain + Path=/ in browsers.
     private const string RefreshTokenCookieName = "__Host-refresh_token";
 
     /// <summary>
@@ -37,7 +36,6 @@ public class AuthController : ApiControllerBase
     /// Login via tenant company email.
     /// The tenant is resolved by matching the provided email against Tenant.Email.
     /// Intended for mobile clients or apps that don't use subdomain-based routing.
-    /// Sets the refresh token as an HTTP-only cookie.
     /// </summary>
     [AllowAnonymous]
     [HttpPost("login-by-email")]
@@ -55,34 +53,30 @@ public class AuthController : ApiControllerBase
 
     /// <summary>
     /// Rotates a refresh token.
-    /// Reads the refresh token from the HTTP-only cookie (preferred) or the JSON body (fallback).
+    /// Reads the refresh token from the HTTP-only cookie.
     /// Returns a new access token in the body; sets a new refresh-token cookie.
     /// </summary>
     [AllowAnonymous]
     [HttpPost("refresh")]
     [ProducesResponseType(typeof(LoginClientResponse), 200)]
     [ProducesResponseType(401)]
-    public async Task<IActionResult> Refresh(
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> Refresh(CancellationToken cancellationToken)
     {
-        // Prefer the HTTP-only cookie; fall back to body for mobile clients
         var rawToken = Request.Cookies[RefreshTokenCookieName];
         if (string.IsNullOrWhiteSpace(rawToken))
             return Unauthorized();
 
         var result = await Mediator.Send(new RefreshTokenCommand(rawToken), cancellationToken);
-
-        // Rotate the cookie too
         SetRefreshTokenCookie(result.RefreshToken, persistent: false);
         return Ok(LoginClientResponse.From(result));
     }
 
     /// <summary>
-    /// Logs out the currently authenticated user.
+    /// Logs out the currently authenticated solution user.
     /// Revokes the current session refresh token and clears the HTTP-only cookie.
-    /// Requires a valid Bearer access token.
+    /// Requires a valid User Bearer token.
     /// </summary>
-    [Authorize]
+    [Authorize(Policy = AuthPolicies.UserOnly)]
     [HttpPost("logout")]
     [ProducesResponseType(204)]
     [ProducesResponseType(401)]
@@ -91,7 +85,6 @@ public class AuthController : ApiControllerBase
         var rawToken = Request.Cookies[RefreshTokenCookieName];
         await Mediator.Send(new LogoutCommand(rawToken), cancellationToken);
 
-        // Delete the cookie regardless of whether a token was found
         Response.Cookies.Delete(RefreshTokenCookieName, new CookieOptions
         {
             Secure   = true,
@@ -105,10 +98,6 @@ public class AuthController : ApiControllerBase
 
     // ── Cookie helpers ───────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Writes the refresh token into an HTTP-only, Secure, SameSite=Strict cookie.
-    /// <paramref name="persistent"/> = true → browser persists the cookie across sessions (RememberMe).
-    /// </summary>
     private void SetRefreshTokenCookie(string token, bool persistent)
     {
         var options = new CookieOptions
@@ -128,17 +117,14 @@ public class AuthController : ApiControllerBase
 
 // ── DTOs ─────────────────────────────────────────────────────────────────────
 
-/// <summary>
-/// Client-facing login response. The refresh token is NOT included here —
-/// it travels exclusively via the HTTP-only cookie for security.
-/// </summary>
 public record LoginClientResponse(
     string AccessToken,
     DateTime ExpiresAt,
     int UserId,
     string Username,
-    string FullName)
+    string FullName,
+    string TenantSubdomain)
 {
     public static LoginClientResponse From(LoginResponse r) =>
-        new(r.AccessToken, r.ExpiresAt, r.UserId, r.Username, r.FullName);
+        new(r.AccessToken, r.ExpiresAt, r.UserId, r.Username, r.FullName, r.TenantSubdomain);
 }

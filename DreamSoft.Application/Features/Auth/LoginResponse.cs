@@ -10,4 +10,5 @@ public record LoginResponse(
     DateTime ExpiresAt,
     int UserId,
     string Username,
-    string FullName);
+    string FullName,
+    string TenantSubdomain);

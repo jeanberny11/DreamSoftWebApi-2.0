@@ -4,24 +4,20 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DreamSoft.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// Entity Framework Core configuration for Currency entity
-/// Maps to the 'currencies' table in PostgreSQL
-/// </summary>
 public class CurrencyConfiguration : IEntityTypeConfiguration<Currency>
 {
     public void Configure(EntityTypeBuilder<Currency> builder)
     {
-        // Table mapping
+        // ── Table ─────────────────────────────────────────────────────────
         builder.ToTable("currencies");
 
-        // Primary key
+        // ── Primary Key ───────────────────────────────────────────────────
         builder.HasKey(c => c.Id);
         builder.Property(c => c.Id)
             .HasColumnName("id")
             .ValueGeneratedOnAdd();
 
-        // Properties mapping
+        // ── Properties ────────────────────────────────────────────────────
         builder.Property(c => c.Code)
             .HasColumnName("code")
             .HasMaxLength(10)
@@ -44,7 +40,7 @@ public class CurrencyConfiguration : IEntityTypeConfiguration<Currency>
             .HasColumnName("is_default")
             .HasDefaultValue(false);
 
-        // Audit fields
+        // ── Audit Fields ──────────────────────────────────────────────────
         builder.Property(c => c.IsActive)
             .HasColumnName("is_active")
             .HasDefaultValue(true);
@@ -57,10 +53,9 @@ public class CurrencyConfiguration : IEntityTypeConfiguration<Currency>
         builder.Property(c => c.UpdatedAt)
             .HasColumnName("updated_at");
 
-        // Relationships
-        builder.HasMany(c => c.Tenants)
-            .WithOne(t => t.Currency)
-            .HasForeignKey(t => t.CurrencyId)
-            .OnDelete(DeleteBehavior.Restrict);
+        // ── Indexes ───────────────────────────────────────────────────────
+        builder.HasIndex(c => c.Code)
+            .IsUnique()
+            .HasDatabaseName("currencies_code_key");
     }
 }

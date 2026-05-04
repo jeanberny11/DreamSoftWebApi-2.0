@@ -4,19 +4,21 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace DreamSoft.Api.Controllers;
 
-[Authorize]
+[Authorize(Policy = AuthPolicies.TenantOnly)]
 public class OnboardingController : ApiControllerBase
 {
-    /// <summary>Complete the onboarding wizard by selecting a solution
-    /// and subscription plan. Transitions tenant to ACTIVE.
-    /// Requires a real access token (not the registration token).
+    /// <summary>
+    /// Completes the onboarding wizard by saving the tenant's company profile,
+    /// address, language preference, and terms acceptance.
+    /// Sets OnboardingCompleted = true and redirects to /subscribe.
+    /// Requires tenant status: PENDING_SUBSCRIPTION with OnboardingCompleted = false.
     /// </summary>
     [HttpPost("complete")]
-    [ProducesResponseType(typeof(CompleteOnboardingResponse), 200)]
-    [ProducesResponseType(400)]
-    [ProducesResponseType(401)]
-    [ProducesResponseType(404)]
-    [ProducesResponseType(409)]
+    [ProducesResponseType(typeof(CompleteOnboardingResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Complete(
         [FromBody] CompleteOnboardingCommand command,
         CancellationToken cancellationToken)

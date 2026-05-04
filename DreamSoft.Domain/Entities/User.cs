@@ -4,45 +4,33 @@ namespace DreamSoft.Domain.Entities;
 
 public class User : TenantEntity
 {
-    public string Username { get; set; } = null!;
-    public string Email { get; set; } = null!;
-    public string PasswordHash { get; set; } = null!;
-    public string FirstName { get; set; } = null!;
-    public string? MiddleName { get; set; }
-    public string LastName { get; set; } = null!;
-    public string? SecondLastName { get; set; }
-    public int? GenderId { get; set; }
-    public DateTime? DateOfBirth { get; set; }
-    public int? IdTypeId { get; set; }
-    public string? IdNumber { get; set; }
-    public string? Phone { get; set; }
-    public string? Mobile { get; set; }
-    public string? AvatarUrl { get; set; }
-    public int? LanguageId { get; set; }
-    public bool IsEmailVerified { get; set; }
+    // SolutionId is now inherited from TenantEntity
+    public string Username { get; private set; } = null!;
+    public string Email { get; private set; } = null!;
+    public string PasswordHash { get; private set; } = null!;
+    public string FirstName { get; private set; } = null!;
+    public string LastName { get; private set; } = null!;
+    public string? Phone { get; private set; }
+    public string? AvatarUrl { get; private set; }
+    public int? LanguageId { get; private set; }
+    public int? GenderId { get; private set; }
     public bool IsAdmin { get; private set; }
-    public DateTime? LastLoginAt { get; set; }
-    public int FailedLoginAttempts { get; set; }
-    public DateTime? LockoutUntil { get; set; }
+    public int? RoleId { get; private set; }
+    public DateTime? LastLoginAt { get; private set; }
+    public int FailedLoginAttempts { get; private set; }
+    public DateTime? LockoutUntil { get; private set; }
 
     // Navigation properties
-    public Gender? Gender { get; set; }
-    public IdType? IdType { get; set; }
-    public Language? Language { get; set; }
-    public ICollection<UserRole> UserRoles { get; private set; } = [];
-    public ICollection<RefreshToken> RefreshTokens { get; private set; } = [];
-
-    // Self-referential navigation properties for audit trail
-    public ICollection<User> CreatedUsers { get; private set; } = [];
-    public ICollection<User> UpdatedUsers { get; private set; } = [];
-    public ICollection<Role> CreatedRoles { get; private set; } = [];
-    public ICollection<Role> UpdatedRoles { get; private set; } = [];
-    public ICollection<UserRole> AssignedUserRoles { get; private set; } = [];
+    public Gender? Gender { get; private set; }
+    public Language? Language { get; private set; }
+    public Role? Role { get; private set; }
+    public ICollection<UserRefreshToken> RefreshTokens { get; private set; } = [];
 
     private User() { }
 
     public static User Create(
         int tenantId,
+        int solutionId,
         string username,
         string email,
         string passwordHash,
@@ -75,22 +63,15 @@ public class User : TenantEntity
             FirstName = firstName.Trim(),
             LastName = lastName.Trim(),
             LanguageId = languageId,
-            IsEmailVerified = false,
             IsAdmin = isAdmin
         };
 
-        user.InitializeTenantEntity(tenantId, createdBy);
+        user.InitializeTenantEntity(tenantId, solutionId, createdBy);
         return user;
     }
 
-    public void UpdateProfile(
-        string firstName,
-        string lastName,
-        string? middleName = null,
-        string? secondLastName = null,
-        DateTime? dateOfBirth = null,
-        int? genderId = null,
-        int? updatedBy = null)
+    public void UpdateProfile(string firstName, string lastName,
+        string? phone = null, int? genderId = null, int? updatedBy = null)
     {
         if (string.IsNullOrWhiteSpace(firstName))
             throw new ArgumentException("First name is required", nameof(firstName));
@@ -100,25 +81,8 @@ public class User : TenantEntity
 
         FirstName = firstName.Trim();
         LastName = lastName.Trim();
-        MiddleName = middleName?.Trim();
-        SecondLastName = secondLastName?.Trim();
-        DateOfBirth = dateOfBirth;
-        GenderId = genderId;
-
-        RecordUpdate(updatedBy);
-    }
-
-    public void UpdateIdentification(int? idTypeId, string? idNumber, int? updatedBy = null)
-    {
-        IdTypeId = idTypeId;
-        IdNumber = idNumber?.Trim();
-        RecordUpdate(updatedBy);
-    }
-
-    public void UpdateContactInfo(string? phone, string? mobile, int? updatedBy = null)
-    {
         Phone = phone?.Trim();
-        Mobile = mobile?.Trim();
+        GenderId = genderId;
         RecordUpdate(updatedBy);
     }
 
@@ -128,13 +92,6 @@ public class User : TenantEntity
             throw new ArgumentException("Email is required", nameof(email));
 
         Email = email.Trim().ToLower();
-        IsEmailVerified = false; // Reset verification when email changes
-        RecordUpdate(updatedBy);
-    }
-
-    public void VerifyEmail(int? updatedBy = null)
-    {
-        IsEmailVerified = true;
         RecordUpdate(updatedBy);
     }
 
@@ -147,9 +104,9 @@ public class User : TenantEntity
         RecordUpdate(updatedBy);
     }
 
-    public void UpdateAvatar(string avatarUrl, int? updatedBy = null)
+    public void UpdateAvatar(string? avatarUrl, int? updatedBy = null)
     {
-        AvatarUrl = avatarUrl.Trim();
+        AvatarUrl = avatarUrl?.Trim();
         RecordUpdate(updatedBy);
     }
 
@@ -162,12 +119,21 @@ public class User : TenantEntity
         RecordUpdate(updatedBy);
     }
 
-    // ── Lockout constants ───────────────────────────────────────────────────
+    public void AssignRole(int roleId)
+    {
+        if (roleId <= 0)
+            throw new ArgumentException("Role ID must be greater than zero", nameof(roleId));
+
+        RoleId = roleId;
+    }
+
+    public void RemoveRole() { RoleId = null; }
+
+    // ── Lockout ────────────────────────────────────────────────────────────────
     public const int MaxFailedAttempts = 5;
     public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
 
-    public bool IsLockedOut()
-        => LockoutUntil.HasValue && DateTime.UtcNow < LockoutUntil.Value;
+    public bool IsLockedOut() => LockoutUntil.HasValue && DateTime.UtcNow < LockoutUntil.Value;
 
     public void RecordFailedLogin()
     {
@@ -184,24 +150,7 @@ public class User : TenantEntity
         MarkAsUpdated();
     }
 
-    public void RecordLogin()
-    {
-        LastLoginAt = DateTime.UtcNow;
-        MarkAsUpdated();
-    }
+    public void RecordLogin() { LastLoginAt = DateTime.UtcNow; MarkAsUpdated(); }
 
-    public string GetFullName()
-    {
-        var names = new List<string> { FirstName };
-        
-        if (!string.IsNullOrWhiteSpace(MiddleName))
-            names.Add(MiddleName);
-        
-        names.Add(LastName);
-        
-        if (!string.IsNullOrWhiteSpace(SecondLastName))
-            names.Add(SecondLastName);
-
-        return string.Join(" ", names);
-    }
+    public string GetFullName() => $"{FirstName} {LastName}";
 }

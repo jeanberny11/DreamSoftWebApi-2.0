@@ -4,24 +4,20 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DreamSoft.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// Entity Framework Core configuration for IdType entity
-/// Maps to the 'id_types' table in PostgreSQL
-/// </summary>
 public class IdTypeConfiguration : IEntityTypeConfiguration<IdType>
 {
     public void Configure(EntityTypeBuilder<IdType> builder)
     {
-        // Table mapping
+        // ── Table ─────────────────────────────────────────────────────────
         builder.ToTable("id_types");
 
-        // Primary key
+        // ── Primary Key ───────────────────────────────────────────────────
         builder.HasKey(i => i.Id);
         builder.Property(i => i.Id)
             .HasColumnName("id")
             .ValueGeneratedOnAdd();
 
-        // Properties mapping
+        // ── Properties ────────────────────────────────────────────────────
         builder.Property(i => i.Code)
             .HasColumnName("code")
             .HasMaxLength(50)
@@ -43,7 +39,7 @@ public class IdTypeConfiguration : IEntityTypeConfiguration<IdType>
             .IsRequired()
             .HasDefaultValue(string.Empty);
 
-        // JSONB Translation Configuration (Name + Description)
+        // ── Translations (JSONB) ──────────────────────────────────────────
         builder.OwnsOne(i => i.Translations, translations =>
         {
             translations.ToJson("translations");
@@ -51,24 +47,19 @@ public class IdTypeConfiguration : IEntityTypeConfiguration<IdType>
             translations.OwnsOne(t => t.Spanish, spanish =>
             {
                 spanish.ToJson("es");
-                spanish.Property(s => s.Name)
-                    .HasJsonPropertyName("name")
-                    .IsRequired();
-                spanish.Property(s => s.Descripcion)
-                    .HasJsonPropertyName("description");
+                spanish.Property(s => s.Name).HasJsonPropertyName("name").IsRequired();
+                spanish.Property(s => s.Descripcion).HasJsonPropertyName("description");
             });
 
             translations.OwnsOne(t => t.English, english =>
             {
                 english.ToJson("en");
-                english.Property(e => e.Name)
-                    .HasJsonPropertyName("name");
-                english.Property(e => e.Descripcion)
-                    .HasJsonPropertyName("description");
+                english.Property(e => e.Name).HasJsonPropertyName("name");
+                english.Property(e => e.Descripcion).HasJsonPropertyName("description");
             });
         });
 
-        // Audit fields
+        // ── Audit Fields ──────────────────────────────────────────────────
         builder.Property(i => i.IsActive)
             .HasColumnName("is_active")
             .HasDefaultValue(true);
@@ -81,15 +72,10 @@ public class IdTypeConfiguration : IEntityTypeConfiguration<IdType>
         builder.Property(i => i.UpdatedAt)
             .HasColumnName("updated_at");
 
-        // Relationships
+        // ── Relationships ─────────────────────────────────────────────────
         builder.HasOne(i => i.Country)
             .WithMany(c => c.IdTypes)
             .HasForeignKey(i => i.CountryId)
             .OnDelete(DeleteBehavior.Restrict);
-
-        builder.HasMany(i => i.Users)
-            .WithOne(u => u.IdType)
-            .HasForeignKey(u => u.IdTypeId)
-            .OnDelete(DeleteBehavior.NoAction);
     }
 }

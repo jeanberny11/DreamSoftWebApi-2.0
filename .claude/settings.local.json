@@ -2,7 +2,18 @@
   "permissions": {
     "allow": [
       "Bash(dotnet build:*)",
-      "Bash(dotnet ef migrations list:*)"
+      "Bash(dotnet ef migrations list:*)",
+      "Bash(curl -sk https://localhost:7280/api/v1/registration/check-subdomain?subdomain=dreamsoftware -o /dev/null -w \"%{http_code}\")",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:docs.stripe.com)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :5063)",
+      "Bash(curl -s -w '\\\\nHTTP_STATUS:%{http_code}' -X POST http://localhost:5063/api/registration -H 'Content-Type: application/json' -L -d '{:*)",
+      "Bash(curl -sk -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjMiLCJlbWFpbCI6ImluZy5iZXJueTExQGdtYWlsLmNvbSIsImZ1bGxfbmFtZSI6IlBsYXRmb3JtIEFkbWluaXN0cmF0b3IiLCJyb2xlX2NvZGUiOiJTVVBFUl9BRE1JTiIsInRva2VuX3R5cGUiOiJzdXBlcmFkbWluIiwianRpIjoiNzE1NDAwZjAtZjBjNC00MzMzLWFjOGYtOWM0NjFiNjhmYTgwIiwiZXhwIjoxNzc3MTY2NTgxLCJpc3MiOiJkcmVhbXNvZnQtc3VwZXJhZG1pbiIsImF1ZCI6ImRyZWFtc29mdC1hZG1pbi1hcGkifQ.HWYDF28cTbeYiruCtlyhUz1Uddi-6Tn2wbmxHkO7pEg' https://localhost:7280/api/v1/admin/billing-cycles)",
+      "Bash(curl -sk -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjMiLCJlbWFpbCI6ImluZy5iZXJueTExQGdtYWlsLmNvbSIsImZ1bGxfbmFtZSI6IlBsYXRmb3JtIEFkbWluaXN0cmF0b3IiLCJyb2xlX2NvZGUiOiJTVVBFUl9BRE1JTiIsInRva2VuX3R5cGUiOiJzdXBlcmFkbWluIiwianRpIjoiNzE1NDAwZjAtZjBjNC00MzMzLWFjOGYtOWM0NjFiNjhmYTgwIiwiZXhwIjoxNzc3MTY2NTgxLCJpc3MiOiJkcmVhbXNvZnQtc3VwZXJhZG1pbiIsImF1ZCI6ImRyZWFtc29mdC1hZG1pbi1hcGkifQ.HWYDF28cTbeYiruCtlyhUz1Uddi-6Tn2wbmxHkO7pEg' https://localhost:7280/api/v1/admin/billingcycles)",
+      "Bash(curl -sk -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjMiLCJlbWFpbCI6ImluZy5iZXJueTExQGdtYWlsLmNvbSIsImZ1bGxfbmFtZSI6IlBsYXRmb3JtIEFkbWluaXN0cmF0b3IiLCJyb2xlX2NvZGUiOiJTVVBFUl9BRE1JTiIsInRva2VuX3R5cGUiOiJzdXBlcmFkbWluIiwianRpIjoiNzE1NDAwZjAtZjBjNC00MzMzLWFjOGYtOWM0NjFiNjhmYTgwIiwiZXhwIjoxNzc3MTY2NTgxLCJpc3MiOiJkcmVhbXNvZnQtc3VwZXJhZG1pbiIsImF1ZCI6ImRyZWFtc29mdC1hZG1pbi1hcGkifQ.HWYDF28cTbeYiruCtlyhUz1Uddi-6Tn2wbmxHkO7pEg' https://localhost:7280/api/v1/admin/menu-options)",
+      "Bash(curl -sk -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjMiLCJlbWFpbCI6ImluZy5iZXJueTExQGdtYWlsLmNvbSIsImZ1bGxfbmFtZSI6IlBsYXRmb3JtIEFkbWluaXN0cmF0b3IiLCJyb2xlX2NvZGUiOiJTVVBFUl9BRE1JTiIsInRva2VuX3R5cGUiOiJzdXBlcmFkbWluIiwianRpIjoiNzE1NDAwZjAtZjBjNC00MzMzLWFjOGYtOWM0NjFiNjhmYTgwIiwiZXhwIjoxNzc3MTY2NTgxLCJpc3MiOiJkcmVhbXNvZnQtc3VwZXJhZG1pbiIsImF1ZCI6ImRyZWFtc29mdC1hZG1pbi1hcGkifQ.HWYDF28cTbeYiruCtlyhUz1Uddi-6Tn2wbmxHkO7pEg' https://localhost:7280/api/v1/admin/menuoptions)"
     ],
     "deny": [],
     "ask": []

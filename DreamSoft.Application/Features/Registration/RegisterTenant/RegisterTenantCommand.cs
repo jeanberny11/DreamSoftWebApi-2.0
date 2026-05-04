@@ -3,26 +3,13 @@ using MediatR;
 namespace DreamSoft.Application.Features.Registration.RegisterTenant;
 
 public record RegisterTenantCommand(
+    string FirstName,
+    string LastName,
     string CompanyName,
-    string Subdomain,
-    string? TaxId,
-    string Phone,
-    string AddressLine1,
-    int CountryId,
-    int ProvinceId,
-    int MunicipalityId,
-    string AdminFirstName,
-    string AdminLastName,
-    string AdminEmail,
-    string AdminPassword,
-    int LanguageId,
-    int CurrencyId,
-    /// <summary>
-    /// Version identifier of the Terms of Service the user accepted during registration.
-    /// When provided, the acceptance is recorded on the Tenant entity.
-    /// Example: "2025-01-01"
-    /// </summary>
-    string? TermsVersion = null
+    string Email,
+    string Password,
+    string? TermsVersion,
+    bool AcceptTerms
 ) : IRequest<RegisterTenantResponse>;
 
-public record RegisterTenantResponse(string Email, string Subdomain);
+public record RegisterTenantResponse(string Email, string Message);

@@ -10,7 +10,7 @@ public class BillingCycle : LookupEntity
     public int Months { get; protected set; }
 
     // Navigation properties
-    public ICollection<SubscriptionPlan> SubscriptionPlans { get; private set; } = [];
+    public ICollection<PlanPrice> PlanPrices { get; private set; } = [];
 
     private BillingCycle() { }
 
@@ -19,7 +19,7 @@ public class BillingCycle : LookupEntity
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Name is required", nameof(name));
 
-        ArgumentNullException.ThrowIfNull(translations, nameof(translations)); // Now required!
+        ArgumentNullException.ThrowIfNull(translations, nameof(translations));
 
         if (months <= 0)
             throw new ArgumentException("Months must be greater than zero", nameof(months));
@@ -29,11 +29,28 @@ public class BillingCycle : LookupEntity
             Code = code.Trim(),
             Description = description.Trim(),
             Name = name.Trim(),
-            Translations = translations, // Required
+            Translations = translations,
             Months = months
         };
 
         billingCycle.InitializeAudit();
         return billingCycle;
+    }
+
+    public void UpdateDetails(string name, string description, TranslatedString translations)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Name is required", nameof(name));
+
+        ArgumentNullException.ThrowIfNull(translations, nameof(translations));
+
+        Name = name.Trim();
+        Description = description.Trim();
+        UpdateTranslations(translations);
+    }
+
+    public void SetActive(bool isActive)
+    {
+        if (isActive) Activate(); else Deactivate();
     }
 }

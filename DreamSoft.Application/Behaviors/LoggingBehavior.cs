@@ -16,7 +16,7 @@ public class LoggingBehavior<TRequest, TResponse>(ILogger<LoggingBehavior<TReque
     {
         var requestName = typeof(TRequest).Name;
 
-        _logger.LogInformation("Handling {RequestName}", requestName);
+        _logger.LogDebug("Handling {RequestName}", requestName);
 
         var stopwatch = Stopwatch.StartNew();
 
@@ -26,7 +26,7 @@ public class LoggingBehavior<TRequest, TResponse>(ILogger<LoggingBehavior<TReque
 
             stopwatch.Stop();
 
-            _logger.LogInformation(
+            _logger.LogDebug(
                 "Handled {RequestName} in {ElapsedMilliseconds}ms",
                 requestName,
                 stopwatch.ElapsedMilliseconds);

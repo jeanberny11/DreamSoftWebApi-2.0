@@ -1,14 +1,19 @@
 using DreamSoft.Application.Common.Exceptions;
 using DreamSoft.Application.Common.Interfaces;
 using DreamSoft.Domain.Constants;
+using DreamSoft.Domain.Entities;
+using DreamSoft.Domain.Repositories;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
-using RefreshTokenEntity = DreamSoft.Domain.Entities.RefreshToken;
 
 namespace DreamSoft.Application.Features.Auth.LoginByTenantEmail;
 
 public class LoginByTenantEmailCommandHandler(
-    IApplicationDbContext context,
+    ITenantRepository tenantRepository,
+    ITenantSubscriptionRepository tenantSubscriptionRepository,
+    IUserRepository userRepository,
+    ITenantSubdomainRepository tenantSubdomainRepository,
+    IUserRefreshTokenRepository refreshTokenRepository,
+    IUnitOfWork unitOfWork,
     ICurrentUserService currentUserService,
     IPasswordHasher passwordHasher,
     ITokenService tokenService,
@@ -22,31 +27,21 @@ public class LoginByTenantEmailCommandHandler(
         LoginByTenantEmailCommand request,
         CancellationToken cancellationToken)
     {
-        var tenantEmail = request.TenantEmail.Trim().ToLower();
-
         // 1. Find the tenant by company email — global query (no tenant filter on Tenants)
-        var tenant = await context.Tenants
-            .Include(t => t.Status)
-            .FirstOrDefaultAsync(
-                t => t.Email == tenantEmail,
-                cancellationToken)
+        var tenant = await tenantRepository.GetByEmailWithStatusAsync(
+            request.TenantEmail, cancellationToken)
             ?? throw new UnauthorizedException("Invalid credentials.");
 
-        // 2. Find the user by username within that tenant
-        var user = await context.Users
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(
-                u => u.TenantId == tenant.Id &&
-                     u.Username == request.Username.Trim() &&
-                     u.IsActive,
-                cancellationToken)
+        // 2. Find the user by username within that tenant (cross-solution search for mobile clients)
+        var user = await userRepository.GetByUsernameAndTenantAsync(
+            tenant.Id, request.Username, cancellationToken)
             ?? throw new UnauthorizedException("Invalid credentials.");
 
         // 3. Verify password — always check before revealing any account/tenant state
         if (!passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
         {
             user.RecordFailedLogin();
-            await context.SaveChangesAsync(cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
             throw new UnauthorizedException("Invalid credentials.");
         }
 
@@ -56,29 +51,63 @@ public class LoginByTenantEmailCommandHandler(
             case TenantStatusCodes.PendingEmailVerification:
                 throw new ForbiddenException(
                     ForbiddenErrorCodes.TenantPendingEmailVerification,
-                    "Tenant email address has not been verified.");
+                    ErrorMessageKeys.EmailVerificationRequired);
 
             case TenantStatusCodes.PendingSubscription:
                 throw new ForbiddenException(
                     ForbiddenErrorCodes.TenantPendingSubscription,
-                    "Tenant subscription setup is not complete.");
+                    ErrorMessageKeys.TenantPendingSubscription);
 
             case TenantStatusCodes.Suspended:
                 throw new ForbiddenException(
                     ForbiddenErrorCodes.TenantSuspended,
-                    "Tenant account has been suspended.");
+                    ErrorMessageKeys.AccountSuspended);
 
             case TenantStatusCodes.Cancelled:
                 throw new ForbiddenException(
                     ForbiddenErrorCodes.TenantCancelled,
-                    "Tenant account has been cancelled.");
+                    ErrorMessageKeys.AccountCancelled);
         }
 
-        // 5. Check user email verification
-        if (!user.IsEmailVerified)
-            throw new ForbiddenException(
-                ForbiddenErrorCodes.EmailNotVerified,
-                "Email address has not been verified.");
+        // 5. Validate subscription status for this tenant + solution
+        var subscription = await tenantSubscriptionRepository
+            .GetByTenantAndSolutionAsync(tenant.Id, user.SolutionId, cancellationToken)
+            ?? throw new ForbiddenException(
+                ForbiddenErrorCodes.SubscriptionNotFound,
+                ErrorMessageKeys.SubscriptionNotActive);
+
+        switch (subscription.Status.Code)
+        {
+            case SubscriptionStatusCodes.Trial:
+            case SubscriptionStatusCodes.Active:
+                break;
+
+            case SubscriptionStatusCodes.PastDue:
+                throw new ForbiddenException(
+                    ForbiddenErrorCodes.SubscriptionPastDue,
+                    ErrorMessageKeys.SubscriptionPastDue);
+
+            case SubscriptionStatusCodes.Suspended:
+                throw new ForbiddenException(
+                    ForbiddenErrorCodes.SubscriptionSuspended,
+                    ErrorMessageKeys.SubscriptionSuspended);
+
+            case SubscriptionStatusCodes.Cancelled:
+                throw new ForbiddenException(
+                    ForbiddenErrorCodes.SubscriptionCancelled,
+                    ErrorMessageKeys.SubscriptionCancelled);
+
+            case SubscriptionStatusCodes.Expired:
+                throw new ForbiddenException(
+                    ForbiddenErrorCodes.SubscriptionExpired,
+                    ErrorMessageKeys.SubscriptionExpired);
+
+            default:
+                // Covers PROCESSING_PAYMENT, PAYMENT_FAILED, and any future states
+                throw new ForbiddenException(
+                    ForbiddenErrorCodes.SubscriptionPaymentFailed,
+                    ErrorMessageKeys.SubscriptionPaymentFailed);
+        }
 
         // 6. Check account lockout
         if (user.IsLockedOut())
@@ -87,37 +116,44 @@ public class LoginByTenantEmailCommandHandler(
                 (user.LockoutUntil!.Value - dateTime.UtcNow).TotalMinutes);
             throw new ForbiddenException(
                 ForbiddenErrorCodes.AccountLocked,
-                $"Account is locked. Try again in {remaining} minute(s).");
+                ErrorMessageKeys.AccountLocked,
+                remaining);
         }
 
         // 7. Successful login — reset lockout and record LastLoginAt
         user.ResetFailedLoginAttempts();
         user.RecordLogin();
 
-        // 8. Issue tokens
+        // 8. Resolve subdomain via TenantSubdomain
+        var tenantSubdomain = await tenantSubdomainRepository
+            .GetByTenantAndSolutionAsync(tenant.Id, user.SolutionId, cancellationToken);
+        var subdomain = tenantSubdomain?.Subdomain ?? string.Empty;
+
+        // 9. Issue tokens
         var accessToken   = tokenService.GenerateAccessToken(user, tenant);
         var rawToken      = tokenService.GenerateRefreshToken();
         var expiryDays    = request.RememberMe ? ExtendedRefreshTokenExpiryDays : DefaultRefreshTokenExpiryDays;
         var refreshExpiry = dateTime.UtcNow.AddDays(expiryDays);
         var expiresAt     = dateTime.UtcNow.AddMinutes(60);
 
-        // 9. Persist the RefreshToken entity (one row per session — multi-device support)
-        var refreshTokenEntity = RefreshTokenEntity.Create(
+        // 10. Persist the UserRefreshToken entity (one row per session — multi-device support)
+        var refreshTokenEntity = UserRefreshToken.Create(
             userId:      user.Id,
             token:       rawToken,
             expiresAt:   refreshExpiry,
             createdByIp: currentUserService.IpAddress,
             deviceInfo:  request.DeviceInfo);
 
-        context.RefreshTokens.Add(refreshTokenEntity);
-        await context.SaveChangesAsync(cancellationToken);
+        await refreshTokenRepository.AddAsync(refreshTokenEntity, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new LoginResponse(
-            AccessToken:  accessToken,
-            RefreshToken: rawToken,
-            ExpiresAt:    expiresAt,
-            UserId:       user.Id,
-            Username:     user.Username,
-            FullName:     user.GetFullName());
+            AccessToken:     accessToken,
+            RefreshToken:    rawToken,
+            ExpiresAt:       expiresAt,
+            UserId:          user.Id,
+            Username:        user.Username,
+            FullName:        user.GetFullName(),
+            TenantSubdomain: subdomain);
     }
 }

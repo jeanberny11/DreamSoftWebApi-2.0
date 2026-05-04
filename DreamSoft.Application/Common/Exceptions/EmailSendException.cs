@@ -3,6 +3,5 @@ namespace DreamSoft.Application.Common.Exceptions;
 /// <summary>
 /// Exception thrown when email sending fails
 /// </summary>
-public class EmailSendException(string resourceKey, params object[] parameters) : ApplicationException(resourceKey, parameters)
-{
-}
+public class EmailSendException(params object[] parameters)
+    : ApplicationException(ErrorMessageKeys.EmailSendFailed, parameters) { }

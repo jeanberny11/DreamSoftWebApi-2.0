@@ -21,10 +21,6 @@ public class RoleMenuOption : BaseEntity
         if (menuOptionId <= 0)
             throw new ArgumentException("Menu option ID must be greater than zero", nameof(menuOptionId));
 
-        return new RoleMenuOption
-        {
-            RoleId = roleId,
-            MenuOptionId = menuOptionId
-        };
+        return new RoleMenuOption { RoleId = roleId, MenuOptionId = menuOptionId };
     }
 }

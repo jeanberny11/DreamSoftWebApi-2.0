@@ -4,24 +4,20 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DreamSoft.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// Entity Framework Core configuration for MenuOption entity
-/// Maps to the 'menu_options' table in PostgreSQL
-/// </summary>
 public class MenuOptionConfiguration : IEntityTypeConfiguration<MenuOption>
 {
     public void Configure(EntityTypeBuilder<MenuOption> builder)
     {
-        // Table mapping
+        // ── Table ─────────────────────────────────────────────────────────
         builder.ToTable("menu_options");
 
-        // Primary key
+        // ── Primary Key ───────────────────────────────────────────────────
         builder.HasKey(m => m.Id);
         builder.Property(m => m.Id)
             .HasColumnName("id")
             .ValueGeneratedOnAdd();
 
-        // Properties mapping
+        // ── Properties ────────────────────────────────────────────────────
         builder.Property(m => m.Code)
             .HasColumnName("code")
             .HasMaxLength(50)
@@ -64,7 +60,7 @@ public class MenuOptionConfiguration : IEntityTypeConfiguration<MenuOption>
             .IsRequired()
             .HasDefaultValue(0);
 
-        // JSONB Translation Configuration
+        // ── Translations (JSONB) ──────────────────────────────────────────
         builder.OwnsOne(m => m.Translations, translations =>
         {
             translations.ToJson("translations");
@@ -72,24 +68,19 @@ public class MenuOptionConfiguration : IEntityTypeConfiguration<MenuOption>
             translations.OwnsOne(t => t.Spanish, spanish =>
             {
                 spanish.ToJson("es");
-                spanish.Property(s => s.Name)
-                    .HasJsonPropertyName("name")
-                    .IsRequired();
-                spanish.Property(s => s.Descripcion)
-                    .HasJsonPropertyName("description");
+                spanish.Property(s => s.Name).HasJsonPropertyName("name").IsRequired();
+                spanish.Property(s => s.Descripcion).HasJsonPropertyName("description");
             });
 
             translations.OwnsOne(t => t.English, english =>
             {
                 english.ToJson("en");
-                english.Property(e => e.Name)
-                    .HasJsonPropertyName("name");
-                english.Property(e => e.Descripcion)
-                    .HasJsonPropertyName("description");
+                english.Property(e => e.Name).HasJsonPropertyName("name");
+                english.Property(e => e.Descripcion).HasJsonPropertyName("description");
             });
         });
 
-        // Audit fields
+        // ── Audit Fields ──────────────────────────────────────────────────
         builder.Property(m => m.IsActive)
             .HasColumnName("is_active")
             .IsRequired()
@@ -103,7 +94,12 @@ public class MenuOptionConfiguration : IEntityTypeConfiguration<MenuOption>
         builder.Property(m => m.UpdatedAt)
             .HasColumnName("updated_at");
 
-        // Relationships
+        // ── Indexes ───────────────────────────────────────────────────────
+        builder.HasIndex(m => m.Code)
+            .IsUnique()
+            .HasDatabaseName("menu_options_code_key");
+
+        // ── Relationships ─────────────────────────────────────────────────
         builder.HasOne(m => m.Module)
             .WithMany(mo => mo.MenuOptions)
             .HasForeignKey(m => m.ModuleId)
@@ -114,9 +110,9 @@ public class MenuOptionConfiguration : IEntityTypeConfiguration<MenuOption>
             .HasForeignKey(m => m.MenuGroupId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasMany(m => m.SolutionMenuOptions)
-            .WithOne(sm => sm.MenuOption)
-            .HasForeignKey(sm => sm.MenuOptionId)
+        builder.HasMany(m => m.PlanMenuOptions)
+            .WithOne(pm => pm.MenuOption)
+            .HasForeignKey(pm => pm.MenuOptionId)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasMany(m => m.RoleMenuOptions)

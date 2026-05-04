@@ -4,18 +4,20 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DreamSoft.Infrastructure.Persistence.Configurations;
 
-public class TenantRegistrationTokenConfiguration
-    : IEntityTypeConfiguration<TenantRegistrationToken>
+public class TenantRegistrationTokenConfiguration : IEntityTypeConfiguration<TenantRegistrationToken>
 {
     public void Configure(EntityTypeBuilder<TenantRegistrationToken> builder)
     {
+        // ── Table ─────────────────────────────────────────────────────────
         builder.ToTable("tenant_registration_tokens");
 
+        // ── Primary Key ───────────────────────────────────────────────────
         builder.HasKey(t => t.Id);
         builder.Property(t => t.Id)
             .HasColumnName("id")
             .ValueGeneratedOnAdd();
 
+        // ── Properties ────────────────────────────────────────────────────
         builder.Property(t => t.TenantId)
             .HasColumnName("tenant_id")
             .IsRequired();
@@ -31,15 +33,20 @@ public class TenantRegistrationTokenConfiguration
 
         builder.Property(t => t.AttemptCount)
             .HasColumnName("attempt_count")
-            .HasDefaultValue(0)
-            .IsRequired();
+            .IsRequired()
+            .HasDefaultValue(0);
 
         builder.Property(t => t.IsConsumed)
             .HasColumnName("is_consumed")
-            .HasDefaultValue(false)
-            .IsRequired();
+            .IsRequired()
+            .HasDefaultValue(false);
 
-        // Audit fields
+        // ── Audit Fields ──────────────────────────────────────────────────
+        builder.Property(t => t.IsActive)
+            .HasColumnName("is_active")
+            .IsRequired()
+            .HasDefaultValue(true);
+
         builder.Property(t => t.CreatedAt)
             .HasColumnName("created_at")
             .IsRequired()
@@ -48,18 +55,14 @@ public class TenantRegistrationTokenConfiguration
         builder.Property(t => t.UpdatedAt)
             .HasColumnName("updated_at");
 
-        builder.Property(t => t.IsActive)
-            .HasColumnName("is_active")
-            .HasDefaultValue(true)
-            .IsRequired();
-
-        // FK — cascade delete so tokens are removed with the tenant
-        builder.HasOne(t => t.Tenant)
-            .WithMany()
-            .HasForeignKey(t => t.TenantId)
-            .OnDelete(DeleteBehavior.Cascade);
-
+        // ── Indexes ───────────────────────────────────────────────────────
         builder.HasIndex(t => t.TenantId)
             .HasDatabaseName("idx_registration_tokens_tenant_id");
+
+        // ── Relationships ─────────────────────────────────────────────────
+        builder.HasOne(t => t.Tenant)
+            .WithMany(te => te.RegistrationTokens)
+            .HasForeignKey(t => t.TenantId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

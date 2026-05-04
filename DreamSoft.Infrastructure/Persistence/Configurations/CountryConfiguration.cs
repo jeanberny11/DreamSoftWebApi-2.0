@@ -4,24 +4,20 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DreamSoft.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// Entity Framework Core configuration for Country entity
-/// Maps to the 'countries' table in PostgreSQL
-/// </summary>
 public class CountryConfiguration : IEntityTypeConfiguration<Country>
 {
     public void Configure(EntityTypeBuilder<Country> builder)
     {
-        // Table mapping
+        // ── Table ─────────────────────────────────────────────────────────
         builder.ToTable("countries");
 
-        // Primary key
+        // ── Primary Key ───────────────────────────────────────────────────
         builder.HasKey(c => c.Id);
         builder.Property(c => c.Id)
             .HasColumnName("id")
             .ValueGeneratedOnAdd();
 
-        // Properties mapping
+        // ── Properties ────────────────────────────────────────────────────
         builder.Property(c => c.Code)
             .HasColumnName("code")
             .HasMaxLength(50)
@@ -46,7 +42,7 @@ public class CountryConfiguration : IEntityTypeConfiguration<Country>
             .IsRequired()
             .HasDefaultValue(string.Empty);
 
-        // JSONB Translation Configuration (Name Only - No Description)
+        // ── Translations (JSONB) ──────────────────────────────────────────
         builder.OwnsOne(c => c.Translations, translations =>
         {
             translations.ToJson("translations");
@@ -54,22 +50,19 @@ public class CountryConfiguration : IEntityTypeConfiguration<Country>
             translations.OwnsOne(t => t.Spanish, spanish =>
             {
                 spanish.ToJson("es");
-                spanish.Property(s => s.Name)
-                    .HasJsonPropertyName("name")
-                    .IsRequired();
+                spanish.Property(s => s.Name).HasJsonPropertyName("name").IsRequired();
                 spanish.Ignore(s => s.Descripcion);
             });
 
             translations.OwnsOne(t => t.English, english =>
             {
                 english.ToJson("en");
-                english.Property(e => e.Name)
-                    .HasJsonPropertyName("name");
+                english.Property(e => e.Name).HasJsonPropertyName("name");
                 english.Ignore(e => e.Descripcion);
             });
         });
 
-        // Audit fields
+        // ── Audit Fields ──────────────────────────────────────────────────
         builder.Property(c => c.IsActive)
             .HasColumnName("is_active")
             .IsRequired()
@@ -83,7 +76,7 @@ public class CountryConfiguration : IEntityTypeConfiguration<Country>
         builder.Property(c => c.UpdatedAt)
             .HasColumnName("updated_at");
 
-        // Unique constraints
+        // ── Indexes ───────────────────────────────────────────────────────
         builder.HasIndex(c => c.Code)
             .IsUnique()
             .HasDatabaseName("countries_code_key");
@@ -96,7 +89,7 @@ public class CountryConfiguration : IEntityTypeConfiguration<Country>
             .IsUnique()
             .HasDatabaseName("countries_iso_code_key");
 
-        // Relationships
+        // ── Relationships ─────────────────────────────────────────────────
         builder.HasMany(c => c.Provinces)
             .WithOne(p => p.Country)
             .HasForeignKey(p => p.CountryId)

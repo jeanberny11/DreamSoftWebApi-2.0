@@ -32,4 +32,22 @@ public class Gender : LookupEntity
         gender.InitializeAudit();
         return gender;
     }
+
+    public void UpdateDetails(string name, TranslatedString translations, bool isActive)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Name is required", nameof(name));
+
+        ArgumentNullException.ThrowIfNull(translations, nameof(translations));
+
+        Name = name.Trim();
+        UpdateTranslations(translations);
+
+        if (isActive && !IsActive)
+            Activate();
+        else if (!isActive && IsActive)
+            Deactivate();
+
+        MarkAsUpdated();
+    }
 }

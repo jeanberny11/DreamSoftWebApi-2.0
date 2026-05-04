@@ -2,9 +2,10 @@ using DreamSoft.Domain.Common;
 
 namespace DreamSoft.Domain.Entities;
 
-public class Municipality : LookupEntity
+public class Municipality : AuditableEntity
 {
     public string Code { get; set; } = null!;
+    public string Name { get; set; } = null!;
     public int ProvinceId { get; set; }
 
     // Navigation properties
@@ -29,7 +30,6 @@ public class Municipality : LookupEntity
             Code = code.ToUpper().Trim(),
             Name = name.Trim(),
             ProvinceId = provinceId,
-            Translations = null! // Municipalities may not have translations in the DB schema
         };
 
         municipality.InitializeAudit();

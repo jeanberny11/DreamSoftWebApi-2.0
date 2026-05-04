@@ -4,24 +4,20 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DreamSoft.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// Entity Framework Core configuration for TenantSubscription entity
-/// Maps to the 'tenant_subscriptions' table in PostgreSQL
-/// </summary>
 public class TenantSubscriptionConfiguration : IEntityTypeConfiguration<TenantSubscription>
 {
     public void Configure(EntityTypeBuilder<TenantSubscription> builder)
     {
-        // Table mapping
+        // ── Table ─────────────────────────────────────────────────────────
         builder.ToTable("tenant_subscriptions");
 
-        // Primary key
+        // ── Primary Key ───────────────────────────────────────────────────
         builder.HasKey(ts => ts.Id);
         builder.Property(ts => ts.Id)
             .HasColumnName("id")
             .ValueGeneratedOnAdd();
 
-        // Properties mapping
+        // ── Properties ────────────────────────────────────────────────────
         builder.Property(ts => ts.TenantId)
             .HasColumnName("tenant_id")
             .IsRequired();
@@ -32,6 +28,10 @@ public class TenantSubscriptionConfiguration : IEntityTypeConfiguration<TenantSu
 
         builder.Property(ts => ts.SubscriptionPlanId)
             .HasColumnName("subscription_plan_id")
+            .IsRequired();
+
+        builder.Property(ts => ts.PlanPriceId)
+            .HasColumnName("plan_price_id")
             .IsRequired();
 
         builder.Property(ts => ts.StatusId)
@@ -48,11 +48,19 @@ public class TenantSubscriptionConfiguration : IEntityTypeConfiguration<TenantSu
         builder.Property(ts => ts.TrialEndDate)
             .HasColumnName("trial_end_date");
 
+        builder.Property(ts => ts.StripeSubscriptionId)
+            .HasColumnName("stripe_subscription_id")
+            .HasMaxLength(100);
+
+        builder.Property(ts => ts.StripeSessionId)
+            .HasColumnName("stripe_session_id")
+            .HasMaxLength(100);
+
         builder.Property(ts => ts.Notes)
             .HasColumnName("notes")
             .HasColumnType("text");
 
-        // Audit fields
+        // ── Audit Fields ──────────────────────────────────────────────────
         builder.Property(ts => ts.IsActive)
             .HasColumnName("is_active")
             .IsRequired()
@@ -66,7 +74,11 @@ public class TenantSubscriptionConfiguration : IEntityTypeConfiguration<TenantSu
         builder.Property(ts => ts.UpdatedAt)
             .HasColumnName("updated_at");
 
-        // Indexes
+        // ── Indexes ───────────────────────────────────────────────────────
+        builder.HasIndex(ts => new { ts.TenantId, ts.SolutionId })
+            .IsUnique()
+            .HasDatabaseName("tenant_subscriptions_tenant_solution_key");
+
         builder.HasIndex(ts => ts.TenantId)
             .HasDatabaseName("idx_tenant_subscriptions_tenant_id");
 
@@ -76,17 +88,20 @@ public class TenantSubscriptionConfiguration : IEntityTypeConfiguration<TenantSu
         builder.HasIndex(ts => ts.StatusId)
             .HasDatabaseName("idx_tenant_subscriptions_status_id");
 
-        builder.HasIndex(ts => new { ts.TenantId, ts.IsActive })
-            .HasDatabaseName("idx_tenant_subscriptions_tenant_active");
+        // Unique index on StripeSessionId — one session maps to exactly one subscription
+        builder.HasIndex(ts => ts.StripeSessionId)
+            .IsUnique()
+            .HasFilter("stripe_session_id IS NOT NULL")
+            .HasDatabaseName("idx_tenant_subscriptions_stripe_session_id");
 
-        // Relationships
+        // ── Relationships ─────────────────────────────────────────────────
         builder.HasOne(ts => ts.Tenant)
             .WithMany(t => t.TenantSubscriptions)
             .HasForeignKey(ts => ts.TenantId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(ts => ts.Solution)
-            .WithMany()
+            .WithMany(s => s.TenantSubscriptions)
             .HasForeignKey(ts => ts.SolutionId)
             .OnDelete(DeleteBehavior.Restrict);
 
@@ -95,9 +110,19 @@ public class TenantSubscriptionConfiguration : IEntityTypeConfiguration<TenantSu
             .HasForeignKey(ts => ts.SubscriptionPlanId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasOne(ts => ts.PlanPrice)
+            .WithMany(pp => pp.TenantSubscriptions)
+            .HasForeignKey(ts => ts.PlanPriceId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasOne(ts => ts.Status)
             .WithMany(s => s.TenantSubscriptions)
             .HasForeignKey(ts => ts.StatusId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(ts => ts.Invoices)
+            .WithOne(i => i.TenantSubscription)
+            .HasForeignKey(i => i.TenantSubscriptionId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

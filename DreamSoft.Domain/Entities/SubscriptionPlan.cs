@@ -7,27 +7,22 @@ public class SubscriptionPlan : LookupEntity
 {
     public string Code { get; set; } = null!;
     public string Description { get; set; } = "";
-    public int? SolutionId { get; set; }
-    public int BillingCycleId { get; set; }
-    public decimal Price { get; set; } = 0;
+    public int SolutionId { get; set; }
     public int TrialDays { get; set; }
+    public int TierLevel { get; set; }
 
     // Navigation properties
     public Solution Solution { get; set; } = null!;
-    public BillingCycle BillingCycle { get; set; } = null!;
+    public ICollection<PlanPrice> PlanPrices { get; private set; } = [];
+    public ICollection<PlanLimit> PlanLimits { get; private set; } = [];
+    public ICollection<PlanMenuOption> PlanMenuOptions { get; private set; } = [];
+    public ICollection<RoleTemplate> RoleTemplates { get; private set; } = [];
     public ICollection<TenantSubscription> TenantSubscriptions { get; private set; } = [];
 
     private SubscriptionPlan() { }
 
-    public static SubscriptionPlan Create(
-        string code,
-        string name,
-        TranslatedString translations,
-        int billingCycleId,
-        string description = "",
-        int? solutionId = null,
-        decimal price = 0,
-        int trialDays = 0)
+    public static SubscriptionPlan Create(string code, string name, TranslatedString translations,
+        int solutionId, int tierLevel, string description = "", int trialDays = 0, bool isActive = true)
     {
         if (string.IsNullOrWhiteSpace(code))
             throw new ArgumentException("Code is required", nameof(code));
@@ -37,11 +32,11 @@ public class SubscriptionPlan : LookupEntity
 
         ArgumentNullException.ThrowIfNull(translations, nameof(translations));
 
-        if (billingCycleId <= 0)
-            throw new ArgumentException("Billing cycle ID must be greater than zero", nameof(billingCycleId));
+        if (solutionId <= 0)
+            throw new ArgumentException("Solution ID must be greater than zero", nameof(solutionId));
 
-        if ( price < 0)
-            throw new ArgumentException("Price cannot be negative", nameof(price));
+        if (tierLevel <= 0)
+            throw new ArgumentException("Tier level must be greater than zero", nameof(tierLevel));
 
         if (trialDays < 0)
             throw new ArgumentException("Trial days cannot be negative", nameof(trialDays));
@@ -53,9 +48,9 @@ public class SubscriptionPlan : LookupEntity
             Description = description.Trim(),
             Translations = translations,
             SolutionId = solutionId,
-            BillingCycleId = billingCycleId,
-            Price = price,
-            TrialDays = trialDays
+            TierLevel = tierLevel,
+            TrialDays = trialDays,
+            IsActive = isActive
         };
 
         plan.InitializeAudit();
@@ -74,21 +69,6 @@ public class SubscriptionPlan : LookupEntity
         UpdateTranslations(translations);
     }
 
-    public void UpdatePrice(decimal price)
-    {
-        if (price < 0)
-            throw new ArgumentException("Price cannot be negative", nameof(price));
-
-        Price = price;
-        MarkAsUpdated();
-    }
-
-    public void UpdateSolution(int? solutionId)
-    {
-        SolutionId = solutionId;
-        MarkAsUpdated();
-    }
-
     public void UpdateTrialDays(int trialDays)
     {
         if (trialDays < 0)
@@ -98,5 +78,6 @@ public class SubscriptionPlan : LookupEntity
         MarkAsUpdated();
     }
 
+    public void SetActive(bool isActive) { IsActive = isActive; MarkAsUpdated(); }
     public bool HasTrial() => TrialDays > 0;
 }

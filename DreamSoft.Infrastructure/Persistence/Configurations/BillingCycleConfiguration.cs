@@ -4,24 +4,20 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DreamSoft.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// Entity Framework Core configuration for BillingCycle entity
-/// Maps to the 'billing_cycles' table in PostgreSQL
-/// </summary>
 public class BillingCycleConfiguration : IEntityTypeConfiguration<BillingCycle>
 {
     public void Configure(EntityTypeBuilder<BillingCycle> builder)
     {
-        // Table mapping
+        // ── Table ─────────────────────────────────────────────────────────
         builder.ToTable("billing_cycles");
 
-        // Primary key
+        // ── Primary Key ───────────────────────────────────────────────────
         builder.HasKey(b => b.Id);
         builder.Property(b => b.Id)
             .HasColumnName("id")
             .ValueGeneratedOnAdd();
 
-        // Properties mapping
+        // ── Properties ────────────────────────────────────────────────────
         builder.Property(b => b.Code)
             .HasColumnName("code")
             .HasMaxLength(50)
@@ -45,7 +41,7 @@ public class BillingCycleConfiguration : IEntityTypeConfiguration<BillingCycle>
             .IsRequired()
             .HasDefaultValue(1);
 
-        // JSONB Translation Configuration (Name + Description)
+        // ── Translations (JSONB) ──────────────────────────────────────────
         builder.OwnsOne(b => b.Translations, translations =>
         {
             translations.ToJson("translations");
@@ -53,24 +49,19 @@ public class BillingCycleConfiguration : IEntityTypeConfiguration<BillingCycle>
             translations.OwnsOne(t => t.Spanish, spanish =>
             {
                 spanish.ToJson("es");
-                spanish.Property(s => s.Name)
-                    .HasJsonPropertyName("name")
-                    .IsRequired();
-                spanish.Property(s => s.Descripcion)
-                    .HasJsonPropertyName("description");
+                spanish.Property(s => s.Name).HasJsonPropertyName("name").IsRequired();
+                spanish.Property(s => s.Descripcion).HasJsonPropertyName("description");
             });
 
             translations.OwnsOne(t => t.English, english =>
             {
                 english.ToJson("en");
-                english.Property(e => e.Name)
-                    .HasJsonPropertyName("name");
-                english.Property(e => e.Descripcion)
-                    .HasJsonPropertyName("description");
+                english.Property(e => e.Name).HasJsonPropertyName("name");
+                english.Property(e => e.Descripcion).HasJsonPropertyName("description");
             });
         });
 
-        // Audit fields
+        // ── Audit Fields ──────────────────────────────────────────────────
         builder.Property(b => b.IsActive)
             .HasColumnName("is_active")
             .IsRequired()
@@ -84,10 +75,10 @@ public class BillingCycleConfiguration : IEntityTypeConfiguration<BillingCycle>
         builder.Property(b => b.UpdatedAt)
             .HasColumnName("updated_at");
 
-        // Relationships
-        builder.HasMany(b => b.SubscriptionPlans)
-            .WithOne(s => s.BillingCycle)
-            .HasForeignKey(s => s.BillingCycleId)
+        // ── Relationships ─────────────────────────────────────────────────
+        builder.HasMany(b => b.PlanPrices)
+            .WithOne(p => p.BillingCycle)
+            .HasForeignKey(p => p.BillingCycleId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

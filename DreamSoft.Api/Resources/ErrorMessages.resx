@@ -74,10 +74,10 @@
     <value>Invalid email or password</value>
   </data>
   <data name="NotFound" xml:space="preserve">
-    <value>The requested resource was not found</value>
+    <value>The requested {0} was not found based on {1}</value>
   </data>
   <data name="UserNotFound" xml:space="preserve">
-    <value>User with email '{0}' was not found</value>
+    <value>User '{0}' was not found</value>
   </data>
   <data name="TenantNotFound" xml:space="preserve">
     <value>Tenant '{0}' was not found</value>
@@ -123,5 +123,71 @@
   </data>
   <data name="AccountCancelled" xml:space="preserve">
     <value>Your account has been cancelled</value>
+  </data>
+  <data name="InvalidRefreshToken" xml:space="preserve">
+    <value>Your session has expired. Please log in again</value>
+  </data>
+  <data name="AccountLocked" xml:space="preserve">
+    <value>Your account is locked. Try again in {0} minute(s)</value>
+  </data>
+  <data name="TenantPendingSubscription" xml:space="preserve">
+    <value>Subscription setup is not complete. Please complete your subscription</value>
+  </data>
+  <data name="SubscriptionNotFound" xml:space="preserve">
+    <value>Subscription '{0}' was not found</value>
+  </data>
+  <data name="SubscriptionNotActive" xml:space="preserve">
+    <value>No active subscription found for your account</value>
+  </data>
+  <data name="SubscriptionNotOwnedByTenant" xml:space="preserve">
+    <value>This subscription does not belong to your account</value>
+  </data>
+  <data name="SubscriptionNotRetryable" xml:space="preserve">
+    <value>This subscription cannot be retried in its current state</value>
+  </data>
+  <data name="SubscriptionNotCancellable" xml:space="preserve">
+    <value>This subscription cannot be cancelled in its current state</value>
+  </data>
+  <data name="SubscriptionNotChangeable" xml:space="preserve">
+    <value>This subscription cannot be changed in its current state</value>
+  </data>
+  <data name="SubscriptionPlanNotActive" xml:space="preserve">
+    <value>The selected subscription plan is not active</value>
+  </data>
+  <data name="TenantAlreadySubscribedToSolution" xml:space="preserve">
+    <value>Your account already has an active subscription for this solution</value>
+  </data>
+  <data name="AlreadyOnThisPlan" xml:space="preserve">
+    <value>Your subscription is already on this plan</value>
+  </data>
+  <data name="InvalidTenantStatus" xml:space="preserve">
+    <value>This action is not available for your account's current status</value>
+  </data>
+  <data name="PlanPriceMismatch" xml:space="preserve">
+    <value>The selected price does not match the plan</value>
+  </data>
+  <data name="PlanPriceNotActive" xml:space="preserve">
+    <value>The selected price is not currently active</value>
+  </data>
+  <data name="StripePriceIdNotConfigured" xml:space="preserve">
+    <value>Payment configuration error. Please contact support</value>
+  </data>
+  <data name="NoStripeSubscriptionFound" xml:space="preserve">
+    <value>No active payment subscription found. Please contact support</value>
+  </data>
+  <data name="NoStripeCustomerFound" xml:space="preserve">
+    <value>No payment account found. Please contact support</value>
+  </data>
+  <data name="UserRoleNotAssigned" xml:space="preserve">
+    <value>No role has been assigned to your account</value>
+  </data>
+  <data name="PlanPriceNotFound" xml:space="preserve">
+    <value>Plan price with id '{0}' was not found</value>
+  </data>
+  <data name="SubscriptionPlanNotFound" xml:space="preserve">
+    <value>Subscription plan with id '{0}' was not found</value>
+  </data>
+  <data name="TenantSubscriptionNotFound" xml:space="preserve">
+    <value>No subscription found for tenant '{0}' and solution '{1}'</value>
   </data>
 </root>
