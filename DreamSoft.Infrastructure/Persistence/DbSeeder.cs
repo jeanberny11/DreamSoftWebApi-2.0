@@ -1,7 +1,9 @@
 using DreamSoft.Domain.Constants;
 using DreamSoft.Domain.Entities;
 using DreamSoft.Domain.ValueObjects;
+using DreamSoft.Infrastructure.Services.Common;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace DreamSoft.Infrastructure.Persistence;
 
@@ -11,7 +13,7 @@ namespace DreamSoft.Infrastructure.Persistence;
 /// </summary>
 public static class DbSeeder
 {
-    public static async Task SeedAsync(ApplicationDbContext context, CancellationToken ct = default)
+    public static async Task SeedAsync(ApplicationDbContext context, IConfiguration configuration, CancellationToken ct = default)
     {
         // ── Tenant Statuses ───────────────────────────────────────────────────────
         if (!await context.TenantStatuses.AnyAsync(ct))
@@ -670,6 +672,35 @@ public static class DbSeeder
             };
 
             await context.Municipalities.AddRangeAsync(municipalities, ct);
+            await context.SaveChangesAsync(ct);
+        }
+
+        // ── Super Admin User ──────────────────────────────────────────────────────────
+        // Creates the initial platform administrator if none exists.
+        // Credentials are read from configuration — never hardcoded.
+        // Set SuperAdmin:DefaultEmail and SuperAdmin:DefaultPassword via
+        // environment variables (Railway) or appsettings.Development.json locally.
+        if (!await context.AdminUsers.AnyAsync(ct))
+        {
+            var email = configuration["SuperAdmin:DefaultEmail"]
+                ?? throw new InvalidOperationException(
+                    "SuperAdmin:DefaultEmail is not configured. Set it via environment variable SuperAdmin__DefaultEmail.");
+
+            var rawPassword = configuration["SuperAdmin:DefaultPassword"]
+                ?? throw new InvalidOperationException(
+                    "SuperAdmin:DefaultPassword is not configured. Set it via environment variable SuperAdmin__DefaultPassword.");
+
+            var hasher = new PasswordHasherService();
+            var passwordHash = hasher.HashPassword(rawPassword);
+
+            var adminUser = AdminUser.Create(
+                email: email,
+                passwordHash: passwordHash,
+                firstName: "Platform",
+                lastName: "Administrator",
+                roleCode: "SUPER_ADMIN");
+
+            await context.AdminUsers.AddAsync(adminUser, ct);
             await context.SaveChangesAsync(ct);
         }
     }

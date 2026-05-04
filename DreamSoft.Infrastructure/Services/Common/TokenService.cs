@@ -56,6 +56,27 @@ public class TokenService(IConfiguration configuration) : ITokenService
         return BuildToken(claims, TimeSpan.FromMinutes(expiry), "Jwt:Tenant");
     }
 
+    /// <summary>
+    /// Access token for AdminUser (SuperAdmin) login.
+    /// Signed with a dedicated secret (Jwt:SuperAdmin). token_type=superadmin.
+    /// </summary>
+    public string GenerateSuperAdminToken(AdminUser adminUser)
+    {
+        var expiry = int.Parse(_config["Jwt:SuperAdmin:AccessTokenExpirationMinutes"] ?? "60");
+
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, adminUser.Id.ToString()),
+            new Claim("email",      adminUser.Email),
+            new Claim("full_name",  adminUser.GetFullName()),
+            new Claim("role_code",  adminUser.RoleCode),
+            new Claim("token_type", "superadmin"),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+        };
+
+        return BuildToken(claims, TimeSpan.FromMinutes(expiry), "Jwt:SuperAdmin");
+    }
+
     public string GenerateRefreshToken()
         => Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
 

@@ -365,3 +365,6 @@ FodyWeavers.xsd
 # ── Sensitive local configuration — never commit these ────────────────────────
 appsettings.Development.json
 appsettings.Local.json
+
+# ── Local build artifacts ──────────────────────────────────────────
+build-output.txt

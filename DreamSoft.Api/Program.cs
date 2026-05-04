@@ -22,13 +22,13 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 // Configure Localization
-builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+builder.Services.AddLocalization();
 
 builder.Services.Configure<RequestLocalizationOptions>(options =>
 {
     var supportedCultures = new[] { "en", "es" };
 
-    options.SetDefaultCulture("en")
+    options.SetDefaultCulture("es")
         .AddSupportedCultures(supportedCultures)
         .AddSupportedUICultures(supportedCultures);
 
@@ -51,11 +51,19 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
 
 var tenantJwt = builder.Configuration.GetSection("Jwt:Tenant");
 var userJwt = builder.Configuration.GetSection("Jwt:User");
+var superAdminJwt = builder.Configuration.GetSection("Jwt:SuperAdmin");
 
-var tenantSecret = tenantJwt["Secret"]
-    ?? throw new InvalidOperationException("Jwt:Tenant:Secret is not configured");
-var userSecret = userJwt["Secret"]
-    ?? throw new InvalidOperationException("Jwt:User:Secret is not configured");
+var tenantSecret = tenantJwt["Secret"];
+if (string.IsNullOrWhiteSpace(tenantSecret))
+    throw new InvalidOperationException("Jwt:Tenant:Secret is not configured");
+
+var userSecret = userJwt["Secret"];
+if (string.IsNullOrWhiteSpace(userSecret))
+    throw new InvalidOperationException("Jwt:User:Secret is not configured");
+
+var superAdminSecret = superAdminJwt["Secret"];
+if (string.IsNullOrWhiteSpace(superAdminSecret))
+    throw new InvalidOperationException("Jwt:SuperAdmin:Secret is not configured");
 
 builder.Services
     .AddAuthentication(options =>
@@ -92,6 +100,20 @@ builder.Services
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(userSecret)),
             ClockSkew = TimeSpan.Zero
         };
+    })
+    .AddJwtBearer(AuthSchemes.SuperAdmin, options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = superAdminJwt["Issuer"],
+            ValidAudience = superAdminJwt["Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(superAdminSecret)),
+            ClockSkew = TimeSpan.Zero
+        };
     });
 
 // ── Authorization Policies ────────────────────────────────────────────────────
@@ -107,6 +129,13 @@ builder.Services.AddAuthorizationBuilder()
         policy.AddAuthenticationSchemes(AuthSchemes.User);
         policy.RequireAuthenticatedUser();
         policy.RequireClaim("token_type", "user");
+    })
+    .AddPolicy(AuthPolicies.SuperAdminOnly, policy =>
+    {
+        policy.AddAuthenticationSchemes(AuthSchemes.SuperAdmin);
+        policy.RequireAuthenticatedUser();
+        policy.RequireClaim("token_type", "superadmin");
+        policy.RequireClaim("role_code", "SUPER_ADMIN");
     });
 
 builder.Services.AddControllers();
@@ -170,20 +199,51 @@ builder.Services.AddSwaggerGen(options =>
             Array.Empty<string>()
         }
     });
+
+    options.AddSecurityDefinition("SuperAdminBearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Platform SuperAdmin token. Obtain from POST /api/v1/admin/auth/login"
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "SuperAdminBearer" }
+            },
+            Array.Empty<string>()
+        }
+    });
 });
 
-// CORS
+// ── CORS ──────────────────────────────────────────────────────────────────────
+// Development: explicit localhost origins from appsettings.Development.json
+// Production:  subdomain wildcard for *.dreamsoft.com
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("SubdomainPolicy", policy =>
     {
+        // Read explicit allowed origins from config (used in development)
+        var allowedOrigins = builder.Configuration
+            .GetSection("Cors:AllowedOrigins")
+            .Get<string[]>();
+
         policy
             .SetIsOriginAllowed(origin =>
             {
+                // 1. Check explicit list from config (covers localhost:5173, etc.)
+                if (allowedOrigins != null && allowedOrigins.Contains(origin))
+                    return true;
+
+                // 2. Allow any *.dreamsoft.com subdomain (production)
                 var uri = new Uri(origin);
-                return uri.Host.EndsWith(".dreamsoft.com") ||
-                       uri.Host == "localhost" ||
-                       uri.Host == "dreamsoft.com";
+                return uri.Host.EndsWith(".dreamsoft.com") || uri.Host == "dreamsoft.com";
             })
             .AllowAnyMethod()
             .AllowAnyHeader()
@@ -197,8 +257,9 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
     await db.Database.MigrateAsync();
-    await DbSeeder.SeedAsync(db);
+    await DbSeeder.SeedAsync(db, config);
 }
 
 // ── HTTP Pipeline ─────────────────────────────────────────────────────────────
@@ -216,7 +277,12 @@ app.UseSwaggerUI(options =>
     options.RoutePrefix = string.Empty;
 });
 
-app.UseHttpsRedirection();
+// HTTPS redirection — only in Development.
+// Railway handles TLS termination at the proxy level; the container only
+// receives plain HTTP internally, so redirecting would cause infinite loops.
+if (app.Environment.IsDevelopment())
+    app.UseHttpsRedirection();
+
 app.UseRequestLocalization();
 
 // Exception handling — early in pipeline

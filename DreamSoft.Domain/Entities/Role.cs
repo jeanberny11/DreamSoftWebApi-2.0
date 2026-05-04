@@ -5,7 +5,7 @@ namespace DreamSoft.Domain.Entities;
 
 public class Role : TenantEntity
 {
-    public int SolutionId { get; private set; }
+    // SolutionId is now inherited from TenantEntity
     public string Code { get; private set; } = null!;
     public string Name { get; private set; } = null!;
     public string Description { get; private set; } = "";
@@ -32,9 +32,6 @@ public class Role : TenantEntity
         bool isCustom = false,
         int? createdBy = null)
     {
-        if (solutionId <= 0)
-            throw new ArgumentException("Solution ID must be greater than zero", nameof(solutionId));
-
         if (string.IsNullOrWhiteSpace(code))
             throw new ArgumentException("Code is required", nameof(code));
 
@@ -45,7 +42,6 @@ public class Role : TenantEntity
 
         var role = new Role
         {
-            SolutionId = solutionId,
             Code = code.ToUpper().Trim(),
             Name = name.Trim(),
             Description = description.Trim(),
@@ -54,7 +50,7 @@ public class Role : TenantEntity
             IsCustom = isCustom
         };
 
-        role.InitializeTenantEntity(tenantId, createdBy);
+        role.InitializeTenantEntity(tenantId, solutionId, createdBy);
         return role;
     }
 

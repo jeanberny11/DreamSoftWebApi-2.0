@@ -27,6 +27,9 @@ public interface IApplicationDbContext
     DbSet<Province> Provinces { get; }
     DbSet<SubscriptionStatus> SubscriptionStatuses { get; }
     DbSet<TenantStatus> TenantStatuses { get; }
+    DbSet<CustomerType> CustomerTypes { get; }
+    DbSet<CustomerStatus> CustomerStatuses { get; }
+    DbSet<TaxClassification> TaxClassifications { get; }
 
     // =====================================================================
     // GLOBAL — BUSINESS ENTITIES
@@ -60,6 +63,7 @@ public interface IApplicationDbContext
     DbSet<Role> Roles { get; }
     DbSet<RoleMenuOption> RoleMenuOptions { get; }
     DbSet<RoleOptionAction> RoleOptionActions { get; }
+    DbSet<Customer> Customers { get; }
 
     // =====================================================================
     // INFRASTRUCTURE

@@ -14,4 +14,11 @@ public class LanguageRepository(ApplicationDbContext context)
     public async Task<Language?> GetDefaultAsync(CancellationToken cancellationToken = default)
         => await _dbSet
             .FirstOrDefaultAsync(l => l.IsDefault, cancellationToken);
+
+    public async Task<IReadOnlyList<Language>> GetAllActiveAsync(
+        CancellationToken cancellationToken = default)
+        => await _dbSet
+            .Where(l => l.IsActive)
+            .OrderBy(l => l.Name)
+            .ToListAsync(cancellationToken);
 }

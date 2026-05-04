@@ -17,6 +17,13 @@ public interface ITokenService
     string GenerateTenantAccessToken(Tenant tenant);
 
     /// <summary>
+    /// Issues an access token for an authenticated AdminUser.
+    /// Claims: sub (adminUserId), email, role_code, token_type=superadmin.
+    /// Signed with a dedicated secret (Jwt:SuperAdmin).
+    /// </summary>
+    string GenerateSuperAdminToken(AdminUser adminUser);
+
+    /// <summary>
     /// Generates a cryptographically random opaque string for refresh tokens.
     /// </summary>
     string GenerateRefreshToken();

@@ -34,6 +34,26 @@ public class Currency : AuditableEntity
         return currency;
     }
 
+    public void UpdateDetails(string name, string nativeName, bool isDefault, bool isActive)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Name is required", nameof(name));
+
+        if (string.IsNullOrWhiteSpace(nativeName))
+            throw new ArgumentException("Native name is required", nameof(nativeName));
+
+        Name = name.Trim();
+        NativeName = nativeName.Trim();
+        IsDefault = isDefault;
+
+        if (isActive && !IsActive)
+            Activate();
+        else if (!isActive && IsActive)
+            Deactivate();
+
+        MarkAsUpdated();
+    }
+
     public void SetAsDefault()
     {
         IsDefault = true;

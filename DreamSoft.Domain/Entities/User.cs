@@ -4,7 +4,7 @@ namespace DreamSoft.Domain.Entities;
 
 public class User : TenantEntity
 {
-    public int SolutionId { get; private set; }
+    // SolutionId is now inherited from TenantEntity
     public string Username { get; private set; } = null!;
     public string Email { get; private set; } = null!;
     public string PasswordHash { get; private set; } = null!;
@@ -40,9 +40,6 @@ public class User : TenantEntity
         int? createdBy = null,
         bool isAdmin = false)
     {
-        if (solutionId <= 0)
-            throw new ArgumentException("Solution ID must be greater than zero", nameof(solutionId));
-
         if (string.IsNullOrWhiteSpace(username))
             throw new ArgumentException("Username is required", nameof(username));
 
@@ -60,7 +57,6 @@ public class User : TenantEntity
 
         var user = new User
         {
-            SolutionId = solutionId,
             Username = username.Trim().ToLower(),
             Email = email.Trim().ToLower(),
             PasswordHash = passwordHash,
@@ -70,7 +66,7 @@ public class User : TenantEntity
             IsAdmin = isAdmin
         };
 
-        user.InitializeTenantEntity(tenantId, createdBy);
+        user.InitializeTenantEntity(tenantId, solutionId, createdBy);
         return user;
     }
 

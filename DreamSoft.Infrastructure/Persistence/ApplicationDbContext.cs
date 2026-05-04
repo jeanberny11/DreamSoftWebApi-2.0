@@ -34,6 +34,9 @@ public class ApplicationDbContext(
     public DbSet<Province> Provinces => Set<Province>();
     public DbSet<SubscriptionStatus> SubscriptionStatuses => Set<SubscriptionStatus>();
     public DbSet<TenantStatus> TenantStatuses => Set<TenantStatus>();
+    public DbSet<CustomerType> CustomerTypes => Set<CustomerType>();
+    public DbSet<CustomerStatus> CustomerStatuses => Set<CustomerStatus>();
+    public DbSet<TaxClassification> TaxClassifications => Set<TaxClassification>();
 
     // =====================================================================
     // GLOBAL — BUSINESS ENTITIES
@@ -67,6 +70,13 @@ public class ApplicationDbContext(
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<RoleMenuOption> RoleMenuOptions => Set<RoleMenuOption>();
     public DbSet<RoleOptionAction> RoleOptionActions => Set<RoleOptionAction>();
+    public DbSet<Customer> Customers => Set<Customer>();
+
+    // =====================================================================
+    // ADMIN — PLATFORM ADMINISTRATORS (isolated from tenant data)
+    // =====================================================================
+    public DbSet<AdminUser> AdminUsers => Set<AdminUser>();
+    public DbSet<AdminRefreshToken> AdminRefreshTokens => Set<AdminRefreshToken>();
 
     // =====================================================================
     // MODEL CONFIGURATION
@@ -123,6 +133,12 @@ public class ApplicationDbContext(
                 && (_tenantService.CurrentSolutionId == null
                 || e.SolutionId == _tenantService.CurrentSolutionId));
 
+        modelBuilder.Entity<Customer>()
+            .HasQueryFilter(e => (_tenantService.CurrentTenantId == null
+                || e.TenantId == _tenantService.CurrentTenantId)
+                && (_tenantService.CurrentSolutionId == null
+                || e.SolutionId == _tenantService.CurrentSolutionId));
+
         base.OnModelCreating(modelBuilder);
     }
 
@@ -138,13 +154,14 @@ public class ApplicationDbContext(
     /// <summary>
     /// Automatically stamps audit fields on all tracked entities before saving.
     /// AuditableEntity: sets CreatedAt / IsActive on Add; UpdatedAt on Modify.
-    /// TenantEntity: sets TenantId / CreatedBy on Add; UpdatedBy on Modify.
+    /// TenantEntity: sets TenantId / SolutionId / CreatedBy on Add; UpdatedBy on Modify.
     /// </summary>
     private void StampAuditFields()
     {
         var now = _dateTime.UtcNow;
         var userId = _currentUserService.UserId;
         var tenantId = _tenantService.CurrentTenantId;
+        var solutionId = _tenantService.CurrentSolutionId;
 
         foreach (var entry in ChangeTracker.Entries<AuditableEntity>())
         {
@@ -166,6 +183,9 @@ public class ApplicationDbContext(
             {
                 if (entry.Property(nameof(TenantEntity.TenantId)).CurrentValue is 0 or null && tenantId.HasValue)
                     entry.Property(nameof(TenantEntity.TenantId)).CurrentValue = tenantId.Value;
+
+                if (entry.Property(nameof(TenantEntity.SolutionId)).CurrentValue is 0 or null && solutionId.HasValue)
+                    entry.Property(nameof(TenantEntity.SolutionId)).CurrentValue = solutionId.Value;
 
                 if (userId.HasValue)
                     entry.Property(nameof(TenantEntity.CreatedBy)).CurrentValue = userId;

@@ -13,6 +13,7 @@ public class Country : LookupEntity
     public ICollection<Province> Provinces { get; private set; } = [];
     public ICollection<Tenant> Tenants { get; private set; } = [];
     public ICollection<IdType> IdTypes { get; private set; } = [];
+    public ICollection<Customer> Customers { get; private set; } = [];
 
     private Country() { }
 

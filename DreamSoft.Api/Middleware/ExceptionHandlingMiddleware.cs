@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using DreamSoft.Api.Contracts.Responses;
 using DreamSoft.Application.Common.Exceptions;
+using DreamSoft.Api.Resources;
 using Microsoft.Extensions.Localization;
 using ApplicationException = DreamSoft.Application.Common.Exceptions.ApplicationException;
 

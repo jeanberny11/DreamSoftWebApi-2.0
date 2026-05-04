@@ -36,6 +36,25 @@ public class Language : LookupEntity
         return language;
     }
 
+    public void UpdateDetails(string name, TranslatedString translations, bool isDefault, bool isActive)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Name is required", nameof(name));
+
+        ArgumentNullException.ThrowIfNull(translations, nameof(translations));
+
+        Name = name.Trim();
+        IsDefault = isDefault;
+        UpdateTranslations(translations);
+
+        if (isActive && !IsActive)
+            Activate();
+        else if (!isActive && IsActive)
+            Deactivate();
+
+        MarkAsUpdated();
+    }
+
     public void SetAsDefault()
     {
         IsDefault = true;

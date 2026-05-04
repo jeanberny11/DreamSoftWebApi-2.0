@@ -9,4 +9,11 @@ public class CurrencyRepository(ApplicationDbContext context)
 {
     public async Task<Currency?> GetByCodeAsync(string code, CancellationToken cancellationToken = default)
         => await _dbSet.FirstOrDefaultAsync(c => c.Code == code.ToUpper().Trim(), cancellationToken);
+
+    public async Task<IReadOnlyList<Currency>> GetAllActiveAsync(
+        CancellationToken cancellationToken = default)
+        => await _dbSet
+            .Where(c => c.IsActive)
+            .OrderBy(c => c.Name)
+            .ToListAsync(cancellationToken);
 }

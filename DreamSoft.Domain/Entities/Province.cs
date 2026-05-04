@@ -1,4 +1,5 @@
 using DreamSoft.Domain.Common;
+
 namespace DreamSoft.Domain.Entities;
 
 public class Province : AuditableEntity
@@ -11,6 +12,7 @@ public class Province : AuditableEntity
     public Country Country { get; set; } = null!;
     public ICollection<Municipality> Municipalities { get; private set; } = [];
     public ICollection<Tenant> Tenants { get; private set; } = [];
+    public ICollection<Customer> Customers { get; private set; } = [];
 
     private Province() { }
 

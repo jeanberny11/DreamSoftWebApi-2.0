@@ -22,6 +22,124 @@ namespace DreamSoft.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("DreamSoft.Domain.Entities.AdminRefreshToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AdminUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedByIp")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("DeviceInfo")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RevokedByIp")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AdminUserId");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.ToTable("admin_refresh_tokens", (string)null);
+                });
+
+            modelBuilder.Entity("DreamSoft.Domain.Entities.AdminUser", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("FailedLoginAttempts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTime?>("LastLoginAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("LockoutUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("RoleCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("admin_users", (string)null);
+                });
+
             modelBuilder.Entity("DreamSoft.Domain.Entities.BillingCycle", b =>
                 {
                     b.Property<int>("Id")
@@ -218,6 +336,313 @@ namespace DreamSoft.Infrastructure.Migrations
                         .HasDatabaseName("currencies_code_key");
 
                     b.ToTable("currencies", (string)null);
+                });
+
+            modelBuilder.Entity("DreamSoft.Domain.Entities.Customer", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AddressLine1")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("address_line1");
+
+                    b.Property<string>("AddressLine2")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("address_line2");
+
+                    b.Property<string>("CommercialName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("commercial_name");
+
+                    b.Property<string>("CompanyName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("company_name");
+
+                    b.Property<string>("ContactPerson")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("contact_person");
+
+                    b.Property<int>("CountryId")
+                        .HasColumnType("integer")
+                        .HasColumnName("country_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("integer")
+                        .HasColumnName("created_by");
+
+                    b.Property<decimal>("CreditLimit")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("credit_limit");
+
+                    b.Property<int>("CurrencyId")
+                        .HasColumnType("integer")
+                        .HasColumnName("currency_id");
+
+                    b.Property<string>("CustomerCategory")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("customer_category");
+
+                    b.Property<int>("CustomerStatusId")
+                        .HasColumnType("integer")
+                        .HasColumnName("customer_status_id");
+
+                    b.Property<int>("CustomerTypeId")
+                        .HasColumnType("integer")
+                        .HasColumnName("customer_type_id");
+
+                    b.Property<decimal>("DiscountPercentage")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("discount_percentage");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("email");
+
+                    b.Property<string>("FirstName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("first_name");
+
+                    b.Property<int?>("IdTypeId")
+                        .HasColumnType("integer")
+                        .HasColumnName("id_type_id");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("LastName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("last_name");
+
+                    b.Property<string>("Mobile")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("mobile");
+
+                    b.Property<int>("MunicipalityId")
+                        .HasColumnType("integer")
+                        .HasColumnName("municipality_id");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("PaymentTerms")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("payment_terms");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("phone");
+
+                    b.Property<string>("PostalCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("postal_code");
+
+                    b.Property<int>("ProvinceId")
+                        .HasColumnType("integer")
+                        .HasColumnName("province_id");
+
+                    b.Property<int>("SolutionId")
+                        .HasColumnType("integer")
+                        .HasColumnName("solution_id");
+
+                    b.Property<int?>("TaxClassificationId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tax_classification_id");
+
+                    b.Property<string>("TaxId")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("tax_id");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int?>("UpdatedBy")
+                        .HasColumnType("integer")
+                        .HasColumnName("updated_by");
+
+                    b.Property<string>("Website")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("website");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CountryId")
+                        .HasDatabaseName("idx_customers_country");
+
+                    b.HasIndex("CreatedBy")
+                        .HasDatabaseName("idx_customers_created_by");
+
+                    b.HasIndex("CurrencyId");
+
+                    b.HasIndex("CustomerStatusId");
+
+                    b.HasIndex("CustomerTypeId");
+
+                    b.HasIndex("IdTypeId");
+
+                    b.HasIndex("IsActive")
+                        .HasDatabaseName("idx_customers_is_active");
+
+                    b.HasIndex("MunicipalityId")
+                        .HasDatabaseName("idx_customers_municipality");
+
+                    b.HasIndex("ProvinceId")
+                        .HasDatabaseName("idx_customers_province");
+
+                    b.HasIndex("SolutionId");
+
+                    b.HasIndex("TaxClassificationId")
+                        .HasDatabaseName("idx_customers_tax_classification");
+
+                    b.HasIndex("UpdatedBy");
+
+                    b.HasIndex("TenantId", "SolutionId")
+                        .HasDatabaseName("idx_customers_tenant_solution");
+
+                    b.HasIndex("TenantId", "SolutionId", "IsActive")
+                        .HasDatabaseName("idx_customers_tenant_solution_is_active");
+
+                    b.HasIndex("TenantId", "SolutionId", "TaxId")
+                        .HasDatabaseName("idx_customers_tax_id");
+
+                    b.ToTable("customers", null, t =>
+                        {
+                            t.HasCheckConstraint("check_customer_contact_info", "email IS NOT NULL OR phone IS NOT NULL OR mobile IS NOT NULL");
+                        });
+                });
+
+            modelBuilder.Entity("DreamSoft.Domain.Entities.CustomerStatus", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("customer_statuses", (string)null);
+                });
+
+            modelBuilder.Entity("DreamSoft.Domain.Entities.CustomerType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("customer_types", (string)null);
                 });
 
             modelBuilder.Entity("DreamSoft.Domain.Entities.Gender", b =>
@@ -1584,6 +2009,66 @@ namespace DreamSoft.Infrastructure.Migrations
                     b.ToTable("subscription_statuses", (string)null);
                 });
 
+            modelBuilder.Entity("DreamSoft.Domain.Entities.TaxClassification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NcfType")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("ncf_type");
+
+                    b.Property<bool>("RequiresRnc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("requires_rnc");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("idx_tax_classifications_code");
+
+                    b.HasIndex("IsActive")
+                        .HasDatabaseName("idx_tax_classifications_active");
+
+                    b.ToTable("tax_classifications", (string)null);
+                });
+
             modelBuilder.Entity("DreamSoft.Domain.Entities.Tenant", b =>
                 {
                     b.Property<int>("Id")
@@ -2331,6 +2816,17 @@ namespace DreamSoft.Infrastructure.Migrations
                     b.ToTable("user_refresh_tokens", (string)null);
                 });
 
+            modelBuilder.Entity("DreamSoft.Domain.Entities.AdminRefreshToken", b =>
+                {
+                    b.HasOne("DreamSoft.Domain.Entities.AdminUser", "AdminUser")
+                        .WithMany("RefreshTokens")
+                        .HasForeignKey("AdminUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AdminUser");
+                });
+
             modelBuilder.Entity("DreamSoft.Domain.Entities.BillingCycle", b =>
                 {
                     b.OwnsOne("DreamSoft.Domain.ValueObjects.TranslatedString", "Translations", b1 =>
@@ -2467,6 +2963,257 @@ namespace DreamSoft.Infrastructure.Migrations
 
                                     b2.WithOwner()
                                         .HasForeignKey("TranslatedStringCountryId");
+                                });
+
+                            b1.Navigation("English");
+
+                            b1.Navigation("Spanish")
+                                .IsRequired();
+                        });
+
+                    b.Navigation("Translations")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DreamSoft.Domain.Entities.Customer", b =>
+                {
+                    b.HasOne("DreamSoft.Domain.Entities.Country", "Country")
+                        .WithMany("Customers")
+                        .HasForeignKey("CountryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DreamSoft.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("DreamSoft.Domain.Entities.Currency", "Currency")
+                        .WithMany()
+                        .HasForeignKey("CurrencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DreamSoft.Domain.Entities.CustomerStatus", "CustomerStatus")
+                        .WithMany("Customers")
+                        .HasForeignKey("CustomerStatusId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DreamSoft.Domain.Entities.CustomerType", "CustomerType")
+                        .WithMany("Customers")
+                        .HasForeignKey("CustomerTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DreamSoft.Domain.Entities.IdType", "IdType")
+                        .WithMany()
+                        .HasForeignKey("IdTypeId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("DreamSoft.Domain.Entities.Municipality", "Municipality")
+                        .WithMany()
+                        .HasForeignKey("MunicipalityId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DreamSoft.Domain.Entities.Province", "Province")
+                        .WithMany("Customers")
+                        .HasForeignKey("ProvinceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DreamSoft.Domain.Entities.Solution", "Solution")
+                        .WithMany()
+                        .HasForeignKey("SolutionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DreamSoft.Domain.Entities.TaxClassification", "TaxClassification")
+                        .WithMany("Customers")
+                        .HasForeignKey("TaxClassificationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DreamSoft.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DreamSoft.Domain.Entities.User", "UpdatedByUser")
+                        .WithMany()
+                        .HasForeignKey("UpdatedBy")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Country");
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Currency");
+
+                    b.Navigation("CustomerStatus");
+
+                    b.Navigation("CustomerType");
+
+                    b.Navigation("IdType");
+
+                    b.Navigation("Municipality");
+
+                    b.Navigation("Province");
+
+                    b.Navigation("Solution");
+
+                    b.Navigation("TaxClassification");
+
+                    b.Navigation("Tenant");
+
+                    b.Navigation("UpdatedByUser");
+                });
+
+            modelBuilder.Entity("DreamSoft.Domain.Entities.CustomerStatus", b =>
+                {
+                    b.OwnsOne("DreamSoft.Domain.ValueObjects.TranslatedString", "Translations", b1 =>
+                        {
+                            b1.Property<int>("CustomerStatusId")
+                                .HasColumnType("integer");
+
+                            b1.HasKey("CustomerStatusId");
+
+                            b1.ToTable("customer_statuses");
+
+                            b1.ToJson("translations");
+
+                            b1.WithOwner()
+                                .HasForeignKey("CustomerStatusId");
+
+                            b1.OwnsOne("DreamSoft.Domain.ValueObjects.BaseTranslatedProperties", "English", b2 =>
+                                {
+                                    b2.Property<int>("TranslatedStringCustomerStatusId")
+                                        .HasColumnType("integer");
+
+                                    b2.Property<string>("Descripcion")
+                                        .HasColumnType("text")
+                                        .HasAnnotation("Relational:JsonPropertyName", "description");
+
+                                    b2.Property<string>("Name")
+                                        .IsRequired()
+                                        .HasColumnType("text")
+                                        .HasAnnotation("Relational:JsonPropertyName", "name");
+
+                                    b2.HasKey("TranslatedStringCustomerStatusId");
+
+                                    b2.ToTable("customer_statuses");
+
+                                    b2
+                                        .ToJson("en")
+                                        .HasAnnotation("Relational:JsonPropertyName", "en");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("TranslatedStringCustomerStatusId");
+                                });
+
+                            b1.OwnsOne("DreamSoft.Domain.ValueObjects.BaseTranslatedProperties", "Spanish", b2 =>
+                                {
+                                    b2.Property<int>("TranslatedStringCustomerStatusId")
+                                        .HasColumnType("integer");
+
+                                    b2.Property<string>("Descripcion")
+                                        .HasColumnType("text")
+                                        .HasAnnotation("Relational:JsonPropertyName", "description");
+
+                                    b2.Property<string>("Name")
+                                        .IsRequired()
+                                        .HasColumnType("text")
+                                        .HasAnnotation("Relational:JsonPropertyName", "name");
+
+                                    b2.HasKey("TranslatedStringCustomerStatusId");
+
+                                    b2.ToTable("customer_statuses");
+
+                                    b2
+                                        .ToJson("es")
+                                        .HasAnnotation("Relational:JsonPropertyName", "es");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("TranslatedStringCustomerStatusId");
+                                });
+
+                            b1.Navigation("English");
+
+                            b1.Navigation("Spanish")
+                                .IsRequired();
+                        });
+
+                    b.Navigation("Translations")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DreamSoft.Domain.Entities.CustomerType", b =>
+                {
+                    b.OwnsOne("DreamSoft.Domain.ValueObjects.TranslatedString", "Translations", b1 =>
+                        {
+                            b1.Property<int>("CustomerTypeId")
+                                .HasColumnType("integer");
+
+                            b1.HasKey("CustomerTypeId");
+
+                            b1.ToTable("customer_types");
+
+                            b1.ToJson("translations");
+
+                            b1.WithOwner()
+                                .HasForeignKey("CustomerTypeId");
+
+                            b1.OwnsOne("DreamSoft.Domain.ValueObjects.BaseTranslatedProperties", "English", b2 =>
+                                {
+                                    b2.Property<int>("TranslatedStringCustomerTypeId")
+                                        .HasColumnType("integer");
+
+                                    b2.Property<string>("Descripcion")
+                                        .HasColumnType("text")
+                                        .HasAnnotation("Relational:JsonPropertyName", "description");
+
+                                    b2.Property<string>("Name")
+                                        .IsRequired()
+                                        .HasColumnType("text")
+                                        .HasAnnotation("Relational:JsonPropertyName", "name");
+
+                                    b2.HasKey("TranslatedStringCustomerTypeId");
+
+                                    b2.ToTable("customer_types");
+
+                                    b2
+                                        .ToJson("en")
+                                        .HasAnnotation("Relational:JsonPropertyName", "en");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("TranslatedStringCustomerTypeId");
+                                });
+
+                            b1.OwnsOne("DreamSoft.Domain.ValueObjects.BaseTranslatedProperties", "Spanish", b2 =>
+                                {
+                                    b2.Property<int>("TranslatedStringCustomerTypeId")
+                                        .HasColumnType("integer");
+
+                                    b2.Property<string>("Descripcion")
+                                        .HasColumnType("text")
+                                        .HasAnnotation("Relational:JsonPropertyName", "description");
+
+                                    b2.Property<string>("Name")
+                                        .IsRequired()
+                                        .HasColumnType("text")
+                                        .HasAnnotation("Relational:JsonPropertyName", "name");
+
+                                    b2.HasKey("TranslatedStringCustomerTypeId");
+
+                                    b2.ToTable("customer_types");
+
+                                    b2
+                                        .ToJson("es")
+                                        .HasAnnotation("Relational:JsonPropertyName", "es");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("TranslatedStringCustomerTypeId");
                                 });
 
                             b1.Navigation("English");
@@ -3666,6 +4413,84 @@ namespace DreamSoft.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("DreamSoft.Domain.Entities.TaxClassification", b =>
+                {
+                    b.OwnsOne("DreamSoft.Domain.ValueObjects.TranslatedString", "Translations", b1 =>
+                        {
+                            b1.Property<int>("TaxClassificationId")
+                                .HasColumnType("integer");
+
+                            b1.HasKey("TaxClassificationId");
+
+                            b1.ToTable("tax_classifications");
+
+                            b1.ToJson("translations");
+
+                            b1.WithOwner()
+                                .HasForeignKey("TaxClassificationId");
+
+                            b1.OwnsOne("DreamSoft.Domain.ValueObjects.BaseTranslatedProperties", "English", b2 =>
+                                {
+                                    b2.Property<int>("TranslatedStringTaxClassificationId")
+                                        .HasColumnType("integer");
+
+                                    b2.Property<string>("Descripcion")
+                                        .HasColumnType("text")
+                                        .HasAnnotation("Relational:JsonPropertyName", "description");
+
+                                    b2.Property<string>("Name")
+                                        .IsRequired()
+                                        .HasColumnType("text")
+                                        .HasAnnotation("Relational:JsonPropertyName", "name");
+
+                                    b2.HasKey("TranslatedStringTaxClassificationId");
+
+                                    b2.ToTable("tax_classifications");
+
+                                    b2
+                                        .ToJson("en")
+                                        .HasAnnotation("Relational:JsonPropertyName", "en");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("TranslatedStringTaxClassificationId");
+                                });
+
+                            b1.OwnsOne("DreamSoft.Domain.ValueObjects.BaseTranslatedProperties", "Spanish", b2 =>
+                                {
+                                    b2.Property<int>("TranslatedStringTaxClassificationId")
+                                        .HasColumnType("integer");
+
+                                    b2.Property<string>("Descripcion")
+                                        .HasColumnType("text")
+                                        .HasAnnotation("Relational:JsonPropertyName", "description");
+
+                                    b2.Property<string>("Name")
+                                        .IsRequired()
+                                        .HasColumnType("text")
+                                        .HasAnnotation("Relational:JsonPropertyName", "name");
+
+                                    b2.HasKey("TranslatedStringTaxClassificationId");
+
+                                    b2.ToTable("tax_classifications");
+
+                                    b2
+                                        .ToJson("es")
+                                        .HasAnnotation("Relational:JsonPropertyName", "es");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("TranslatedStringTaxClassificationId");
+                                });
+
+                            b1.Navigation("English");
+
+                            b1.Navigation("Spanish")
+                                .IsRequired();
+                        });
+
+                    b.Navigation("Translations")
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("DreamSoft.Domain.Entities.Tenant", b =>
                 {
                     b.HasOne("DreamSoft.Domain.Entities.Country", "Country")
@@ -3905,6 +4730,11 @@ namespace DreamSoft.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("DreamSoft.Domain.Entities.AdminUser", b =>
+                {
+                    b.Navigation("RefreshTokens");
+                });
+
             modelBuilder.Entity("DreamSoft.Domain.Entities.BillingCycle", b =>
                 {
                     b.Navigation("PlanPrices");
@@ -3912,11 +4742,23 @@ namespace DreamSoft.Infrastructure.Migrations
 
             modelBuilder.Entity("DreamSoft.Domain.Entities.Country", b =>
                 {
+                    b.Navigation("Customers");
+
                     b.Navigation("IdTypes");
 
                     b.Navigation("Provinces");
 
                     b.Navigation("Tenants");
+                });
+
+            modelBuilder.Entity("DreamSoft.Domain.Entities.CustomerStatus", b =>
+                {
+                    b.Navigation("Customers");
+                });
+
+            modelBuilder.Entity("DreamSoft.Domain.Entities.CustomerType", b =>
+                {
+                    b.Navigation("Customers");
                 });
 
             modelBuilder.Entity("DreamSoft.Domain.Entities.Gender", b =>
@@ -3973,6 +4815,8 @@ namespace DreamSoft.Infrastructure.Migrations
 
             modelBuilder.Entity("DreamSoft.Domain.Entities.Province", b =>
                 {
+                    b.Navigation("Customers");
+
                     b.Navigation("Municipalities");
 
                     b.Navigation("Tenants");
@@ -4026,6 +4870,11 @@ namespace DreamSoft.Infrastructure.Migrations
             modelBuilder.Entity("DreamSoft.Domain.Entities.SubscriptionStatus", b =>
                 {
                     b.Navigation("TenantSubscriptions");
+                });
+
+            modelBuilder.Entity("DreamSoft.Domain.Entities.TaxClassification", b =>
+                {
+                    b.Navigation("Customers");
                 });
 
             modelBuilder.Entity("DreamSoft.Domain.Entities.Tenant", b =>

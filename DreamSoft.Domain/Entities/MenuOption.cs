@@ -83,4 +83,13 @@ public class MenuOption : LookupEntity
         MenuGroupId = menuGroupId;
         MarkAsUpdated();
     }
+
+    public void MoveToModule(int moduleId)
+    {
+        if (moduleId <= 0)
+            throw new ArgumentException("Module ID must be greater than zero", nameof(moduleId));
+
+        ModuleId = moduleId;
+        MarkAsUpdated();
+    }
 }

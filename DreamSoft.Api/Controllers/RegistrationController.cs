@@ -59,11 +59,10 @@ public class RegistrationController : ApiControllerBase
     [ProducesResponseType(409)]
     [ProducesResponseType(429)]
     public async Task<IActionResult> VerifyEmail(
-        [FromBody] VerifyEmailRequest body,
+        [FromBody] VerifyEmailCommand request,
         CancellationToken cancellationToken)
     {
-        var command = new VerifyEmailCommand(body.Email, body.Code);
-        var result = await Mediator.Send(command, cancellationToken);
+        var result = await Mediator.Send(request, cancellationToken);
         return Ok(result);
     }
 
@@ -95,20 +94,12 @@ public class RegistrationController : ApiControllerBase
     [ProducesResponseType(409)]
     [ProducesResponseType(429)]
     public async Task<IActionResult> ResendVerification(
-        [FromBody] ResendVerificationRequest body,
+        [FromBody] ResendVerificationCommand request,
         CancellationToken cancellationToken)
     {
         await Mediator.Send(
-            new ResendVerificationCommand(body.Email),
+            request,
             cancellationToken);
         return NoContent();
     }
 }
-
-// ── Request DTOs ────────────────────────────────────────────────────────────
-
-/// <summary>Body for POST /registration/verify-email</summary>
-public record VerifyEmailRequest(string Email, string Code);
-
-/// <summary>Body for POST /registration/resend-verification</summary>
-public record ResendVerificationRequest(string Email);

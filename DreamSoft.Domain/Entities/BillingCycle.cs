@@ -36,4 +36,21 @@ public class BillingCycle : LookupEntity
         billingCycle.InitializeAudit();
         return billingCycle;
     }
+
+    public void UpdateDetails(string name, string description, TranslatedString translations)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Name is required", nameof(name));
+
+        ArgumentNullException.ThrowIfNull(translations, nameof(translations));
+
+        Name = name.Trim();
+        Description = description.Trim();
+        UpdateTranslations(translations);
+    }
+
+    public void SetActive(bool isActive)
+    {
+        if (isActive) Activate(); else Deactivate();
+    }
 }

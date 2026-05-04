@@ -1,4 +1,4 @@
-namespace DreamSoft.Api;
+namespace DreamSoft.Api.Resources;
 
 /// <summary>
 /// Marker class for error message localization

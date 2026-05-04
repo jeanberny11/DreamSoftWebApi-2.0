@@ -24,9 +24,18 @@ public static class DependencyInjection
         IConfiguration configuration)
     {
         // ── Database ──────────────────────────────────────────────────────────
+        // Prefer DATABASE_URL (injected by Railway) over the legacy key-value
+        // connection string. Falls back to ConnectionStrings:DefaultConnection
+        // for local development.
+        var databaseUrl =
+            configuration["DATABASE_URL"] ??
+            configuration.GetConnectionString("DefaultConnection") ??
+            throw new InvalidOperationException(
+                "No database connection configured. Set DATABASE_URL or ConnectionStrings:DefaultConnection.");
+
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(
-                configuration.GetConnectionString("DefaultConnection"),
+                databaseUrl,
                 b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
 
         services.AddScoped<IApplicationDbContext>(provider =>
@@ -51,11 +60,17 @@ public static class DependencyInjection
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<IRoleMenuOptionRepository, RoleMenuOptionRepository>();
         services.AddScoped<IRoleOptionActionRepository, RoleOptionActionRepository>();
+        services.AddScoped<ICustomerRepository, CustomerRepository>();
+
+        // ── Admin Repositories ────────────────────────────────────────────────
+        services.AddScoped<IAdminUserRepository, AdminUserRepository>();
+        services.AddScoped<IAdminRefreshTokenRepository, AdminRefreshTokenRepository>();
 
         // ── Global Business Repositories ──────────────────────────────────────
         services.AddScoped<ISolutionRepository, SolutionRepository>();
         services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
         services.AddScoped<IPlanPriceRepository, PlanPriceRepository>();
+        services.AddScoped<IPlanLimitRepository, PlanLimitRepository>();
         services.AddScoped<IPlanMenuOptionRepository, PlanMenuOptionRepository>();
         services.AddScoped<IRoleTemplateRepository, RoleTemplateRepository>();
         services.AddScoped<IRoleMenuOptionTemplateRepository, RoleMenuOptionTemplateRepository>();
@@ -76,10 +91,14 @@ public static class DependencyInjection
         services.AddScoped<IProvinceRepository, ProvinceRepository>();
         services.AddScoped<ITenantStatusRepository, TenantStatusRepository>();
         services.AddScoped<ISubscriptionStatusRepository, SubscriptionStatusRepository>();
+        services.AddScoped<ICustomerTypeRepository, CustomerTypeRepository>();
+        services.AddScoped<ICustomerStatusRepository, CustomerStatusRepository>();
+        services.AddScoped<ITaxClassificationRepository, TaxClassificationRepository>();
 
         // ── Common Services ───────────────────────────────────────────────────
         services.AddTransient<IDateTime, DateTimeService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<IRequestLanguageService, RequestLanguageService>();
         services.AddScoped<ITenantService, TenantService>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IPasswordHasher, PasswordHasherService>();
@@ -100,9 +119,15 @@ public static class DependencyInjection
         // ── Redis + Webhook Event Store ───────────────────────────────────────
         // Singleton: StackExchange.Redis ConnectionMultiplexer is thread-safe
         // and designed to be shared across the application lifetime.
-        var redisConnection = configuration.GetConnectionString("Redis") ?? "localhost:6379";
+        // Prefer REDIS_URL (injected by Railway) over ConnectionStrings:Redis.
+        var redisConnection =
+            configuration["REDIS_URL"] ??
+            configuration.GetConnectionString("Redis") ??
+            "localhost:6379";
+        var redisOptions = ConfigurationOptions.Parse(redisConnection);
+        redisOptions.AbortOnConnectFail = false;
         services.AddSingleton<IConnectionMultiplexer>(
-            ConnectionMultiplexer.Connect(redisConnection));
+            ConnectionMultiplexer.Connect(redisOptions));
         services.AddScoped<IWebhookEventStore, RedisWebhookEventStore>();
 
         // ── Rate Limiting ─────────────────────────────────────────────────────

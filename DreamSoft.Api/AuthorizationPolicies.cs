@@ -18,6 +18,9 @@ public static class AuthSchemes
     /// Validated against Jwt:User issuer, audience, and secret.
     /// </summary>
     public const string User = "UserScheme";
+
+    /// <summary>Scheme for tokens issued to platform AdminUsers.</summary>
+    public const string SuperAdmin = "SuperAdminScheme";
 }
 
 /// <summary>
@@ -39,4 +42,7 @@ public static class AuthPolicies
     /// endpoint that operates within a subscribed solution context.
     /// </summary>
     public const string UserOnly = "UserOnly";
+
+    /// <summary>Requires a valid SuperAdmin token (token_type = "superadmin", role_code = "SUPER_ADMIN").</summary>
+    public const string SuperAdminOnly = "SuperAdminOnly";
 }
