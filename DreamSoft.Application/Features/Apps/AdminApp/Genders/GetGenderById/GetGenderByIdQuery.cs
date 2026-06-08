@@ -1,6 +1,6 @@
 using DreamSoft.Application.Common.Exceptions;
 using DreamSoft.Application.Common.Interfaces;
-using DreamSoft.Application.Features.Apps.AdminApp.Genders.GetGenders;
+using DreamSoft.Application.Features.Apps.AdminApp.Genders.DTOs;
 using DreamSoft.Domain.Repositories;
 using MediatR;
 

@@ -1,23 +1,9 @@
 using DreamSoft.Application.Common.Exceptions;
+using DreamSoft.Application.Features.Apps.AdminApp.SubscriptionPlans.DTOs;
 using DreamSoft.Domain.Repositories;
 using MediatR;
 
 namespace DreamSoft.Application.Features.Apps.AdminApp.SubscriptionPlans.GetSubscriptionPlans;
-
-// ── Shared DTO ────────────────────────────────────────────────────────────────
-
-public record SubscriptionPlanDto(
-    int     Id,
-    string  Code,
-    string  Name,
-    string  Description,
-    int     SolutionId,
-    string  SolutionCode,
-    int     TierLevel,
-    int     TrialDays,
-    bool    IsActive);
-
-// ── Get All ───────────────────────────────────────────────────────────────────
 
 public record GetSubscriptionPlansQuery : IRequest<IReadOnlyList<SubscriptionPlanDto>>;
 
@@ -37,8 +23,6 @@ public class GetSubscriptionPlansQueryHandler(ISubscriptionPlanRepository planRe
             .ToList();
     }
 }
-
-// ── Get By Solution ───────────────────────────────────────────────────────────
 
 public record GetSubscriptionPlansBySolutionQuery(int SolutionId)
     : IRequest<IReadOnlyList<SubscriptionPlanDto>>;

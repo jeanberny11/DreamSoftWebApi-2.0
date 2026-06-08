@@ -1,5 +1,5 @@
 using DreamSoft.Application.Common.Exceptions;
-using DreamSoft.Application.Features.Apps.AdminApp.Currencies.GetCurrencies;
+using DreamSoft.Application.Features.Apps.AdminApp.Currencies.DTOs;
 using DreamSoft.Domain.Entities;
 using DreamSoft.Domain.Repositories;
 using MediatR;
@@ -19,7 +19,7 @@ public class CreateCurrencyCommandHandler(
             c => c.Code == request.Code.ToUpper().Trim(), cancellationToken);
 
         if (exists)
-            throw new ConflictException("CurrencyCodeAlreadyExists", request.Code);
+            throw new ConflictException(ErrorMessageKeys.CurrencyCodeAlreadyExists, request.Code);
 
         var currency = Currency.Create(
             request.Code,

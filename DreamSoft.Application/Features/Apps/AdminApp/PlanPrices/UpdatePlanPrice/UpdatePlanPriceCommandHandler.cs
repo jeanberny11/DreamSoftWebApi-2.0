@@ -1,6 +1,4 @@
 using DreamSoft.Application.Common.Exceptions;
-using DreamSoft.Application.Common.Interfaces;
-using DreamSoft.Application.Features.Apps.AdminApp.PlanPrices.GetPlanPrices;
 using DreamSoft.Domain.Repositories;
 using MediatR;
 
@@ -9,9 +7,9 @@ namespace DreamSoft.Application.Features.Apps.AdminApp.PlanPrices.UpdatePlanPric
 public class UpdatePlanPriceCommandHandler(
     IPlanPriceRepository planPriceRepository,
     IUnitOfWork unitOfWork)
-    : IRequestHandler<UpdatePlanPriceCommand, PlanPriceDto>
+    : IRequestHandler<UpdatePlanPriceCommand, Unit>
 {
-    public async Task<PlanPriceDto> Handle(
+    public async Task<Unit> Handle(
         UpdatePlanPriceCommand request, CancellationToken cancellationToken)
     {
         var planPrice = await planPriceRepository.GetByIdAsync(request.Id, cancellationToken)
@@ -22,11 +20,6 @@ public class UpdatePlanPriceCommandHandler(
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new PlanPriceDto(
-            planPrice.Id, planPrice.PlanId,
-            planPrice.BillingCycleId,
-            planPrice.BillingCycle?.Code ?? string.Empty,
-            planPrice.BillingCycle?.Name ?? string.Empty,
-            planPrice.Price, planPrice.IsActive);
+        return Unit.Value;
     }
 }

@@ -1,6 +1,5 @@
 using DreamSoft.Application.Common.Exceptions;
-using DreamSoft.Application.Common.Interfaces;
-using DreamSoft.Application.Features.Apps.AdminApp.PlanLimits.GetPlanLimits;
+using DreamSoft.Application.Features.Apps.AdminApp.PlanLimits.DTOs;
 using DreamSoft.Domain.Entities;
 using DreamSoft.Domain.Repositories;
 using MediatR;
@@ -23,7 +22,7 @@ public class CreatePlanLimitCommandHandler(
             request.PlanId, request.LimitKey, cancellationToken);
 
         if (duplicate is not null)
-            throw new ConflictException("PlanLimitKeyAlreadyExists",
+            throw new ConflictException(ErrorMessageKeys.PlanLimitKeyAlreadyExists,
                 $"Plan {request.PlanId} already has a limit with key '{request.LimitKey}'");
 
         var limit = PlanLimit.Create(

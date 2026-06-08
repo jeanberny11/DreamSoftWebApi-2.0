@@ -1,6 +1,4 @@
 using DreamSoft.Application.Common.Exceptions;
-using DreamSoft.Application.Common.Interfaces;
-using DreamSoft.Application.Features.Apps.AdminApp.BillingCycles.GetBillingCycles;
 using DreamSoft.Domain.Repositories;
 using DreamSoft.Domain.ValueObjects;
 using MediatR;
@@ -9,11 +7,10 @@ namespace DreamSoft.Application.Features.Apps.AdminApp.BillingCycles.UpdateBilli
 
 public class UpdateBillingCycleCommandHandler(
     IBillingCycleRepository billingCycleRepository,
-    IRequestLanguageService languageService,
     IUnitOfWork unitOfWork)
-    : IRequestHandler<UpdateBillingCycleCommand, BillingCycleDto>
+    : IRequestHandler<UpdateBillingCycleCommand, Unit>
 {
-    public async Task<BillingCycleDto> Handle(
+    public async Task<Unit> Handle(
         UpdateBillingCycleCommand request, CancellationToken cancellationToken)
     {
         var cycle = await billingCycleRepository.GetByIdAsync(request.Id, cancellationToken)
@@ -34,12 +31,6 @@ public class UpdateBillingCycleCommandHandler(
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var language = languageService.Resolve();
-
-        return new BillingCycleDto(
-            cycle.Id, cycle.Code,
-            cycle.Translations.GetNameOrFallback(language, cycle.Name),
-            cycle.Translations.GetDescriptionOrFallback(language, cycle.Description),
-            cycle.Months, cycle.IsActive);
+        return Unit.Value;
     }
 }

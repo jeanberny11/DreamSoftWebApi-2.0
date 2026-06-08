@@ -1,6 +1,4 @@
 using DreamSoft.Application.Common.Exceptions;
-using DreamSoft.Application.Common.Interfaces;
-using DreamSoft.Application.Features.Apps.AdminApp.Genders.GetGenders;
 using DreamSoft.Domain.Repositories;
 using DreamSoft.Domain.ValueObjects;
 using MediatR;
@@ -9,11 +7,10 @@ namespace DreamSoft.Application.Features.Apps.AdminApp.Genders.UpdateGender;
 
 public class UpdateGenderCommandHandler(
     IGenderRepository genderRepository,
-    IRequestLanguageService languageService,
     IUnitOfWork unitOfWork)
-    : IRequestHandler<UpdateGenderCommand, GenderDto>
+    : IRequestHandler<UpdateGenderCommand, Unit>
 {
-    public async Task<GenderDto> Handle(
+    public async Task<Unit> Handle(
         UpdateGenderCommand request,
         CancellationToken cancellationToken)
     {
@@ -30,12 +27,6 @@ public class UpdateGenderCommandHandler(
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var language = languageService.Resolve();
-
-        return new GenderDto(
-            gender.Id,
-            gender.Code,
-            gender.Translations.GetNameOrFallback(language, gender.Name),
-            gender.IsActive);
+        return Unit.Value;
     }
 }

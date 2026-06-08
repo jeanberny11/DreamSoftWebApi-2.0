@@ -1,6 +1,4 @@
 using DreamSoft.Application.Common.Exceptions;
-using DreamSoft.Application.Common.Interfaces;
-using DreamSoft.Application.Features.Apps.AdminApp.PlanLimits.GetPlanLimits;
 using DreamSoft.Domain.Repositories;
 using MediatR;
 
@@ -9,9 +7,9 @@ namespace DreamSoft.Application.Features.Apps.AdminApp.PlanLimits.UpdatePlanLimi
 public class UpdatePlanLimitCommandHandler(
     IPlanLimitRepository planLimitRepository,
     IUnitOfWork unitOfWork)
-    : IRequestHandler<UpdatePlanLimitCommand, PlanLimitDto>
+    : IRequestHandler<UpdatePlanLimitCommand, Unit>
 {
-    public async Task<PlanLimitDto> Handle(
+    public async Task<Unit> Handle(
         UpdatePlanLimitCommand request, CancellationToken cancellationToken)
     {
         var limit = await planLimitRepository.GetByIdAsync(request.Id, cancellationToken)
@@ -21,6 +19,6 @@ public class UpdatePlanLimitCommandHandler(
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new PlanLimitDto(limit.Id, limit.PlanId, limit.LimitKey, limit.LimitValue, limit.Description);
+        return Unit.Value;
     }
 }

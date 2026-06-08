@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using DreamSoft.Application.Features.Apps.AdminApp.PlanMenuOptions.AddPlanMenuOption;
+using DreamSoft.Application.Features.Apps.AdminApp.PlanMenuOptions.DTOs;
 using DreamSoft.Application.Features.Apps.AdminApp.PlanMenuOptions.GetPlanMenuOptions;
 using DreamSoft.Application.Features.Apps.AdminApp.PlanMenuOptions.RemovePlanMenuOption;
 using DreamSoft.Application.Features.Apps.AdminApp.PlanMenuOptions.SetPlanMenuOptions;
@@ -19,7 +20,6 @@ public class PlanMenuOptionsController : ControllerBase
     private ISender Mediator => _mediator ??= HttpContext.RequestServices.GetRequiredService<ISender>();
 
     // ── GET /api/v1/admin/subscription-plans/{planId}/menu-options ────────────
-
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<PlanMenuOptionDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -28,8 +28,6 @@ public class PlanMenuOptionsController : ControllerBase
         => Ok(await Mediator.Send(new GetPlanMenuOptionsQuery(planId), cancellationToken));
 
     // ── POST /api/v1/admin/subscription-plans/{planId}/menu-options ───────────
-    // Adds a single menu option to the plan
-
     [HttpPost]
     [ProducesResponseType(typeof(PlanMenuOptionDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -50,8 +48,6 @@ public class PlanMenuOptionsController : ControllerBase
     }
 
     // ── PUT /api/v1/admin/subscription-plans/{planId}/menu-options ────────────
-    // Bulk replace — replaces all menu options for the plan
-
     [HttpPut]
     [ProducesResponseType(typeof(IReadOnlyList<PlanMenuOptionDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -67,7 +63,6 @@ public class PlanMenuOptionsController : ControllerBase
             cancellationToken));
 
     // ── DELETE /api/v1/admin/subscription-plans/{planId}/menu-options/{menuOptionId}
-
     [HttpDelete("{menuOptionId:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

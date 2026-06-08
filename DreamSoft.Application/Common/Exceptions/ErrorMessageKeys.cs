@@ -31,7 +31,19 @@ public static class ErrorMessageKeys
     public const string OnboardingRequired             = "OnboardingRequired";
 
     // ── Conflict / Already-done ──────────────────────────────────────────────
-    public const string EmailAlreadyExists      = "EmailAlreadyExists";
+    public const string BillingCycleCodeAlreadyExists    = "BillingCycleCodeAlreadyExists";
+    public const string CurrencyCodeAlreadyExists        = "CurrencyCodeAlreadyExists";
+    public const string EmailAlreadyExists               = "EmailAlreadyExists";
+    public const string GenderCodeAlreadyExists          = "GenderCodeAlreadyExists";
+    public const string LanguageCodeAlreadyExists        = "LanguageCodeAlreadyExists";
+    public const string MenuGroupCodeAlreadyExists       = "MenuGroupCodeAlreadyExists";
+    public const string MenuOptionCodeAlreadyExists      = "MenuOptionCodeAlreadyExists";
+    public const string ModuleCodeAlreadyExists          = "ModuleCodeAlreadyExists";
+    public const string PlanLimitKeyAlreadyExists        = "PlanLimitKeyAlreadyExists";
+    public const string PlanMenuOptionAlreadyExists      = "PlanMenuOptionAlreadyExists";
+    public const string PlanPriceAlreadyExists           = "PlanPriceAlreadyExists";
+    public const string SolutionCodeAlreadyExists        = "SolutionCodeAlreadyExists";
+    public const string SubscriptionPlanCodeAlreadyExists = "SubscriptionPlanCodeAlreadyExists";
     public const string TenantAlreadyExists     = "TenantAlreadyExists";
     public const string EmailAlreadyVerified    = "EmailAlreadyVerified";
     public const string OnboardingAlreadyComplete = "OnboardingAlreadyComplete";

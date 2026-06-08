@@ -1,11 +1,9 @@
 using DreamSoft.Application.Features.Apps.LandingApp.SendEmailVerificationCode;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DreamSoft.Api.Controllers.Apps.LandingApp;
 
-[Authorize(Policy = AuthPolicies.TenantOnly)]
-public class SendEmailVerificationCodeController : ApiControllerBase
+public class SendEmailVerificationCodeController : LandingControllerBase
 {
     /// <summary>
     /// Send a new email verification code. Tenant is identified from the Bearer token.

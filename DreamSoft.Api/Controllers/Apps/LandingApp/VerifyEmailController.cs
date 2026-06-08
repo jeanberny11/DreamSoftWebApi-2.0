@@ -1,11 +1,9 @@
 using DreamSoft.Application.Features.Apps.LandingApp.VerifyEmail;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DreamSoft.Api.Controllers.Apps.LandingApp;
 
-[Authorize(Policy = AuthPolicies.TenantOnly)]
-public class VerifyEmailController : ApiControllerBase
+public class VerifyEmailController : LandingControllerBase
 {
     /// <summary>
     /// Verify the email OTP. Pass the email used during registration and the

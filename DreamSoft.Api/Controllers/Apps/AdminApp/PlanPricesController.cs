@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using DreamSoft.Application.Features.Apps.AdminApp.PlanPrices.CreatePlanPrice;
 using DreamSoft.Application.Features.Apps.AdminApp.PlanPrices.DeletePlanPrice;
+using DreamSoft.Application.Features.Apps.AdminApp.PlanPrices.DTOs;
 using DreamSoft.Application.Features.Apps.AdminApp.PlanPrices.GetPlanPrices;
 using DreamSoft.Application.Features.Apps.AdminApp.PlanPrices.UpdatePlanPrice;
 using MediatR;
@@ -19,7 +20,6 @@ public class PlanPricesController : ControllerBase
     private ISender Mediator => _mediator ??= HttpContext.RequestServices.GetRequiredService<ISender>();
 
     // ── GET /api/v1/admin/subscription-plans/{planId}/prices ─────────────────
-
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<PlanPriceDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -28,7 +28,6 @@ public class PlanPricesController : ControllerBase
         => Ok(await Mediator.Send(new GetPlanPricesQuery(planId), cancellationToken));
 
     // ── POST /api/v1/admin/subscription-plans/{planId}/prices ────────────────
-
     [HttpPost]
     [ProducesResponseType(typeof(PlanPriceDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -49,9 +48,8 @@ public class PlanPricesController : ControllerBase
     }
 
     // ── PUT /api/v1/admin/subscription-plans/{planId}/prices/{priceId} ───────
-
     [HttpPut("{priceId:int}")]
-    [ProducesResponseType(typeof(PlanPriceDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -60,12 +58,14 @@ public class PlanPricesController : ControllerBase
         int priceId,
         [FromBody] UpdatePlanPriceRequest body,
         CancellationToken cancellationToken)
-        => Ok(await Mediator.Send(
+    {
+        await Mediator.Send(
             new UpdatePlanPriceCommand(priceId, body.Price, body.IsActive),
-            cancellationToken));
+            cancellationToken);
+        return NoContent();
+    }
 
     // ── DELETE /api/v1/admin/subscription-plans/{planId}/prices/{priceId} ────
-
     [HttpDelete("{priceId:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

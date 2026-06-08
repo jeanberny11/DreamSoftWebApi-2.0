@@ -1,6 +1,6 @@
 using DreamSoft.Application.Common.Exceptions;
 using DreamSoft.Application.Common.Interfaces;
-using DreamSoft.Application.Features.Apps.AdminApp.MenuOptions.GetMenuOptions;
+using DreamSoft.Application.Features.Apps.AdminApp.MenuOptions.DTOs;
 using DreamSoft.Domain.Entities;
 using DreamSoft.Domain.Repositories;
 using DreamSoft.Domain.ValueObjects;
@@ -24,7 +24,7 @@ public class CreateMenuOptionCommandHandler(
             mo => mo.Code == request.Code.ToUpper().Trim(), cancellationToken);
 
         if (exists)
-            throw new ConflictException("MenuOptionCodeAlreadyExists", request.Code);
+            throw new ConflictException(ErrorMessageKeys.MenuOptionCodeAlreadyExists, request.Code);
 
         var moduleExists = await moduleRepository.AnyAsync(
             m => m.Id == request.ModuleId, cancellationToken);

@@ -1,4 +1,4 @@
-using DreamSoft.Application.Features.Apps.AdminApp.Currencies.GetCurrencies;
+using DreamSoft.Application.Features.Apps.AdminApp.Currencies.DTOs;
 using MediatR;
 
 namespace DreamSoft.Application.Features.Apps.AdminApp.Currencies.CreateCurrency;

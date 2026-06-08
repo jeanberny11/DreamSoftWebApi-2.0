@@ -1,6 +1,5 @@
 using DreamSoft.Application.Common.Exceptions;
-using DreamSoft.Application.Common.Interfaces;
-using DreamSoft.Application.Features.Apps.AdminApp.SubscriptionPlans.GetSubscriptionPlans;
+using DreamSoft.Application.Features.Apps.AdminApp.SubscriptionPlans.DTOs;
 using DreamSoft.Domain.Entities;
 using DreamSoft.Domain.Repositories;
 using DreamSoft.Domain.ValueObjects;
@@ -24,7 +23,7 @@ public class CreateSubscriptionPlanCommandHandler(
             p => p.Code == request.Code.ToUpper().Trim(), cancellationToken);
 
         if (exists)
-            throw new ConflictException("SubscriptionPlanCodeAlreadyExists", request.Code);
+            throw new ConflictException(ErrorMessageKeys.SubscriptionPlanCodeAlreadyExists, request.Code);
 
         var translations = TranslatedString.Create(
             BaseTranslatedProperties.Create(

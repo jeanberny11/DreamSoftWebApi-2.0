@@ -1,18 +1,8 @@
+using DreamSoft.Application.Features.Apps.AdminApp.PlanLimits.DTOs;
 using DreamSoft.Domain.Repositories;
 using MediatR;
 
 namespace DreamSoft.Application.Features.Apps.AdminApp.PlanLimits.GetPlanLimits;
-
-// ── Shared DTO ────────────────────────────────────────────────────────────────
-
-public record PlanLimitDto(
-    int     Id,
-    int     PlanId,
-    string  LimitKey,
-    decimal LimitValue,
-    string  Description);
-
-// ── Query ─────────────────────────────────────────────────────────────────────
 
 public record GetPlanLimitsQuery(int PlanId) : IRequest<IReadOnlyList<PlanLimitDto>>;
 

@@ -1,6 +1,6 @@
 using DreamSoft.Application.Common.Exceptions;
 using DreamSoft.Application.Common.Interfaces;
-using DreamSoft.Application.Features.Apps.AdminApp.BillingCycles.GetBillingCycles;
+using DreamSoft.Application.Features.Apps.AdminApp.BillingCycles.DTOs;
 using DreamSoft.Domain.Entities;
 using DreamSoft.Domain.Repositories;
 using DreamSoft.Domain.ValueObjects;
@@ -21,7 +21,7 @@ public class CreateBillingCycleCommandHandler(
             c => c.Code == request.Code.ToUpper().Trim(), cancellationToken);
 
         if (exists)
-            throw new ConflictException("BillingCycleCodeAlreadyExists", request.Code);
+            throw new ConflictException(ErrorMessageKeys.BillingCycleCodeAlreadyExists, request.Code);
 
         var translations = TranslatedString.Create(
             BaseTranslatedProperties.Create(

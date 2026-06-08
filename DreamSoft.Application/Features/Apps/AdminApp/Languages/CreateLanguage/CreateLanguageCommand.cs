@@ -1,4 +1,4 @@
-using DreamSoft.Application.Features.Apps.AdminApp.Languages.GetLanguages;
+using DreamSoft.Application.Features.Apps.AdminApp.Languages.DTOs;
 using DreamSoft.Application.Features.Apps.AdminApp.Shared;
 using MediatR;
 

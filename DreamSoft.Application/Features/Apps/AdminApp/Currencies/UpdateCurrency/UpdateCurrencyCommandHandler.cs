@@ -1,5 +1,4 @@
 using DreamSoft.Application.Common.Exceptions;
-using DreamSoft.Application.Features.Apps.AdminApp.Currencies.GetCurrencies;
 using DreamSoft.Domain.Repositories;
 using MediatR;
 
@@ -8,9 +7,9 @@ namespace DreamSoft.Application.Features.Apps.AdminApp.Currencies.UpdateCurrency
 public class UpdateCurrencyCommandHandler(
     ICurrencyRepository currencyRepository,
     IUnitOfWork unitOfWork)
-    : IRequestHandler<UpdateCurrencyCommand, CurrencyDto>
+    : IRequestHandler<UpdateCurrencyCommand, Unit>
 {
-    public async Task<CurrencyDto> Handle(
+    public async Task<Unit> Handle(
         UpdateCurrencyCommand request,
         CancellationToken cancellationToken)
     {
@@ -25,12 +24,6 @@ public class UpdateCurrencyCommandHandler(
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new CurrencyDto(
-            currency.Id,
-            currency.Code,
-            currency.Name,
-            currency.NativeName,
-            currency.IsDefault,
-            currency.IsActive);
+        return Unit.Value;
     }
 }

@@ -1,4 +1,4 @@
-using DreamSoft.Application.Features.Apps.AdminApp.Genders.GetGenders;
+using DreamSoft.Application.Features.Apps.AdminApp.Genders.DTOs;
 using DreamSoft.Application.Features.Apps.AdminApp.Shared;
 using MediatR;
 

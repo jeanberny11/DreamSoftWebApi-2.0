@@ -190,4 +190,40 @@
   <data name="TenantSubscriptionNotFound" xml:space="preserve">
     <value>No se encontró suscripción para el inquilino '{0}' y la solución '{1}'</value>
   </data>
+  <data name="BillingCycleCodeAlreadyExists" xml:space="preserve">
+    <value>Ya existe un ciclo de facturación con el código '{0}'</value>
+  </data>
+  <data name="CurrencyCodeAlreadyExists" xml:space="preserve">
+    <value>Ya existe una moneda con el código '{0}'</value>
+  </data>
+  <data name="GenderCodeAlreadyExists" xml:space="preserve">
+    <value>Ya existe un género con el código '{0}'</value>
+  </data>
+  <data name="LanguageCodeAlreadyExists" xml:space="preserve">
+    <value>Ya existe un idioma con el código '{0}'</value>
+  </data>
+  <data name="MenuGroupCodeAlreadyExists" xml:space="preserve">
+    <value>Ya existe un grupo de menú con el código '{0}'</value>
+  </data>
+  <data name="MenuOptionCodeAlreadyExists" xml:space="preserve">
+    <value>Ya existe una opción de menú con el código '{0}'</value>
+  </data>
+  <data name="ModuleCodeAlreadyExists" xml:space="preserve">
+    <value>Ya existe un módulo con el código '{0}'</value>
+  </data>
+  <data name="PlanLimitKeyAlreadyExists" xml:space="preserve">
+    <value>Ya existe un límite con la clave '{0}' para este plan</value>
+  </data>
+  <data name="PlanMenuOptionAlreadyExists" xml:space="preserve">
+    <value>Esta opción de menú ya está asignada al plan</value>
+  </data>
+  <data name="PlanPriceAlreadyExists" xml:space="preserve">
+    <value>Ya existe un precio para este ciclo de facturación en el plan</value>
+  </data>
+  <data name="SolutionCodeAlreadyExists" xml:space="preserve">
+    <value>Ya existe una solución con el código '{0}'</value>
+  </data>
+  <data name="SubscriptionPlanCodeAlreadyExists" xml:space="preserve">
+    <value>Ya existe un plan de suscripción con el código '{0}'</value>
+  </data>
 </root>

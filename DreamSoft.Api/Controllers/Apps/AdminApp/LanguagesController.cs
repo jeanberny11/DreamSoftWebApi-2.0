@@ -1,4 +1,5 @@
 using DreamSoft.Application.Features.Apps.AdminApp.Languages.CreateLanguage;
+using DreamSoft.Application.Features.Apps.AdminApp.Languages.DTOs;
 using DreamSoft.Application.Features.Apps.AdminApp.Languages.GetLanguageById;
 using DreamSoft.Application.Features.Apps.AdminApp.Languages.GetLanguages;
 using DreamSoft.Application.Features.Apps.AdminApp.Languages.UpdateLanguage;
@@ -10,9 +11,7 @@ namespace DreamSoft.Api.Controllers.Apps.AdminApp;
 
 public class LanguagesController : AdminControllerBase
 {
-    // ── GET /api/v1/admin/languages?language=en ───────────────────────────────
-    // SuperAdmin only — returns all records including inactive
-
+    // ── GET /api/v1/admin/languages ───────────────────────────────────────────
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<LanguageDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -22,9 +21,7 @@ public class LanguagesController : AdminControllerBase
         CancellationToken cancellationToken)
         => Ok(await Mediator.Send(new GetLanguagesQuery(language), cancellationToken));
 
-    // ── GET /api/v1/admin/languages/active?language=en ────────────────────────
-    // Public — active records only, used by tenants
-
+    // ── GET /api/v1/admin/languages/active ────────────────────────────────────
     [HttpGet("active")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(IReadOnlyList<LanguageDto>), StatusCodes.Status200OK)]
@@ -33,9 +30,7 @@ public class LanguagesController : AdminControllerBase
         CancellationToken cancellationToken)
         => Ok(await Mediator.Send(new GetActiveLanguagesQuery(language), cancellationToken));
 
-    // ── GET /api/v1/admin/languages/{id}?language=en ──────────────────────────
-    // Public — single record lookup
-
+    // ── GET /api/v1/admin/languages/{id} ──────────────────────────────────────
     [HttpGet("{id:int}")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(LanguageDto), StatusCodes.Status200OK)]
@@ -47,8 +42,6 @@ public class LanguagesController : AdminControllerBase
         => Ok(await Mediator.Send(new GetLanguageByIdQuery(id, language), cancellationToken));
 
     // ── POST /api/v1/admin/languages ──────────────────────────────────────────
-    // SuperAdmin only — inherited from AdminControllerBase
-
     [HttpPost]
     [ProducesResponseType(typeof(LanguageDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -60,14 +53,12 @@ public class LanguagesController : AdminControllerBase
         CancellationToken cancellationToken)
     {
         var result = await Mediator.Send(command, cancellationToken);
-        return StatusCode(StatusCodes.Status201Created, result);
+        return CreatedAtAction(nameof(GetById), new { id = result.Id, version = "1" }, result);
     }
 
     // ── PUT /api/v1/admin/languages/{id} ──────────────────────────────────────
-    // SuperAdmin only — inherited from AdminControllerBase
-
     [HttpPut("{id:int}")]
-    [ProducesResponseType(typeof(LanguageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -76,9 +67,12 @@ public class LanguagesController : AdminControllerBase
         int id,
         [FromBody] UpdateLanguageRequest body,
         CancellationToken cancellationToken)
-        => Ok(await Mediator.Send(
+    {
+        await Mediator.Send(
             new UpdateLanguageCommand(id, body.Name, body.IsDefault, body.Translations, body.IsActive),
-            cancellationToken));
+            cancellationToken);
+        return NoContent();
+    }
 }
 
 // ── Request body DTO ──────────────────────────────────────────────────────────

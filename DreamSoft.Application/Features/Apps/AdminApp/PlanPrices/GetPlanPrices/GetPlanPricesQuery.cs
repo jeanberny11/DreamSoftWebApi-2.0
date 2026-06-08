@@ -1,20 +1,8 @@
+using DreamSoft.Application.Features.Apps.AdminApp.PlanPrices.DTOs;
 using DreamSoft.Domain.Repositories;
 using MediatR;
 
 namespace DreamSoft.Application.Features.Apps.AdminApp.PlanPrices.GetPlanPrices;
-
-// ── Shared DTO ────────────────────────────────────────────────────────────────
-
-public record PlanPriceDto(
-    int     Id,
-    int     PlanId,
-    int     BillingCycleId,
-    string  BillingCycleCode,
-    string  BillingCycleName,
-    decimal Price,
-    bool    IsActive);
-
-// ── Query ─────────────────────────────────────────────────────────────────────
 
 public record GetPlanPricesQuery(int PlanId) : IRequest<IReadOnlyList<PlanPriceDto>>;
 

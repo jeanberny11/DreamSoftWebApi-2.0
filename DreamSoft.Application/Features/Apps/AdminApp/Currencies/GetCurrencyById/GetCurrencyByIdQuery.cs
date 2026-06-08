@@ -1,5 +1,5 @@
 using DreamSoft.Application.Common.Exceptions;
-using DreamSoft.Application.Features.Apps.AdminApp.Currencies.GetCurrencies;
+using DreamSoft.Application.Features.Apps.AdminApp.Currencies.DTOs;
 using DreamSoft.Domain.Repositories;
 using MediatR;
 

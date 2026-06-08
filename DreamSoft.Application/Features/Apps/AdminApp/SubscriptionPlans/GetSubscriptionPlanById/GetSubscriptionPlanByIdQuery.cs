@@ -1,5 +1,5 @@
 using DreamSoft.Application.Common.Exceptions;
-using DreamSoft.Application.Features.Apps.AdminApp.SubscriptionPlans.GetSubscriptionPlans;
+using DreamSoft.Application.Features.Apps.AdminApp.SubscriptionPlans.DTOs;
 using DreamSoft.Domain.Repositories;
 using MediatR;
 

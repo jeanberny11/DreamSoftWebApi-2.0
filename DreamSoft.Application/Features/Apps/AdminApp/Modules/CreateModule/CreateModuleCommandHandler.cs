@@ -1,6 +1,6 @@
 using DreamSoft.Application.Common.Exceptions;
 using DreamSoft.Application.Common.Interfaces;
-using DreamSoft.Application.Features.Apps.AdminApp.Modules.GetModules;
+using DreamSoft.Application.Features.Apps.AdminApp.Modules.DTOs;
 using DreamSoft.Domain.Entities;
 using DreamSoft.Domain.Repositories;
 using DreamSoft.Domain.ValueObjects;
@@ -22,7 +22,7 @@ public class CreateModuleCommandHandler(
             m => m.Code == request.Code.ToUpper().Trim(), cancellationToken);
 
         if (exists)
-            throw new ConflictException("ModuleCodeAlreadyExists", request.Code);
+            throw new ConflictException(ErrorMessageKeys.ModuleCodeAlreadyExists, request.Code);
 
         var es = request.Translations.Spanish;
         var en = request.Translations.English;

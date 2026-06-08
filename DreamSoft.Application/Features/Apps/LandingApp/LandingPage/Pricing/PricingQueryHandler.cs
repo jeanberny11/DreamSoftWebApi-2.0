@@ -34,7 +34,13 @@ public class PricingQueryHandler(
                     plan.Translations.GetDescriptionOrFallback(language, plan.Description),
                     plan.TrialDays,
                     plan.TierLevel,
-                    [.. prices.Select(p => new PlanPrices(p.BillingCycle?.Code ?? string.Empty, p.Price))],
+                    [.. prices.Select(p => new PlanPrices(
+                        new PricingBillingCycleDto(
+                            p.BillingCycle.Code,
+                            p.BillingCycle.Translations.GetNameOrFallback(language, p.BillingCycle.Name),
+                            p.BillingCycle.Translations.GetDescriptionOrFallback(language, p.BillingCycle.Description),
+                            p.BillingCycle.Months),
+                        p.Price))],
                     [.. limits.Select(l => new PlanLimits(l.LimitKey, (int)l.LimitValue, l.Description))]
                 ));
             }

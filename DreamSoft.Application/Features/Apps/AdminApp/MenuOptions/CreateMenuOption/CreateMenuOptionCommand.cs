@@ -1,4 +1,4 @@
-using DreamSoft.Application.Features.Apps.AdminApp.MenuOptions.GetMenuOptions;
+using DreamSoft.Application.Features.Apps.AdminApp.MenuOptions.DTOs;
 using DreamSoft.Application.Features.Apps.AdminApp.Shared;
 using MediatR;
 

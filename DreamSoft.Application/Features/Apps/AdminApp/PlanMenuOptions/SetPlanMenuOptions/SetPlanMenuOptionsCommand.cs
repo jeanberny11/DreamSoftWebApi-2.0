@@ -1,6 +1,5 @@
 using DreamSoft.Application.Common.Exceptions;
-using DreamSoft.Application.Common.Interfaces;
-using DreamSoft.Application.Features.Apps.AdminApp.PlanMenuOptions.GetPlanMenuOptions;
+using DreamSoft.Application.Features.Apps.AdminApp.PlanMenuOptions.DTOs;
 using DreamSoft.Domain.Entities;
 using DreamSoft.Domain.Repositories;
 using FluentValidation;

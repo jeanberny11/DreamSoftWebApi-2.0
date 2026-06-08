@@ -1,4 +1,4 @@
-using DreamSoft.Application.Features.Apps.AdminApp.Modules.GetModules;
+using DreamSoft.Application.Features.Apps.AdminApp.Modules.DTOs;
 using DreamSoft.Application.Features.Apps.AdminApp.Shared;
 using MediatR;
 

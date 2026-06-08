@@ -1,4 +1,4 @@
-using DreamSoft.Application.Features.Apps.LandingApp.LandingPage.AppFeatures.GetAppFeaturesQuery;
+using DreamSoft.Application.Features.Apps.LandingApp.LandingPage.AppFeatures.GetAppFeatures;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

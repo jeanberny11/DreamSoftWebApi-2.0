@@ -1,4 +1,3 @@
-using DreamSoft.Application.Features.Apps.AdminApp.Languages.GetLanguages;
 using DreamSoft.Application.Features.Apps.AdminApp.Shared;
 using MediatR;
 
@@ -9,4 +8,4 @@ public record UpdateLanguageCommand(
     string Name,
     bool IsDefault,
     TranslationsDto Translations,
-    bool IsActive) : IRequest<LanguageDto>;
+    bool IsActive) : IRequest<Unit>;

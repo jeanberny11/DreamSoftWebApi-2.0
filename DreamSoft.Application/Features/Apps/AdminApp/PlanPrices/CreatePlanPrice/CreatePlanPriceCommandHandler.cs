@@ -1,6 +1,5 @@
 using DreamSoft.Application.Common.Exceptions;
-using DreamSoft.Application.Common.Interfaces;
-using DreamSoft.Application.Features.Apps.AdminApp.PlanPrices.GetPlanPrices;
+using DreamSoft.Application.Features.Apps.AdminApp.PlanPrices.DTOs;
 using DreamSoft.Domain.Entities;
 using DreamSoft.Domain.Repositories;
 using MediatR;
@@ -28,7 +27,7 @@ public class CreatePlanPriceCommandHandler(
             cancellationToken);
 
         if (duplicate)
-            throw new ConflictException("PlanPriceAlreadyExists",
+            throw new ConflictException(ErrorMessageKeys.PlanPriceAlreadyExists,
                 $"Plan {request.PlanId} already has a price for billing cycle {request.BillingCycleId}");
 
         var planPrice = PlanPrice.Create(request.PlanId, request.BillingCycleId, request.Price);

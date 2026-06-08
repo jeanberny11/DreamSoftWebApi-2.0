@@ -1,6 +1,4 @@
 using DreamSoft.Application.Common.Exceptions;
-using DreamSoft.Application.Common.Interfaces;
-using DreamSoft.Application.Features.Apps.AdminApp.Solutions.GetSolutions;
 using DreamSoft.Domain.Repositories;
 using DreamSoft.Domain.ValueObjects;
 using MediatR;
@@ -9,11 +7,10 @@ namespace DreamSoft.Application.Features.Apps.AdminApp.Solutions.UpdateSolution;
 
 public class UpdateSolutionCommandHandler(
     ISolutionRepository solutionRepository,
-    IRequestLanguageService languageService,
     IUnitOfWork unitOfWork)
-    : IRequestHandler<UpdateSolutionCommand, SolutionDto>
+    : IRequestHandler<UpdateSolutionCommand, Unit>
 {
-    public async Task<SolutionDto> Handle(
+    public async Task<Unit> Handle(
         UpdateSolutionCommand request,
         CancellationToken cancellationToken)
     {
@@ -41,15 +38,6 @@ public class UpdateSolutionCommandHandler(
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var language = languageService.Resolve();
-
-        return new SolutionDto(
-            solution.Id,
-            solution.Code,
-            solution.Translations.GetNameOrFallback(language, solution.Name),
-            solution.Translations.GetDescriptionOrFallback(language, solution.Description),
-            solution.Icon,
-            solution.SortOrder,
-            solution.IsActive);
+        return Unit.Value;
     }
 }

@@ -1,6 +1,6 @@
 using DreamSoft.Application.Common.Exceptions;
 using DreamSoft.Application.Common.Interfaces;
-using DreamSoft.Application.Features.Apps.AdminApp.Genders.GetGenders;
+using DreamSoft.Application.Features.Apps.AdminApp.Genders.DTOs;
 using DreamSoft.Domain.Entities;
 using DreamSoft.Domain.Repositories;
 using DreamSoft.Domain.ValueObjects;
@@ -22,7 +22,7 @@ public class CreateGenderCommandHandler(
             g => g.Code == request.Code.ToUpper().Trim(), cancellationToken);
 
         if (exists)
-            throw new ConflictException("GenderCodeAlreadyExists", request.Code);
+            throw new ConflictException(ErrorMessageKeys.GenderCodeAlreadyExists, request.Code);
 
         var translations = TranslatedString.Create(
             BaseTranslatedProperties.CreateWithName(request.Translations.Spanish.Name),

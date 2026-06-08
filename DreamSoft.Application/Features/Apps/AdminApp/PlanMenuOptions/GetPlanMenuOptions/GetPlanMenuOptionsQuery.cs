@@ -1,17 +1,8 @@
+using DreamSoft.Application.Features.Apps.AdminApp.PlanMenuOptions.DTOs;
 using DreamSoft.Domain.Repositories;
 using MediatR;
 
 namespace DreamSoft.Application.Features.Apps.AdminApp.PlanMenuOptions.GetPlanMenuOptions;
-
-// ── Shared DTO ────────────────────────────────────────────────────────────────
-
-public record PlanMenuOptionDto(
-    int    PlanId,
-    int    MenuOptionId,
-    string MenuOptionCode,
-    string MenuOptionName);
-
-// ── Query ─────────────────────────────────────────────────────────────────────
 
 public record GetPlanMenuOptionsQuery(int PlanId) : IRequest<IReadOnlyList<PlanMenuOptionDto>>;
 

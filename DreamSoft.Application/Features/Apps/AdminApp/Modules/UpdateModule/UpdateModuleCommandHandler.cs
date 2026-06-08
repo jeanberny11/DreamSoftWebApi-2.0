@@ -1,6 +1,4 @@
 using DreamSoft.Application.Common.Exceptions;
-using DreamSoft.Application.Common.Interfaces;
-using DreamSoft.Application.Features.Apps.AdminApp.Modules.GetModules;
 using DreamSoft.Domain.Repositories;
 using DreamSoft.Domain.ValueObjects;
 using MediatR;
@@ -9,11 +7,10 @@ namespace DreamSoft.Application.Features.Apps.AdminApp.Modules.UpdateModule;
 
 public class UpdateModuleCommandHandler(
     IModuleRepository moduleRepository,
-    IRequestLanguageService languageService,
     IUnitOfWork unitOfWork)
-    : IRequestHandler<UpdateModuleCommand, ModuleDto>
+    : IRequestHandler<UpdateModuleCommand, Unit>
 {
-    public async Task<ModuleDto> Handle(
+    public async Task<Unit> Handle(
         UpdateModuleCommand request,
         CancellationToken cancellationToken)
     {
@@ -38,15 +35,6 @@ public class UpdateModuleCommandHandler(
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var language = languageService.Resolve();
-
-        return new ModuleDto(
-            module.Id,
-            module.Code,
-            module.Translations.GetNameOrFallback(language, module.Name),
-            module.Translations.GetDescriptionOrFallback(language, module.Description),
-            module.Icon,
-            module.SortOrder,
-            module.IsActive);
+        return Unit.Value;
     }
 }

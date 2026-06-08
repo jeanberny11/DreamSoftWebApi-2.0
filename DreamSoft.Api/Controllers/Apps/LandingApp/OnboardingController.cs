@@ -4,8 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace DreamSoft.Api.Controllers.Apps.LandingApp;
 
-[Authorize(Policy = AuthPolicies.TenantOnly)]
-public class OnboardingController : ApiControllerBase
+public class OnboardingController : LandingControllerBase
 {
     /// <summary>
     /// Completes the onboarding wizard by saving the tenant's company profile,

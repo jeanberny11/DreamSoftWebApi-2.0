@@ -1,6 +1,4 @@
 using DreamSoft.Application.Common.Exceptions;
-using DreamSoft.Application.Common.Interfaces;
-using DreamSoft.Application.Features.Apps.AdminApp.MenuGroups.GetMenuGroups;
 using DreamSoft.Domain.Repositories;
 using DreamSoft.Domain.ValueObjects;
 using MediatR;
@@ -9,11 +7,10 @@ namespace DreamSoft.Application.Features.Apps.AdminApp.MenuGroups.UpdateMenuGrou
 
 public class UpdateMenuGroupCommandHandler(
     IMenuGroupRepository menuGroupRepository,
-    IRequestLanguageService languageService,
     IUnitOfWork unitOfWork)
-    : IRequestHandler<UpdateMenuGroupCommand, MenuGroupDto>
+    : IRequestHandler<UpdateMenuGroupCommand, Unit>
 {
-    public async Task<MenuGroupDto> Handle(
+    public async Task<Unit> Handle(
         UpdateMenuGroupCommand request,
         CancellationToken cancellationToken)
     {
@@ -38,15 +35,6 @@ public class UpdateMenuGroupCommandHandler(
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var language = languageService.Resolve();
-
-        return new MenuGroupDto(
-            menuGroup.Id,
-            menuGroup.Code,
-            menuGroup.Translations.GetNameOrFallback(language, menuGroup.Name),
-            menuGroup.Translations.GetDescriptionOrFallback(language, menuGroup.Description),
-            menuGroup.Icon,
-            menuGroup.SortOrder,
-            menuGroup.IsActive);
+        return Unit.Value;
     }
 }

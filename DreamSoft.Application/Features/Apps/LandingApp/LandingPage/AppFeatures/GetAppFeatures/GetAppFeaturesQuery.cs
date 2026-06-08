@@ -1,6 +1,6 @@
 using MediatR;
 
-namespace DreamSoft.Application.Features.Apps.LandingApp.LandingPage.AppFeatures.GetAppFeaturesQuery;
+namespace DreamSoft.Application.Features.Apps.LandingApp.LandingPage.AppFeatures.GetAppFeatures;
 
 public record GetAppFeaturesResponse(
     string Code,
@@ -8,7 +8,7 @@ public record GetAppFeaturesResponse(
     string Description,
     string Icon,
     int SortOrder,
-    List<AppFeatureOptionDto> Modules
+    List<AppFeatureOptionDto> Options
 );
 
 public record AppFeatureOptionDto(
@@ -19,4 +19,4 @@ public record AppFeatureOptionDto(
     int SortOrder
 );
 
-    public record GetAppFeaturesQuery(string? Language = null) : IRequest<List<GetAppFeaturesResponse>>;
+public record GetAppFeaturesQuery(string? Language = null) : IRequest<List<GetAppFeaturesResponse>>;

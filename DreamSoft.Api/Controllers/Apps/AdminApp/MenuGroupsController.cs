@@ -1,4 +1,5 @@
 using DreamSoft.Application.Features.Apps.AdminApp.MenuGroups.CreateMenuGroup;
+using DreamSoft.Application.Features.Apps.AdminApp.MenuGroups.DTOs;
 using DreamSoft.Application.Features.Apps.AdminApp.MenuGroups.GetMenuGroupById;
 using DreamSoft.Application.Features.Apps.AdminApp.MenuGroups.GetMenuGroups;
 using DreamSoft.Application.Features.Apps.AdminApp.MenuGroups.UpdateMenuGroup;
@@ -11,9 +12,7 @@ namespace DreamSoft.Api.Controllers.Apps.AdminApp;
 [Route("api/v{version:apiVersion}/admin/menu-groups")]
 public class MenuGroupsController : AdminControllerBase
 {
-    // ── GET /api/v1/admin/menu-groups?language=en ─────────────────────────────
-    // SuperAdmin only — returns all records including inactive
-
+    // ── GET /api/v1/admin/menu-groups ─────────────────────────────────────────
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<MenuGroupDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -23,9 +22,7 @@ public class MenuGroupsController : AdminControllerBase
         CancellationToken cancellationToken)
         => Ok(await Mediator.Send(new GetMenuGroupsQuery(language), cancellationToken));
 
-    // ── GET /api/v1/admin/menu-groups/active?language=en ──────────────────────
-    // Public — active records only
-
+    // ── GET /api/v1/admin/menu-groups/active ──────────────────────────────────
     [HttpGet("active")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(IReadOnlyList<MenuGroupDto>), StatusCodes.Status200OK)]
@@ -34,9 +31,7 @@ public class MenuGroupsController : AdminControllerBase
         CancellationToken cancellationToken)
         => Ok(await Mediator.Send(new GetActiveMenuGroupsQuery(language), cancellationToken));
 
-    // ── GET /api/v1/admin/menu-groups/{id}?language=en ────────────────────────
-    // Public — single record lookup
-
+    // ── GET /api/v1/admin/menu-groups/{id} ────────────────────────────────────
     [HttpGet("{id:int}")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(MenuGroupDto), StatusCodes.Status200OK)]
@@ -48,8 +43,6 @@ public class MenuGroupsController : AdminControllerBase
         => Ok(await Mediator.Send(new GetMenuGroupByIdQuery(id, language), cancellationToken));
 
     // ── POST /api/v1/admin/menu-groups ────────────────────────────────────────
-    // SuperAdmin only — inherited from AdminControllerBase
-
     [HttpPost]
     [ProducesResponseType(typeof(MenuGroupDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -61,14 +54,12 @@ public class MenuGroupsController : AdminControllerBase
         CancellationToken cancellationToken)
     {
         var result = await Mediator.Send(command, cancellationToken);
-        return StatusCode(StatusCodes.Status201Created, result);
+        return CreatedAtAction(nameof(GetById), new { id = result.Id, version = "1" }, result);
     }
 
     // ── PUT /api/v1/admin/menu-groups/{id} ────────────────────────────────────
-    // SuperAdmin only — inherited from AdminControllerBase
-
     [HttpPut("{id:int}")]
-    [ProducesResponseType(typeof(MenuGroupDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -77,16 +68,13 @@ public class MenuGroupsController : AdminControllerBase
         int id,
         [FromBody] UpdateMenuGroupRequest body,
         CancellationToken cancellationToken)
-        => Ok(await Mediator.Send(
+    {
+        await Mediator.Send(
             new UpdateMenuGroupCommand(
-                id,
-                body.Name,
-                body.Description,
-                body.Icon,
-                body.SortOrder,
-                body.Translations,
-                body.IsActive),
-            cancellationToken));
+                id, body.Name, body.Description, body.Icon, body.SortOrder, body.Translations, body.IsActive),
+            cancellationToken);
+        return NoContent();
+    }
 }
 
 // ── Request body DTO ──────────────────────────────────────────────────────────

@@ -1,6 +1,4 @@
 using DreamSoft.Application.Common.Exceptions;
-using DreamSoft.Application.Common.Interfaces;
-using DreamSoft.Application.Features.Apps.AdminApp.Languages.GetLanguages;
 using DreamSoft.Domain.Repositories;
 using DreamSoft.Domain.ValueObjects;
 using MediatR;
@@ -9,11 +7,10 @@ namespace DreamSoft.Application.Features.Apps.AdminApp.Languages.UpdateLanguage;
 
 public class UpdateLanguageCommandHandler(
     ILanguageRepository languageRepository,
-    IRequestLanguageService languageService,
     IUnitOfWork unitOfWork)
-    : IRequestHandler<UpdateLanguageCommand, LanguageDto>
+    : IRequestHandler<UpdateLanguageCommand, Unit>
 {
-    public async Task<LanguageDto> Handle(
+    public async Task<Unit> Handle(
         UpdateLanguageCommand request,
         CancellationToken cancellationToken)
     {
@@ -30,13 +27,6 @@ public class UpdateLanguageCommandHandler(
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var lang = languageService.Resolve();
-
-        return new LanguageDto(
-            language.Id,
-            language.Code,
-            language.Translations.GetNameOrFallback(lang, language.Name),
-            language.IsDefault,
-            language.IsActive);
+        return Unit.Value;
     }
 }

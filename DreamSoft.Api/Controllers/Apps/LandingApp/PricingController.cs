@@ -4,8 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace DreamSoft.Api.Controllers.Apps.LandingApp;
 
-[Route("api/v{version:apiVersion}/landing/pricing")]
-public class PricingController : ApiControllerBase
+public class PricingController : LandingControllerBase
 {
     [HttpGet]
     [AllowAnonymous]

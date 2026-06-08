@@ -1,6 +1,6 @@
 using DreamSoft.Application.Common.Exceptions;
 using DreamSoft.Application.Common.Interfaces;
-using DreamSoft.Application.Features.Apps.AdminApp.Languages.GetLanguages;
+using DreamSoft.Application.Features.Apps.AdminApp.Languages.DTOs;
 using DreamSoft.Domain.Entities;
 using DreamSoft.Domain.Repositories;
 using DreamSoft.Domain.ValueObjects;
@@ -22,7 +22,7 @@ public class CreateLanguageCommandHandler(
             l => l.Code == request.Code.ToLower().Trim(), cancellationToken);
 
         if (exists)
-            throw new ConflictException("LanguageCodeAlreadyExists", request.Code);
+            throw new ConflictException(ErrorMessageKeys.LanguageCodeAlreadyExists, request.Code);
 
         var translations = TranslatedString.Create(
             BaseTranslatedProperties.CreateWithName(request.Translations.Spanish.Name),

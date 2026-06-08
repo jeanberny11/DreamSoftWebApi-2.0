@@ -1,4 +1,3 @@
-using DreamSoft.Application.Features.Apps.AdminApp.MenuOptions.GetMenuOptions;
 using DreamSoft.Application.Features.Apps.AdminApp.Shared;
 using MediatR;
 
@@ -14,4 +13,4 @@ public record UpdateMenuOptionCommand(
     string Icon,
     int SortOrder,
     TranslationsDto Translations,
-    bool IsActive) : IRequest<MenuOptionDto>;
+    bool IsActive) : IRequest<Unit>;

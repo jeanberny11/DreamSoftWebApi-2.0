@@ -1,6 +1,6 @@
 using DreamSoft.Application.Common.Exceptions;
 using DreamSoft.Application.Common.Interfaces;
-using DreamSoft.Application.Features.Apps.AdminApp.Languages.GetLanguages;
+using DreamSoft.Application.Features.Apps.AdminApp.Languages.DTOs;
 using DreamSoft.Domain.Repositories;
 using MediatR;
 

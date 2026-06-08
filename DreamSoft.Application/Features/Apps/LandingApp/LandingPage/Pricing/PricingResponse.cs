@@ -18,7 +18,7 @@ public record Plans(
 );
 
 public record PlanPrices(
-    string BillingCycleCode,
+    PricingBillingCycleDto BillingCycle,
     decimal Price
 );
 
@@ -26,4 +26,11 @@ public record PlanLimits(
     string LimitKey,
     int LimitValue,
     string Description
+);
+
+public record PricingBillingCycleDto(
+    string Code,
+    string Name,
+    string Description,
+    int Months
 );

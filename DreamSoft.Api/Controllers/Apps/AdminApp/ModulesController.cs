@@ -1,4 +1,5 @@
 using DreamSoft.Application.Features.Apps.AdminApp.Modules.CreateModule;
+using DreamSoft.Application.Features.Apps.AdminApp.Modules.DTOs;
 using DreamSoft.Application.Features.Apps.AdminApp.Modules.GetModuleById;
 using DreamSoft.Application.Features.Apps.AdminApp.Modules.GetModules;
 using DreamSoft.Application.Features.Apps.AdminApp.Modules.UpdateModule;
@@ -10,9 +11,7 @@ namespace DreamSoft.Api.Controllers.Apps.AdminApp;
 
 public class ModulesController : AdminControllerBase
 {
-    // ── GET /api/v1/admin/modules?language=en ─────────────────────────────────
-    // SuperAdmin only — returns all records including inactive
-
+    // ── GET /api/v1/admin/modules ─────────────────────────────────────────────
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<ModuleDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -22,9 +21,7 @@ public class ModulesController : AdminControllerBase
         CancellationToken cancellationToken)
         => Ok(await Mediator.Send(new GetModulesQuery(language), cancellationToken));
 
-    // ── GET /api/v1/admin/modules/active?language=en ──────────────────────────
-    // Public — active records only
-
+    // ── GET /api/v1/admin/modules/active ──────────────────────────────────────
     [HttpGet("active")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(IReadOnlyList<ModuleDto>), StatusCodes.Status200OK)]
@@ -33,9 +30,7 @@ public class ModulesController : AdminControllerBase
         CancellationToken cancellationToken)
         => Ok(await Mediator.Send(new GetActiveModulesQuery(language), cancellationToken));
 
-    // ── GET /api/v1/admin/modules/{id}?language=en ────────────────────────────
-    // Public — single record lookup
-
+    // ── GET /api/v1/admin/modules/{id} ────────────────────────────────────────
     [HttpGet("{id:int}")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(ModuleDto), StatusCodes.Status200OK)]
@@ -47,8 +42,6 @@ public class ModulesController : AdminControllerBase
         => Ok(await Mediator.Send(new GetModuleByIdQuery(id, language), cancellationToken));
 
     // ── POST /api/v1/admin/modules ────────────────────────────────────────────
-    // SuperAdmin only — inherited from AdminControllerBase
-
     [HttpPost]
     [ProducesResponseType(typeof(ModuleDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -60,14 +53,12 @@ public class ModulesController : AdminControllerBase
         CancellationToken cancellationToken)
     {
         var result = await Mediator.Send(command, cancellationToken);
-        return StatusCode(StatusCodes.Status201Created, result);
+        return CreatedAtAction(nameof(GetById), new { id = result.Id, version = "1" }, result);
     }
 
     // ── PUT /api/v1/admin/modules/{id} ────────────────────────────────────────
-    // SuperAdmin only — inherited from AdminControllerBase
-
     [HttpPut("{id:int}")]
-    [ProducesResponseType(typeof(ModuleDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -76,16 +67,13 @@ public class ModulesController : AdminControllerBase
         int id,
         [FromBody] UpdateModuleRequest body,
         CancellationToken cancellationToken)
-        => Ok(await Mediator.Send(
+    {
+        await Mediator.Send(
             new UpdateModuleCommand(
-                id,
-                body.Name,
-                body.Description,
-                body.Icon,
-                body.SortOrder,
-                body.Translations,
-                body.IsActive),
-            cancellationToken));
+                id, body.Name, body.Description, body.Icon, body.SortOrder, body.Translations, body.IsActive),
+            cancellationToken);
+        return NoContent();
+    }
 }
 
 // ── Request body DTO ──────────────────────────────────────────────────────────

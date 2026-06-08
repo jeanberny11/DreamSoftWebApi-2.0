@@ -1,7 +1,7 @@
 using DreamSoft.Domain.Repositories;
 using MediatR;
 
-namespace DreamSoft.Application.Features.Apps.LandingApp.LandingPage.AppFeatures.GetAppFeaturesQuery;
+namespace DreamSoft.Application.Features.Apps.LandingApp.LandingPage.AppFeatures.GetAppFeatures;
 
 public class GetAppFeaturesQueryHandler(IModuleRepository moduleRepository)
     : IRequestHandler<GetAppFeaturesQuery, List<GetAppFeaturesResponse>>

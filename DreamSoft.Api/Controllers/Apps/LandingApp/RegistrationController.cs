@@ -6,14 +6,14 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace DreamSoft.Api.Controllers.Apps.LandingApp;
 
-[AllowAnonymous]
-public class RegistrationController : ApiControllerBase
+public class RegistrationController : LandingControllerBase
 {
     /// <summary>
     /// Check whether a subdomain is available for registration.
     /// Returns availability status and the normalized subdomain.
     /// Rate-limited at the infrastructure level.
     /// </summary>
+    [AllowAnonymous]
     [HttpGet("check-subdomain")]
     [ProducesResponseType(typeof(SubdomainAvailabilityResponse), 200)]
     [ProducesResponseType(400)]
@@ -33,6 +33,7 @@ public class RegistrationController : ApiControllerBase
     /// Register a new tenant. Issues an access token and refresh token cookie
     /// immediately so the client is authenticated without a separate login call.
     /// </summary>
+    [AllowAnonymous]
     [HttpPost]
     [ProducesResponseType(typeof(RegisterTenantClientResponse), 201)]
     [ProducesResponseType(400)]
@@ -60,6 +61,7 @@ public class RegistrationController : ApiControllerBase
     /// <summary>
     /// Check whether a tenant has completed onboarding.
     /// </summary>
+    [AllowAnonymous]
     [HttpGet("check-onboarding-status")]
     [ProducesResponseType(typeof(OnboardingStatusResponse), 200)]
     [ProducesResponseType(400)]

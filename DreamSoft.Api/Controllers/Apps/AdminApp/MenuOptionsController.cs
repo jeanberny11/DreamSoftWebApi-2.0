@@ -1,4 +1,5 @@
 using DreamSoft.Application.Features.Apps.AdminApp.MenuOptions.CreateMenuOption;
+using DreamSoft.Application.Features.Apps.AdminApp.MenuOptions.DTOs;
 using DreamSoft.Application.Features.Apps.AdminApp.MenuOptions.GetMenuOptionById;
 using DreamSoft.Application.Features.Apps.AdminApp.MenuOptions.GetMenuOptions;
 using DreamSoft.Application.Features.Apps.AdminApp.MenuOptions.UpdateMenuOption;
@@ -11,9 +12,7 @@ namespace DreamSoft.Api.Controllers.Apps.AdminApp;
 [Route("api/v{version:apiVersion}/admin/menu-options")]
 public class MenuOptionsController : AdminControllerBase
 {
-    // ── GET /api/v1/admin/menu-options?language=en ────────────────────────────
-    // SuperAdmin only — returns all records including inactive
-
+    // ── GET /api/v1/admin/menu-options ────────────────────────────────────────
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<MenuOptionDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -23,9 +22,7 @@ public class MenuOptionsController : AdminControllerBase
         CancellationToken cancellationToken)
         => Ok(await Mediator.Send(new GetMenuOptionsQuery(language), cancellationToken));
 
-    // ── GET /api/v1/admin/menu-options/active?language=en ─────────────────────
-    // Public — active records only
-
+    // ── GET /api/v1/admin/menu-options/active ─────────────────────────────────
     [HttpGet("active")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(IReadOnlyList<MenuOptionDto>), StatusCodes.Status200OK)]
@@ -34,9 +31,7 @@ public class MenuOptionsController : AdminControllerBase
         CancellationToken cancellationToken)
         => Ok(await Mediator.Send(new GetActiveMenuOptionsQuery(language), cancellationToken));
 
-    // ── GET /api/v1/admin/menu-options/{id}?language=en ──────────────────────
-    // Public — single record lookup
-
+    // ── GET /api/v1/admin/menu-options/{id} ───────────────────────────────────
     [HttpGet("{id:int}")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(MenuOptionDto), StatusCodes.Status200OK)]
@@ -48,8 +43,6 @@ public class MenuOptionsController : AdminControllerBase
         => Ok(await Mediator.Send(new GetMenuOptionByIdQuery(id, language), cancellationToken));
 
     // ── POST /api/v1/admin/menu-options ───────────────────────────────────────
-    // SuperAdmin only — inherited from AdminControllerBase
-
     [HttpPost]
     [ProducesResponseType(typeof(MenuOptionDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -61,14 +54,12 @@ public class MenuOptionsController : AdminControllerBase
         CancellationToken cancellationToken)
     {
         var result = await Mediator.Send(command, cancellationToken);
-        return StatusCode(StatusCodes.Status201Created, result);
+        return CreatedAtAction(nameof(GetById), new { id = result.Id, version = "1" }, result);
     }
 
     // ── PUT /api/v1/admin/menu-options/{id} ───────────────────────────────────
-    // SuperAdmin only — inherited from AdminControllerBase
-
     [HttpPut("{id:int}")]
-    [ProducesResponseType(typeof(MenuOptionDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -77,19 +68,14 @@ public class MenuOptionsController : AdminControllerBase
         int id,
         [FromBody] UpdateMenuOptionRequest body,
         CancellationToken cancellationToken)
-        => Ok(await Mediator.Send(
+    {
+        await Mediator.Send(
             new UpdateMenuOptionCommand(
-                id,
-                body.Name,
-                body.Description,
-                body.ModuleId,
-                body.MenuGroupId,
-                body.Route,
-                body.Icon,
-                body.SortOrder,
-                body.Translations,
-                body.IsActive),
-            cancellationToken));
+                id, body.Name, body.Description, body.ModuleId, body.MenuGroupId,
+                body.Route, body.Icon, body.SortOrder, body.Translations, body.IsActive),
+            cancellationToken);
+        return NoContent();
+    }
 }
 
 // ── Request body DTO ──────────────────────────────────────────────────────────

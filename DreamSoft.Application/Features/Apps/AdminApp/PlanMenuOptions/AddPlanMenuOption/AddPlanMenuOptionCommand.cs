@@ -1,6 +1,5 @@
 using DreamSoft.Application.Common.Exceptions;
-using DreamSoft.Application.Common.Interfaces;
-using DreamSoft.Application.Features.Apps.AdminApp.PlanMenuOptions.GetPlanMenuOptions;
+using DreamSoft.Application.Features.Apps.AdminApp.PlanMenuOptions.DTOs;
 using DreamSoft.Domain.Entities;
 using DreamSoft.Domain.Repositories;
 using FluentValidation;
@@ -30,7 +29,7 @@ public class AddPlanMenuOptionCommandHandler(
             request.PlanId, cancellationToken);
 
         if (existingIds.Contains(request.MenuOptionId))
-            throw new ConflictException("PlanMenuOptionAlreadyExists",
+            throw new ConflictException(ErrorMessageKeys.PlanMenuOptionAlreadyExists,
                 $"Plan {request.PlanId} already includes menu option {request.MenuOptionId}");
 
         var entry = PlanMenuOption.Create(request.PlanId, request.MenuOptionId);

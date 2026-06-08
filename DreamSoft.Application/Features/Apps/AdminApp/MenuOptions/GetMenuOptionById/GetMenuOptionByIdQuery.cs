@@ -1,6 +1,6 @@
 using DreamSoft.Application.Common.Exceptions;
 using DreamSoft.Application.Common.Interfaces;
-using DreamSoft.Application.Features.Apps.AdminApp.MenuOptions.GetMenuOptions;
+using DreamSoft.Application.Features.Apps.AdminApp.MenuOptions.DTOs;
 using DreamSoft.Domain.Repositories;
 using MediatR;
 
