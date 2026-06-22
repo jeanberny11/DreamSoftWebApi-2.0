@@ -17,6 +17,9 @@ public class TenantGatewayMiddleware(
         "/api/v1/onboarding",
         "/swagger",
         "/health",
+        "/api/v1/landing/onboarding/checklist",
+        "/api/v1/landing/SendEmailVerificationCode",
+        "/api/v1/landing/VerifyEmail"
     ];
 
     private readonly JsonSerializerOptions _json = new()

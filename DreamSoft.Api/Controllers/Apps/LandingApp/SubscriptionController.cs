@@ -2,10 +2,12 @@ using DreamSoft.Application.Features.Apps.LandingApp.Subscription.CancelSubscrip
 using DreamSoft.Application.Features.Apps.LandingApp.Subscription.ChangePlan;
 using DreamSoft.Application.Features.Apps.LandingApp.Subscription.CreateSubscription;
 using DreamSoft.Application.Features.Apps.LandingApp.Subscription.RetryPayment;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DreamSoft.Api.Controllers.Apps.LandingApp;
 
+[Authorize(Policy = AuthPolicies.TenantOnly)]
 public class SubscriptionController : LandingControllerBase
 {
     // ── POST /api/v1/subscription/create ─────────────────────────────────────

@@ -9,7 +9,7 @@ namespace DreamSoft.Api.Controllers.Apps.LandingApp;
 [Route("api/v{version:apiVersion}/tenant-auth")]
 public class TenantAuthController : ApiControllerBase
 {
-    private const string RefreshTokenCookieName = "__Host-tenant_refresh_token";
+    private const string RefreshTokenCookieName = "tenant_refresh_token";
 
     /// <summary>
     /// Authenticates a tenant account owner with email and password.
@@ -69,7 +69,7 @@ public class TenantAuthController : ApiControllerBase
         {
             Secure   = true,
             HttpOnly = true,
-            SameSite = SameSiteMode.Strict,
+            SameSite = SameSiteMode.None,
             Path     = "/"
         });
 
@@ -84,7 +84,7 @@ public class TenantAuthController : ApiControllerBase
         {
             HttpOnly = true,
             Secure   = true,
-            SameSite = SameSiteMode.Strict,
+            SameSite = SameSiteMode.None,
             Path     = "/"
         };
 
@@ -117,8 +117,13 @@ public record LoginTenantClientResponse(
 public record RefreshTenantTokenClientResponse(
     string AccessToken,
     DateTime ExpiresAt,
-    int TenantId)
+    int TenantId,
+    string Email,
+    string FirstName,
+    string LastName,
+    string LogoUrl,
+    string TenantStatus)
 {
     public static RefreshTenantTokenClientResponse From(RefreshTenantTokenResponse r) =>
-        new(r.AccessToken, r.ExpiresAt, r.TenantId);
+        new(r.AccessToken, r.ExpiresAt, r.TenantId, r.Email, r.FirstName, r.LastName, r.LogoUrl, r.TenantStatus);
 }

@@ -9,4 +9,11 @@ public record RefreshTenantTokenResponse(
     string AccessToken,
     string RefreshToken,
     DateTime ExpiresAt,
-    int TenantId);
+    int TenantId,
+    string Email,
+    string FirstName,
+    string LastName,
+    string LogoUrl,
+    string TenantStatus,
+    bool EmailVerified,
+    bool OnboardingCompleted);

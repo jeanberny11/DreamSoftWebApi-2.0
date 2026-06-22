@@ -19,11 +19,10 @@ public class GetActiveLanguagesQueryHandler(
         var lang      = languageService.Resolve(request.Language);
         var languages = await languageRepository.GetAllActiveAsync(cancellationToken);
 
-        return languages
+        return [.. languages
             .Select(l => new LanguageDto(
                 l.Id, l.Code,
                 l.Translations.GetNameOrFallback(lang, l.Name),
-                l.IsDefault, l.IsActive))
-            .ToList();
+                l.IsDefault, l.IsActive))];
     }
 }

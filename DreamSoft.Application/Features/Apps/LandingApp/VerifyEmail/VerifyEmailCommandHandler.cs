@@ -86,6 +86,9 @@ public class VerifyEmailCommandHandler(
         }
         // ── Transaction complete ─────────────────────────────────────────────
 
-        return new VerifyEmailResponse(tenant.Id, tenant.Email);
+        return new VerifyEmailResponse(
+            Email:         tenant.Email,
+            EmailVerified: tenant.EmailVerified,
+            StatusCode:    tenant.Status.Code);
     }
 }

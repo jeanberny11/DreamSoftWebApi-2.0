@@ -57,9 +57,16 @@ public class RefreshTenantTokenCommandHandler(
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new RefreshTenantTokenResponse(
-            AccessToken: newAccessToken,
-            RefreshToken: newRawToken,
-            ExpiresAt: expiresAt,
-            TenantId: tokenEntity.Tenant.Id);
+            AccessToken:         newAccessToken,
+            RefreshToken:        newRawToken,
+            ExpiresAt:           expiresAt,
+            TenantId:            tokenEntity.Tenant.Id,
+            Email:               tokenEntity.Tenant.Email,
+            FirstName:           tokenEntity.Tenant.FirstName,
+            LastName:            tokenEntity.Tenant.LastName,
+            LogoUrl:             tokenEntity.Tenant.LogoUrl,
+            TenantStatus:        tokenEntity.Tenant.Status?.Code ?? string.Empty,
+            EmailVerified:       tokenEntity.Tenant.EmailVerified,
+            OnboardingCompleted: tokenEntity.Tenant.OnboardingCompleted);
     }
 }

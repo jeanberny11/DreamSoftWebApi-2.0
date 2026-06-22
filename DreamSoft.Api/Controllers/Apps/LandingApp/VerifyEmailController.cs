@@ -1,4 +1,6 @@
 using DreamSoft.Application.Features.Apps.LandingApp.VerifyEmail;
+using DreamSoft.Domain.Constants;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DreamSoft.Api.Controllers.Apps.LandingApp;
@@ -6,10 +8,11 @@ namespace DreamSoft.Api.Controllers.Apps.LandingApp;
 public class VerifyEmailController : LandingControllerBase
 {
     /// <summary>
-    /// Verify the email OTP. Pass the email used during registration and the
-    /// 6-digit code received by email. No Authorization header required.
-    /// Returns access + refresh tokens on success.
+    /// Verify the email OTP. Tenant is identified from the Bearer token.
+    /// Submits the 6-digit code received by email to complete verification.
+    /// Requires a valid tenant access token.
     /// </summary>
+    [Authorize(Policy = AuthPolicies.TenantOnly)]
     [HttpPost]
     [ProducesResponseType(typeof(VerifyEmailResponse), 200)]
     [ProducesResponseType(400)]

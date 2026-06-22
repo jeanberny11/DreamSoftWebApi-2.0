@@ -5,7 +5,8 @@ namespace DreamSoft.Application.Features.Apps.LandingApp.SendEmailVerificationCo
 public record SendEmailVerificationCodeResponse(
     string Email,
     bool Success,
-    string Message
+    string Message,
+    DateTime ExpiresAt
 );
 
 /// <summary>

@@ -52,10 +52,11 @@ public class SendEmailVerificationCodeCommandHandler(
         // 6. Generate new OTP and PBKDF2-hash it
         var plainCode = RandomNumberGenerator.GetInt32(100_000, 1_000_000).ToString();
         var codeHash  = passwordHasher.HashPassword(plainCode);
+        var expiresAt = DateTime.UtcNow.AddMinutes(10);
         var newToken  = TenantRegistrationToken.Create(
             tenantId:  tenant.Id,
             codeHash:  codeHash,
-            expiresAt: DateTime.UtcNow.AddHours(24));
+            expiresAt: expiresAt);
 
         await tokenRepository.AddAsync(newToken, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -65,6 +66,6 @@ public class SendEmailVerificationCodeCommandHandler(
         if (!emailResult.IsSuccess)
             throw new EmailSendException(emailResult.Error ?? "Unknown error");
 
-        return new SendEmailVerificationCodeResponse(tenant.Email, true, "Verification code sent successfully");
+        return new SendEmailVerificationCodeResponse(tenant.Email, true, "Verification code sent successfully", expiresAt);
     }
 }
