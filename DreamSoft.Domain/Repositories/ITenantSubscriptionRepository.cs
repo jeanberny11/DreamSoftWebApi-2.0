@@ -17,4 +17,14 @@ public interface ITenantSubscriptionRepository : IRepository<TenantSubscription>
     /// one session ID maps to exactly one subscription.
     /// </summary>
     Task<TenantSubscription?> GetByStripeSessionIdAsync(string stripeSessionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns all subscriptions for a tenant, excluding any subscription whose
+    /// status code matches <paramref name="excludedStatusCode"/>. Includes Solution,
+    /// SubscriptionPlan, PlanPrice.BillingCycle, and Status for projection.
+    /// </summary>
+    Task<IReadOnlyList<TenantSubscription>> GetByTenantExcludingStatusAsync(
+        int tenantId,
+        string excludedStatusCode,
+        CancellationToken cancellationToken = default);
 }

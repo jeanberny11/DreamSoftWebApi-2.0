@@ -18,4 +18,10 @@ public class TenantSubdomainRepository(ApplicationDbContext context)
 
     public async Task<bool> SubdomainExistsAsync(string subdomain, CancellationToken cancellationToken = default)
         => await _dbSet.AnyAsync(td => td.Subdomain == subdomain.ToLower().Trim(), cancellationToken);
+
+    public async Task<IReadOnlyList<TenantSubdomain>> GetByTenantIdAsync(
+        int tenantId, CancellationToken cancellationToken = default)
+        => await _dbSet
+            .Where(td => td.TenantId == tenantId)
+            .ToListAsync(cancellationToken);
 }

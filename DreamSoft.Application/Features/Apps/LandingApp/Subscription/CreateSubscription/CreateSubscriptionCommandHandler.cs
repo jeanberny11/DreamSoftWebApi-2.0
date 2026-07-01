@@ -24,6 +24,7 @@ public partial class CreateSubscriptionCommandHandler(
     IUserRepository userRepository,
     IPaymentGateway paymentGateway,
     IPaymentSettings paymentSettings,
+    ICurrentTenantService currentTenantService,
     IUnitOfWork unitOfWork)
     : IRequestHandler<CreateSubscriptionCommand, CreateSubscriptionResponse>
 {
@@ -31,9 +32,12 @@ public partial class CreateSubscriptionCommandHandler(
         CreateSubscriptionCommand request,
         CancellationToken cancellationToken)
     {
+        var tenantId = currentTenantService.TenantId
+            ?? throw new UnauthorizedException("Unauthorized");
+
         // 1. Validate tenant exists
-        var tenant = await tenantRepository.GetByIdAsync(request.TenantId, cancellationToken)
-            ?? throw new NotFoundException("TenantNotFound", request.TenantId);
+        var tenant = await tenantRepository.GetByIdAsync(tenantId, cancellationToken)
+            ?? throw new NotFoundException("TenantNotFound", tenantId);
 
         // 2. Validate plan exists
         var plan = await subscriptionPlanRepository.GetByIdAsync(request.PlanId, cancellationToken)
@@ -44,7 +48,7 @@ public partial class CreateSubscriptionCommandHandler(
 
         // 3. Ensure the tenant does not already have a subscription for this solution
         var alreadySubscribed = await tenantSubscriptionRepository.ExistsForTenantAndSolutionAsync(
-            request.TenantId, plan.SolutionId, cancellationToken);
+            tenantId, plan.SolutionId, cancellationToken);
 
         if (alreadySubscribed)
             throw new ConflictException("TenantAlreadySubscribedToSolution");
@@ -75,7 +79,7 @@ public partial class CreateSubscriptionCommandHandler(
             : null;
 
         var subscription = TenantSubscription.Create(
-            tenantId:           request.TenantId,
+            tenantId:           tenantId,
             solutionId:         plan.SolutionId,
             subscriptionPlanId: request.PlanId,
             planPriceId:        request.PlanPriceId,
@@ -86,8 +90,8 @@ public partial class CreateSubscriptionCommandHandler(
         await tenantSubscriptionRepository.AddAsync(subscription, cancellationToken);
 
         // 8. Create the subdomain based on the tenant's company name
-        var subdomain = await BuildUniqueSubdomainAsync(tenant.CompanyName, request.TenantId, cancellationToken);
-        var tenantSubdomain = TenantSubdomain.Create(request.TenantId, plan.SolutionId, subdomain);
+        var subdomain = await BuildUniqueSubdomainAsync(tenant.CompanyName, tenantId, cancellationToken);
+        var tenantSubdomain = TenantSubdomain.Create(tenantId, plan.SolutionId, subdomain);
         await tenantSubdomainRepository.AddAsync(tenantSubdomain, cancellationToken);
 
         // 9. Create the default admin role for this subscription
@@ -99,7 +103,7 @@ public partial class CreateSubscriptionCommandHandler(
             BaseTranslatedProperties.Create("Administrator", "System administrator role"));
 
         var adminRole = Role.Create(
-            tenantId:       request.TenantId,
+            tenantId:       tenantId,
             solutionId:     plan.SolutionId,
             code:           RoleCodes.Admin,
             name:           "Administrator",
@@ -118,7 +122,7 @@ public partial class CreateSubscriptionCommandHandler(
 
             // 10. Create the admin user and assign the admin role
             var adminUser = User.Create(
-                tenantId:     request.TenantId,
+                tenantId:     tenantId,
                 solutionId:   plan.SolutionId,
                 username:     tenant.Email,
                 email:        tenant.Email,
@@ -161,7 +165,7 @@ public partial class CreateSubscriptionCommandHandler(
 
         // 13. Create or retrieve the Stripe customer and persist the ID on the tenant
         var gatewayCustomerId = await paymentGateway.CreateOrGetCustomerAsync(
-            tenantId:    request.TenantId,
+            tenantId:    tenantId,
             email:       tenant.Email,
             companyName: tenant.CompanyName,
             ct:          cancellationToken);
@@ -178,7 +182,7 @@ public partial class CreateSubscriptionCommandHandler(
             new CheckoutRequest(
                 GatewayCustomerId: gatewayCustomerId,
                 GatewayPriceId:    planPrice.StripePriceId,
-                TenantId:          request.TenantId,
+                TenantId:          tenantId,
                 TrialDays:         plan.TrialDays,
                 SuccessUrl:        paymentSettings.SuccessUrl,
                 CancelUrl:         paymentSettings.CancelUrl),

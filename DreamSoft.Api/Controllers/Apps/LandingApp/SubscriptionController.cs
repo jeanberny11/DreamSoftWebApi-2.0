@@ -1,6 +1,7 @@
 using DreamSoft.Application.Features.Apps.LandingApp.Subscription.CancelSubscription;
 using DreamSoft.Application.Features.Apps.LandingApp.Subscription.ChangePlan;
 using DreamSoft.Application.Features.Apps.LandingApp.Subscription.CreateSubscription;
+using DreamSoft.Application.Features.Apps.LandingApp.Subscription.GetSubscriptions;
 using DreamSoft.Application.Features.Apps.LandingApp.Subscription.RetryPayment;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +11,23 @@ namespace DreamSoft.Api.Controllers.Apps.LandingApp;
 [Authorize(Policy = AuthPolicies.TenantOnly)]
 public class SubscriptionController : LandingControllerBase
 {
+    // ── GET /api/v1/landing/subscription ─────────────────────────────────────
+
+    /// <summary>
+    /// Returns the authenticated tenant's subscriptions across all solutions,
+    /// excluding cancelled ones.
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType(typeof(IReadOnlyList<TenantSubscriptionDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetAll(
+        [FromQuery] string? language,
+        CancellationToken cancellationToken)
+    {
+        var result = await Mediator.Send(new GetSubscriptionsQuery(language), cancellationToken);
+        return Ok(result);
+    }
+
     // ── POST /api/v1/subscription/create ─────────────────────────────────────
 
     /// <summary>

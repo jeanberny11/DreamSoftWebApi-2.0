@@ -1,5 +1,6 @@
 using DreamSoft.Application.Common.Exceptions;
 using DreamSoft.Application.Common.Interfaces;
+using DreamSoft.Application.Features.Apps.LandingApp.TenantAuth.Dtos;
 using DreamSoft.Domain.Constants;
 using DreamSoft.Domain.Entities;
 using DreamSoft.Domain.Repositories;
@@ -17,9 +18,9 @@ public class RegisterTenantCommandHandler(
     ITokenService tokenService,
     ICurrentTenantService currentTenantService,
     IDateTime dateTime)
-    : IRequestHandler<RegisterTenantCommand, RegisterTenantResponse>
+    : IRequestHandler<RegisterTenantCommand, TenantAuthResponse>
 {
-    public async Task<RegisterTenantResponse> Handle(
+    public async Task<TenantAuthResponse> Handle(
         RegisterTenantCommand request,
         CancellationToken cancellationToken)
     {
@@ -93,7 +94,7 @@ public class RegisterTenantCommandHandler(
         await refreshTokenRepository.AddAsync(refreshTokenEntity, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new RegisterTenantResponse(
+        return new TenantAuthResponse(
             AccessToken: accessToken,
             RefreshToken: rawToken,
             ExpiresAt: expiresAt,
@@ -102,6 +103,8 @@ public class RegisterTenantCommandHandler(
             FirstName: tenant.FirstName,
             LastName: tenant.LastName,
             LogoUrl: tenant.LogoUrl,
-            TenantStatus: TenantStatusCodes.PendingEmailVerification);
+            OnboardingCompleted: tenant.OnboardingCompleted,
+            EmailVerified: tenant.EmailVerified,
+            TenantStatusCode: TenantStatusCodes.PendingEmailVerification);
     }
 }

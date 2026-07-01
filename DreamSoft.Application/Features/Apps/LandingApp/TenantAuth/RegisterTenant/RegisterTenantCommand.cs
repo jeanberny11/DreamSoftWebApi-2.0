@@ -1,3 +1,4 @@
+using DreamSoft.Application.Features.Apps.LandingApp.TenantAuth.Dtos;
 using MediatR;
 
 namespace DreamSoft.Application.Features.Apps.LandingApp.Registration.RegisterTenant;
@@ -10,15 +11,4 @@ public record RegisterTenantCommand(
     string Password,
     string? TermsVersion,
     bool AcceptTerms
-) : IRequest<RegisterTenantResponse>;
-
-public record RegisterTenantResponse(
-    string AccessToken,
-    string RefreshToken,
-    DateTime ExpiresAt,
-    int TenantId,
-    string Email,
-     string FirstName,
-    string LastName,
-    string LogoUrl,
-    string TenantStatus);
+) : IRequest<TenantAuthResponse>;

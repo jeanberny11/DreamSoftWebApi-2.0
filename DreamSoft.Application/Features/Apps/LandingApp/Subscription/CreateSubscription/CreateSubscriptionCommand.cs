@@ -3,7 +3,6 @@ using MediatR;
 namespace DreamSoft.Application.Features.Apps.LandingApp.Subscription.CreateSubscription;
 
 public record CreateSubscriptionCommand(
-    int TenantId,
     int PlanId,
     int PlanPriceId
 ) : IRequest<CreateSubscriptionResponse>;

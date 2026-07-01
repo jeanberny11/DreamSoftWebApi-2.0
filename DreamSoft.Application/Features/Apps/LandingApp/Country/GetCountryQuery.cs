@@ -6,5 +6,8 @@ public record GetCountryQuery(string? Language = null) : IRequest<List<GetCountr
 
 public record GetCountryResponse(
     int CountryId,
-    string Code, string Name,
-    string IsoCode, string PhoneCode);
+    string Code,
+    string Name,
+    string IsoCode,
+    string PhoneCode
+);

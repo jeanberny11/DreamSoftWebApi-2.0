@@ -6,6 +6,7 @@ public record GetSolutionByCodeQuery(string Code, string? Language = null)
     : IRequest<GetSolutionByCodeResponse>;
 
 public record GetSolutionByCodeResponse(
+    int SolutionId,
     string Code,
     string Name,
     string Description,
@@ -13,6 +14,7 @@ public record GetSolutionByCodeResponse(
     List<SolutionPlan> Plans);
 
 public record SolutionPlan(
+    int PlanId,
     string Code,
     string Name,
     string Description,
@@ -36,6 +38,7 @@ public record PlanLimit(
 );
 
 public record PlanOption(
+    int OptionId,
     string Code,
     string Name,
     string Description,

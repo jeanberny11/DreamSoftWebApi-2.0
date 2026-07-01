@@ -1,5 +1,6 @@
 using DreamSoft.Application.Common.Exceptions;
 using DreamSoft.Application.Common.Interfaces;
+using DreamSoft.Application.Features.Apps.LandingApp.TenantAuth.Dtos;
 using DreamSoft.Domain.Constants;
 using DreamSoft.Domain.Entities;
 using DreamSoft.Domain.Repositories;
@@ -15,12 +16,12 @@ public class LoginTenantCommandHandler(
     IPasswordHasher passwordHasher,
     ITokenService tokenService,
     IDateTime dateTime)
-    : IRequestHandler<LoginTenantCommand, LoginTenantResponse>
+    : IRequestHandler<LoginTenantCommand, TenantAuthResponse>
 {
     private const int DefaultRefreshTokenExpiryDays  = 7;
     private const int ExtendedRefreshTokenExpiryDays = 30;
 
-    public async Task<LoginTenantResponse> Handle(
+    public async Task<TenantAuthResponse> Handle(
         LoginTenantCommand request,
         CancellationToken cancellationToken)
     {
@@ -85,7 +86,7 @@ public class LoginTenantCommandHandler(
         await refreshTokenRepository.AddAsync(refreshTokenEntity, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new LoginTenantResponse(
+        return new TenantAuthResponse(
             AccessToken:        accessToken,
             RefreshToken:       rawToken,
             ExpiresAt:          expiresAt,
@@ -96,6 +97,6 @@ public class LoginTenantCommandHandler(
             LogoUrl:            tenant.LogoUrl,
             OnboardingCompleted: tenant.OnboardingCompleted,
             EmailVerified:      tenant.EmailVerified,
-            StatusCode:         tenant.Status.Code);
+            TenantStatusCode:         tenant.Status.Code);
     }
 }

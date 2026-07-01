@@ -17,6 +17,7 @@ public class GetSolutionByCodeQueryHandler(ISolutionRepository solutionRepositor
             ?? throw new NotFoundException(ErrorMessageKeys.NotFound, "Solution", request.Code);
 
         var plans = solution.SubscriptionPlans.Select(sp => new SolutionPlan(
+            sp.Id,
             sp.Code,
             sp.Translations.GetNameOrFallback(language, sp.Name),
             sp.Translations.GetDescriptionOrFallback(language, sp.Description),
@@ -25,6 +26,7 @@ public class GetSolutionByCodeQueryHandler(ISolutionRepository solutionRepositor
             [..sp.PlanPrices.Select(pp => new PlanPrice(pp.BillingCycle.Code, pp.BillingCycle.Name, pp.Price))],
             [..sp.PlanLimits.Select(pl => new PlanLimit(pl.LimitKey, (int)pl.LimitValue, pl.Description))],
             [..sp.PlanMenuOptions.Select(pmo => new PlanOption(
+                pmo.MenuOption.Id,
                 pmo.MenuOption.Code,
                 pmo.MenuOption.Translations.GetNameOrFallback(language, pmo.MenuOption.Name),
                 pmo.MenuOption.Translations.GetDescriptionOrFallback(language, pmo.MenuOption.Description),
@@ -38,6 +40,7 @@ public class GetSolutionByCodeQueryHandler(ISolutionRepository solutionRepositor
         )).ToList();
 
         return new GetSolutionByCodeResponse(
+            solution.Id,
             solution.Code,
             solution.Translations.GetNameOrFallback(language, solution.Name),
             solution.Translations.GetDescriptionOrFallback(language, solution.Description),

@@ -1,4 +1,3 @@
-using DreamSoft.Application.Features.Apps.LandingApp.Onboarding.CompleteOnboarding;
 using DreamSoft.Application.Features.Apps.LandingApp.Onboarding.GetOnboardingChecklist;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,26 +18,6 @@ public class OnboardingController : LandingControllerBase
     public async Task<IActionResult> GetChecklist(CancellationToken cancellationToken)
     {
         var result = await Mediator.Send(new GetOnboardingChecklistQuery(), cancellationToken);
-        return Ok(result);
-    }
-
-    /// <summary>
-    /// Completes the onboarding wizard by saving the tenant's company profile,
-    /// address, language preference, and terms acceptance.
-    /// Sets OnboardingCompleted = true and redirects to /subscribe.
-    /// Requires tenant status: PENDING_SUBSCRIPTION with OnboardingCompleted = false.
-    /// </summary>
-    [HttpPost("complete")]
-    [ProducesResponseType(typeof(CompleteOnboardingResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Complete(
-        [FromBody] CompleteOnboardingCommand command,
-        CancellationToken cancellationToken)
-    {
-        var result = await Mediator.Send(command, cancellationToken);
         return Ok(result);
     }
 }

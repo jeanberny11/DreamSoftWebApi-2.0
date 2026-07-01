@@ -1,3 +1,5 @@
+using DreamSoft.Application.Features.Apps.LandingApp.Registration.RegisterTenant;
+using DreamSoft.Application.Features.Apps.LandingApp.TenantAuth.Dtos;
 using DreamSoft.Application.Features.Apps.LandingApp.TenantAuth.LoginTenant;
 using DreamSoft.Application.Features.Apps.LandingApp.TenantAuth.LogoutTenant;
 using DreamSoft.Application.Features.Apps.LandingApp.TenantAuth.RefreshTenantToken;
@@ -6,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace DreamSoft.Api.Controllers.Apps.LandingApp;
 
-[Route("api/v{version:apiVersion}/tenant-auth")]
+[Route("api/v{version:apiVersion}/landing/tenant-auth")]
 public class TenantAuthController : ApiControllerBase
 {
     private const string RefreshTokenCookieName = "tenant_refresh_token";
@@ -18,7 +20,7 @@ public class TenantAuthController : ApiControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpPost("login")]
-    [ProducesResponseType(typeof(LoginTenantClientResponse), 200)]
+    [ProducesResponseType(typeof(TenantAuthClientResponse), 200)]
     [ProducesResponseType(400)]
     [ProducesResponseType(401)]
     [ProducesResponseType(403)]
@@ -28,7 +30,7 @@ public class TenantAuthController : ApiControllerBase
     {
         var result = await Mediator.Send(command, cancellationToken);
         SetRefreshTokenCookie(result.RefreshToken, command.RememberMe);
-        return Ok(LoginTenantClientResponse.From(result));
+        return Ok(TenantAuthClientResponse.From(result));
     }
 
     /// <summary>
@@ -38,7 +40,7 @@ public class TenantAuthController : ApiControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpPost("refresh")]
-    [ProducesResponseType(typeof(RefreshTenantTokenResponse), 200)]
+    [ProducesResponseType(typeof(TenantAuthClientResponse), 200)]
     [ProducesResponseType(401)]
     public async Task<IActionResult> Refresh(CancellationToken cancellationToken)
     {
@@ -48,7 +50,7 @@ public class TenantAuthController : ApiControllerBase
 
         var result = await Mediator.Send(new RefreshTenantTokenCommand(rawToken), cancellationToken);
         SetRefreshTokenCookie(result.RefreshToken, persistent: false);
-        return Ok(RefreshTenantTokenClientResponse.From(result));
+        return Ok(TenantAuthClientResponse.From(result));
     }
 
     /// <summary>
@@ -76,6 +78,25 @@ public class TenantAuthController : ApiControllerBase
         return NoContent();
     }
 
+    
+    /// <summary>
+    /// Register a new tenant. Issues an access token and refresh token cookie
+    /// immediately so the client is authenticated without a separate login call.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpPost("register")]
+    [ProducesResponseType(typeof(TenantAuthClientResponse), 201)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(409)]
+    public async Task<IActionResult> Register(
+        [FromBody] RegisterTenantCommand command,
+        CancellationToken cancellationToken)
+    {
+        var result = await Mediator.Send(command, cancellationToken);
+        SetRefreshTokenCookie(result.RefreshToken, persistent: false);
+        return StatusCode(201, TenantAuthClientResponse.From(result));
+    }
+
     // ── Cookie helpers ───────────────────────────────────────────────────────
 
     private void SetRefreshTokenCookie(string token, bool persistent)
@@ -97,7 +118,7 @@ public class TenantAuthController : ApiControllerBase
 
 // ── DTOs ─────────────────────────────────────────────────────────────────────
 
-public record LoginTenantClientResponse(
+public record TenantAuthClientResponse(
     string AccessToken,
     DateTime ExpiresAt,
     int TenantId,
@@ -107,23 +128,8 @@ public record LoginTenantClientResponse(
     string LogoUrl,
     bool OnboardingCompleted,
     bool EmailVerified,
-    string TenantStatus)
+    string TenantStatusCode)
 {
-    public static LoginTenantClientResponse From(LoginTenantResponse r) =>
-        new(r.AccessToken, r.ExpiresAt, r.TenantId, r.Email, r.FirstName, r.LastName, r.LogoUrl, r.OnboardingCompleted, r.EmailVerified, r.StatusCode);
-}
-
-
-public record RefreshTenantTokenClientResponse(
-    string AccessToken,
-    DateTime ExpiresAt,
-    int TenantId,
-    string Email,
-    string FirstName,
-    string LastName,
-    string LogoUrl,
-    string TenantStatus)
-{
-    public static RefreshTenantTokenClientResponse From(RefreshTenantTokenResponse r) =>
-        new(r.AccessToken, r.ExpiresAt, r.TenantId, r.Email, r.FirstName, r.LastName, r.LogoUrl, r.TenantStatus);
+    public static TenantAuthClientResponse From(TenantAuthResponse r) =>
+        new(r.AccessToken, r.ExpiresAt, r.TenantId, r.Email, r.FirstName, r.LastName, r.LogoUrl, r.OnboardingCompleted, r.EmailVerified, r.TenantStatusCode);
 }

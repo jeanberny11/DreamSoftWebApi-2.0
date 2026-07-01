@@ -44,4 +44,16 @@ public class TenantSubscriptionRepository(ApplicationDbContext context)
             .Include(ts => ts.PlanPrice).ThenInclude(pp => pp.BillingCycle)
             .Include(ts => ts.Status)
             .FirstOrDefaultAsync(ts => ts.StripeSessionId == stripeSessionId, cancellationToken);
+
+    public async Task<IReadOnlyList<TenantSubscription>> GetByTenantExcludingStatusAsync(
+        int tenantId,
+        string excludedStatusCode,
+        CancellationToken cancellationToken = default)
+        => await _dbSet
+            .Include(ts => ts.Solution)
+            .Include(ts => ts.SubscriptionPlan).ThenInclude(sp => sp.Translations)
+            .Include(ts => ts.PlanPrice).ThenInclude(pp => pp.BillingCycle).ThenInclude(bc => bc.Translations)
+            .Include(ts => ts.Status)
+            .Where(ts => ts.TenantId == tenantId && ts.Status.Code != excludedStatusCode)
+            .ToListAsync(cancellationToken);
 }

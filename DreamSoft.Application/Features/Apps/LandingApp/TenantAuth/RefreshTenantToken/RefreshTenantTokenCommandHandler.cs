@@ -5,6 +5,7 @@ using DreamSoft.Domain.Entities;
 using DreamSoft.Domain.Repositories;
 using DreamSoft.Application.Features.Apps.LandingApp.TenantAuth.LoginTenant;
 using MediatR;
+using DreamSoft.Application.Features.Apps.LandingApp.TenantAuth.Dtos;
 
 namespace DreamSoft.Application.Features.Apps.LandingApp.TenantAuth.RefreshTenantToken;
 
@@ -14,9 +15,9 @@ public class RefreshTenantTokenCommandHandler(
     ICurrentTenantService currentTenantService,
     ITokenService tokenService,
     IDateTime dateTime)
-    : IRequestHandler<RefreshTenantTokenCommand, RefreshTenantTokenResponse>
+    : IRequestHandler<RefreshTenantTokenCommand, TenantAuthResponse>
 {
-    public async Task<RefreshTenantTokenResponse> Handle(
+    public async Task<TenantAuthResponse> Handle(
         RefreshTenantTokenCommand request,
         CancellationToken cancellationToken)
     {
@@ -56,7 +57,7 @@ public class RefreshTenantTokenCommandHandler(
         await refreshTokenRepository.AddAsync(newTokenEntity, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new RefreshTenantTokenResponse(
+        return new TenantAuthResponse(
             AccessToken:         newAccessToken,
             RefreshToken:        newRawToken,
             ExpiresAt:           expiresAt,
@@ -65,7 +66,7 @@ public class RefreshTenantTokenCommandHandler(
             FirstName:           tokenEntity.Tenant.FirstName,
             LastName:            tokenEntity.Tenant.LastName,
             LogoUrl:             tokenEntity.Tenant.LogoUrl,
-            TenantStatus:        tokenEntity.Tenant.Status?.Code ?? string.Empty,
+            TenantStatusCode:        tokenEntity.Tenant.Status?.Code ?? string.Empty,
             EmailVerified:       tokenEntity.Tenant.EmailVerified,
             OnboardingCompleted: tokenEntity.Tenant.OnboardingCompleted);
     }

@@ -158,6 +158,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddTransient<IConfigureOptions<SwaggerGenOptions>, DreamSoft.Api.Swagger.ConfigureSwaggerOptions>();
 builder.Services.AddSwaggerGen(options =>
 {
+    options.CustomSchemaIds(type => type.FullName?.Replace("+", "."));
+
     options.AddSecurityDefinition("TenantBearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
