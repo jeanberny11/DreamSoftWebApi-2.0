@@ -1,30 +1,6 @@
-namespace DreamSoft.Application.Features.Apps.LandingApp.LandingPage.AppFeatures.GetAllFeatures;
+using DreamSoft.Application.Features.Apps.LandingApp.LandingPage.Dtos;
 using MediatR;
 
-public record FeatureOption(
-    string Code,
-    string Name,
-    string Description,
-    string Icon,
-    int SortOrder
-);
+namespace DreamSoft.Application.Features.Apps.LandingApp.LandingPage.AppFeatures.GetAllFeatures;
 
-public record FeatureGroup(
-    string Code,
-    string Name,
-    string Description,
-    string Icon,
-    int SortOrder,
-    List<FeatureOption> Options
-);
-
-public record Feature(
-    string Code,
-    string Name,
-    string Description,
-    string Icon,
-    int SortOrder,
-    List<FeatureGroup> Groups
-);
-
-public record GetAllFeaturesQuery(string? Language = null) : IRequest<List<Feature>>;
+public record GetAllFeaturesQuery(string? Language = null) : IRequest<List<ModuleDto>>;

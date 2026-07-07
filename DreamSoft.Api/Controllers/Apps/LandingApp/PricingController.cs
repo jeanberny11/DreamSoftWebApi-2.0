@@ -1,3 +1,4 @@
+using DreamSoft.Application.Features.Apps.LandingApp.LandingPage.Dtos;
 using DreamSoft.Application.Features.Apps.LandingApp.LandingPage.Pricing;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,7 +9,7 @@ public class PricingController : LandingControllerBase
 {
     [HttpGet]
     [AllowAnonymous]
-    [ProducesResponseType(typeof(List<PricingResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(List<SolutionDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> GetPricing(
