@@ -28,7 +28,23 @@ public record CreateCheckoutResult(
 public record ChangePlanRequest(
     string GatewaySubscriptionId,
     string NewGatewayPriceId,
-    bool ProrationImmediate     // true = charge/credit immediately, false = next billing date
+    bool ProrationImmediate,    // true = charge/credit immediately, false = next billing date
+    // When set, pins the actual charge to match a previously shown preview
+    // exactly (Stripe's own recommendation — see PreviewPlanChangeAsync).
+    DateTime? ProrationDate = null
+);
+
+/// <summary>
+/// Result of previewing a plan change before committing it.
+/// ProrationDate MUST be echoed back on the subsequent ChangePlanRequest so
+/// the real charge matches this preview exactly.
+/// </summary>
+public record PlanChangePreviewResult(
+    decimal CreditAmount,   // unused-time credit on the current price; ≤ 0
+    decimal ChargeAmount,   // prorated charge for the new price; ≥ 0
+    decimal AmountDueNow,   // net total Stripe would actually charge today
+    string Currency,
+    DateTime ProrationDate
 );
 
 /// <summary>
@@ -62,7 +78,9 @@ public record PaymentWebhookEvent(
     string? HostedInvoiceUrl,
     string? InvoicePdfUrl,
     string? InvoiceNumber,
-    string? BillingReason
+    string? BillingReason,
+    string? GatewayPaymentIntentId = null,  // Stripe PaymentIntent — the actual charge attempt
+    decimal? AmountDue = null               // invoice amount_due — known even when payment fails
 );
 
 // ── Interface ─────────────────────────────────────────────────────────────────
@@ -102,12 +120,33 @@ public interface IPaymentGateway
         CancellationToken ct = default);
 
     /// <summary>
+    /// Previews the invoice Stripe would generate for a plan change, without
+    /// applying it or creating any real invoice. No trial parameters are
+    /// ever sent — omitting trial_end preserves any remaining trial days on
+    /// the subscription untouched (Stripe only resets billing when a trial
+    /// explicitly starts or ends).
+    /// </summary>
+    Task<PlanChangePreviewResult> PreviewPlanChangeAsync(
+        string gatewaySubscriptionId,
+        string newGatewayPriceId,
+        bool prorationImmediate,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// Cancels a subscription. If immediate is false the subscription remains
     /// active until the end of the current billing period.
     /// </summary>
     Task CancelSubscriptionAsync(
         string gatewaySubscriptionId,
         bool immediate,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Reverts a pending period-end cancellation, keeping the subscription
+    /// active and renewing. No-op semantics if nothing was scheduled.
+    /// </summary>
+    Task ResumeSubscriptionAsync(
+        string gatewaySubscriptionId,
         CancellationToken ct = default);
 
     /// <summary>

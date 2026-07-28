@@ -16,9 +16,9 @@ public class StripeSettings : IPaymentSettings
     /// <summary>Webhook signing secret from the Stripe dashboard (whsec_...).</summary>
     public string WebhookSecret { get; set; } = string.Empty;
 
-    /// <summary>Frontend URL Stripe redirects to after a successful payment.</summary>
-    public string SuccessUrl { get; set; } = string.Empty;
-
-    /// <summary>Frontend URL Stripe redirects to when the user cancels checkout.</summary>
-    public string CancelUrl { get; set; } = string.Empty;
+    /// <summary>
+    /// Base URL of the frontend app, no trailing slash. Success/cancel
+    /// redirect URLs are composed per-request by the command handlers.
+    /// </summary>
+    public string FrontendBaseUrl { get; set; } = string.Empty;
 }

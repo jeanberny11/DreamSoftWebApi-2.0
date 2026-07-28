@@ -177,15 +177,23 @@ public partial class CreateSubscriptionCommandHandler(
             await unitOfWork.SaveChangesAsync(cancellationToken);
         }
 
-        // 14. Create the Stripe hosted checkout session
+        // 14. Create the Stripe hosted checkout session.
+        // URLs are composed per-request: success returns to the subscriptions
+        // list carrying the session ID; cancel returns to the exact checkout
+        // page the user left, ready to retry.
+        var successUrl =
+            $"{paymentSettings.FrontendBaseUrl}/account/subscriptions?checkout=success&session_id={{CHECKOUT_SESSION_ID}}";
+        var cancelUrl =
+            $"{paymentSettings.FrontendBaseUrl}/account/subscriptions/new/checkout?planId={request.PlanId}&planPriceId={request.PlanPriceId}&checkout=cancelled";
+
         var checkoutResult = await paymentGateway.CreateCheckoutSessionAsync(
             new CheckoutRequest(
                 GatewayCustomerId: gatewayCustomerId,
                 GatewayPriceId:    planPrice.StripePriceId,
                 TenantId:          tenantId,
                 TrialDays:         plan.TrialDays,
-                SuccessUrl:        paymentSettings.SuccessUrl,
-                CancelUrl:         paymentSettings.CancelUrl),
+                SuccessUrl:        successUrl,
+                CancelUrl:         cancelUrl),
             ct: cancellationToken);
 
         // 15. Stamp the StripeSessionId on the subscription so the webhook can

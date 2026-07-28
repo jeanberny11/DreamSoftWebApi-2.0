@@ -68,6 +68,8 @@ public static class ErrorMessageKeys
     /// <summary>Requires {0} = subscription id.</summary>
     public const string SubscriptionNotFound  = "SubscriptionNotFound";
     public const string SubscriptionNotActive = "SubscriptionNotActive";
+    /// <summary>Requires {0} = Stripe invoice id.</summary>
+    public const string InvoiceNotFound       = "InvoiceNotFound";
 
     // ── Subscription login-gate states ──────────────────────────────────────
     public const string SubscriptionPastDue       = "SubscriptionPastDue";

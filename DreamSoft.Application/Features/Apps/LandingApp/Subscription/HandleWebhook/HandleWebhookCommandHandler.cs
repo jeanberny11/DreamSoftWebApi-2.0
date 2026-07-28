@@ -145,6 +145,10 @@ public class HandleWebhookCommandHandler(
             if (!string.IsNullOrWhiteSpace(webhookEvent.GatewaySubscriptionId))
                 subscription.SetStripeSubscriptionId(webhookEvent.GatewaySubscriptionId);
 
+            // Align dates with the real activation moment — Stripe's trial/billing
+            // clock starts now, not at local record creation (OPEN-11 drift fix)
+            subscription.SyncActivationDates(DateTime.UtcNow, plan.TrialDays);
+
             subscription.UpdateStatus(targetStatus.Id);
             await tenantSubscriptionRepository.UpdateAsync(subscription, cancellationToken);
 
@@ -322,16 +326,34 @@ public class HandleWebhookCommandHandler(
                 billingReason:    webhookEvent.BillingReason);
             await subscriptionInvoiceRepository.UpdateAsync(invoice, cancellationToken);
 
-            var payment = SubscriptionPayment.Create(
-                subscriptionInvoiceId: invoice.Id,
-                tenantId:              subscription.TenantId,
-                amount:                webhookEvent.AmountPaid ?? 0m,
-                currency:              webhookEvent.Currency ?? "USD",
-                status:                "paid",
-                paymentDate:           paidAt,
-                stripePaymentId:       webhookEvent.GatewayInvoiceId);
+            // Record the successful payment attempt.
+            // StripePaymentId = the PaymentIntent (the actual charge attempt),
+            // falling back to the invoice ID for older/edge payloads.
+            var paymentRef = webhookEvent.GatewayPaymentIntentId ?? webhookEvent.GatewayInvoiceId;
 
-            await subscriptionPaymentRepository.AddAsync(payment, cancellationToken);
+            var isDuplicatePayment = paymentRef is not null &&
+                await subscriptionPaymentRepository.ExistsByStripePaymentIdAndStatusAsync(
+                    paymentRef, "paid", cancellationToken);
+
+            if (!isDuplicatePayment)
+            {
+                var payment = SubscriptionPayment.Create(
+                    subscriptionInvoiceId: invoice.Id,
+                    tenantId:              subscription.TenantId,
+                    amount:                webhookEvent.AmountPaid ?? 0m,
+                    currency:              webhookEvent.Currency ?? "USD",
+                    status:                "paid",
+                    paymentDate:           paidAt,
+                    stripePaymentId:       paymentRef);
+
+                await subscriptionPaymentRepository.AddAsync(payment, cancellationToken);
+            }
+            else
+            {
+                logger.LogWarning(
+                    "Webhook invoice.paid: payment {PaymentRef} already recorded as paid, skipping duplicate row.",
+                    paymentRef);
+            }
 
             // Restore PAST_DUE subscriptions to ACTIVE on successful renewal
             if (subscription.Status?.Code == SubscriptionStatusCodes.PastDue)
@@ -412,17 +434,53 @@ public class HandleWebhookCommandHandler(
             subscription.UpdateStatus(pastDueStatus.Id);
             await tenantSubscriptionRepository.UpdateAsync(subscription, cancellationToken);
 
+            // Locate — or create — the local invoice for this failed attempt.
+            // Renewal failures can arrive before any local invoice exists
+            // (invoices were previously only created on invoice.paid).
+            SubscriptionInvoice? invoice = null;
+
             if (!string.IsNullOrWhiteSpace(webhookEvent.GatewayInvoiceId))
             {
-                var invoice = await subscriptionInvoiceRepository
+                invoice = await subscriptionInvoiceRepository
                     .GetByStripeInvoiceIdAsync(webhookEvent.GatewayInvoiceId, cancellationToken);
-
-                if (invoice is not null)
-                {
-                    invoice.MarkAsFailed();
-                    await subscriptionInvoiceRepository.UpdateAsync(invoice, cancellationToken);
-                }
             }
+
+            if (invoice is null)
+            {
+                invoice = SubscriptionInvoice.Create(
+                    tenantId:             subscription.TenantId,
+                    tenantSubscriptionId: subscription.Id,
+                    amount:               webhookEvent.AmountDue ?? 0m,
+                    currency:             webhookEvent.Currency ?? "USD",
+                    dueDate:              DateTime.UtcNow,
+                    stripeInvoiceId:      webhookEvent.GatewayInvoiceId);
+
+                invoice.MarkAsFailed();
+                await subscriptionInvoiceRepository.AddAsync(invoice, cancellationToken);
+                await unitOfWork.SaveChangesAsync(cancellationToken); // materialize invoice.Id
+            }
+            else
+            {
+                invoice.MarkAsFailed();
+                await subscriptionInvoiceRepository.UpdateAsync(invoice, cancellationToken);
+            }
+
+            // Record the failed payment attempt — full audit trail:
+            // every Stripe retry fires its own invoice.payment_failed and
+            // therefore produces its own history row.
+            var paymentRef = webhookEvent.GatewayPaymentIntentId ?? webhookEvent.GatewayInvoiceId;
+
+            var failedPayment = SubscriptionPayment.Create(
+                subscriptionInvoiceId: invoice.Id,
+                tenantId:              subscription.TenantId,
+                amount:                webhookEvent.AmountDue ?? 0m,
+                currency:              webhookEvent.Currency ?? "USD",
+                status:                "failed",
+                paymentDate:           DateTime.UtcNow,
+                stripePaymentId:       paymentRef,
+                failureReason:         webhookEvent.FailureReason);
+
+            await subscriptionPaymentRepository.AddAsync(failedPayment, cancellationToken);
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
             await unitOfWork.CommitTransactionAsync(cancellationToken);
@@ -434,7 +492,7 @@ public class HandleWebhookCommandHandler(
         }
 
         logger.LogInformation(
-            "Subscription {SubscriptionId} marked PAST_DUE after payment failure for tenant {TenantId}.",
+            "Subscription {SubscriptionId} marked PAST_DUE after payment failure for tenant {TenantId} — failed attempt recorded.",
             subscription.Id, subscription.TenantId);
 
         // Notify tenant — never throws

@@ -139,6 +139,9 @@
   <data name="SubscriptionNotActive" xml:space="preserve">
     <value>No se encontró una suscripción activa para su cuenta</value>
   </data>
+  <data name="InvoiceNotFound" xml:space="preserve">
+    <value>Factura '{0}' no fue encontrada</value>
+  </data>
   <data name="SubscriptionNotOwnedByTenant" xml:space="preserve">
     <value>Esta suscripción no pertenece a su cuenta</value>
   </data>

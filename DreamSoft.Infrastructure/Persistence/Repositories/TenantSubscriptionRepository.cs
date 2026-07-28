@@ -14,6 +14,16 @@ public class TenantSubscriptionRepository(ApplicationDbContext context)
             .Include(ts => ts.Status)
             .FirstOrDefaultAsync(ts => ts.Id == id, cancellationToken);
 
+    public async Task<TenantSubscription?> GetByIdWithDetailsAsync(
+        int id,
+        CancellationToken cancellationToken = default)
+        => await _dbSet
+            .Include(ts => ts.Solution)
+            .Include(ts => ts.SubscriptionPlan).ThenInclude(sp => sp.Translations)
+            .Include(ts => ts.PlanPrice).ThenInclude(pp => pp.BillingCycle).ThenInclude(bc => bc.Translations)
+            .Include(ts => ts.Status)
+            .FirstOrDefaultAsync(ts => ts.Id == id, cancellationToken);
+
     public async Task<TenantSubscription?> GetByTenantAndSolutionAsync(int tenantId, int solutionId, CancellationToken cancellationToken = default)
         => await _dbSet
             .Include(ts => ts.SubscriptionPlan)

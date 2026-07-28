@@ -70,15 +70,22 @@ public class RetryPaymentCommandHandler(
             await unitOfWork.SaveChangesAsync(cancellationToken);
         }
 
-        // 7. Create a new Stripe checkout session
+        // 7. Create a new Stripe checkout session with per-request URLs:
+        // success returns to the subscriptions list carrying the session ID;
+        // cancel returns to the checkout page for this exact plan/price.
+        var successUrl =
+            $"{paymentSettings.FrontendBaseUrl}/account/subscriptions?checkout=success&session_id={{CHECKOUT_SESSION_ID}}";
+        var cancelUrl =
+            $"{paymentSettings.FrontendBaseUrl}/account/subscriptions/new/checkout?planId={subscription.SubscriptionPlanId}&planPriceId={subscription.PlanPriceId}&checkout=cancelled";
+
         var checkoutResult = await paymentGateway.CreateCheckoutSessionAsync(
             new CheckoutRequest(
                 GatewayCustomerId: gatewayCustomerId,
                 GatewayPriceId:    planPrice.StripePriceId,
                 TenantId:          tenantId,
                 TrialDays:         plan.TrialDays,
-                SuccessUrl:        paymentSettings.SuccessUrl,
-                CancelUrl:         paymentSettings.CancelUrl),
+                SuccessUrl:        successUrl,
+                CancelUrl:         cancelUrl),
             ct: cancellationToken);
 
         // 8. Stamp the new StripeSessionId so the webhook finds this exact

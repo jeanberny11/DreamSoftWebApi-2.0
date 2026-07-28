@@ -10,7 +10,8 @@ namespace DreamSoft.Application.Features.Apps.LandingApp.Subscription.ChangePlan
 /// </summary>
 public record ChangePlanCommand(
     int NewPlanPriceId,
-    bool ProrationImmediate = true
+    bool ProrationImmediate = true,
+    DateTime? ProrationDate = null
 ) : IRequest<ChangePlanResponse>;
 
 public record ChangePlanResponse(string Message);

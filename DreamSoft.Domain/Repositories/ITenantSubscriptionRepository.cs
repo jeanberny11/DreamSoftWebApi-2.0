@@ -5,6 +5,16 @@ namespace DreamSoft.Domain.Repositories;
 public interface ITenantSubscriptionRepository : IRepository<TenantSubscription>
 {
     Task<TenantSubscription?> GetByIdWithStatusAsync(int id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns a single subscription by ID with all navigations needed for
+    /// full DTO projection: Solution, SubscriptionPlan (+Translations),
+    /// PlanPrice → BillingCycle (+Translations), and Status.
+    /// Ownership is NOT checked here — callers must verify TenantId.
+    /// </summary>
+    Task<TenantSubscription?> GetByIdWithDetailsAsync(
+        int id,
+        CancellationToken cancellationToken = default);
     Task<TenantSubscription?> GetByTenantAndSolutionAsync(int tenantId, int solutionId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TenantSubscription>> GetActiveByTenantAsync(int tenantId, CancellationToken cancellationToken = default);
     Task<bool> ExistsForTenantAndSolutionAsync(int tenantId, int solutionId, CancellationToken cancellationToken = default);

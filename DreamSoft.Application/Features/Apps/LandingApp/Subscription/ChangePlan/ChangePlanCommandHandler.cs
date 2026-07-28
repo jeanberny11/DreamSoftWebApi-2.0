@@ -79,7 +79,8 @@ public class ChangePlanCommandHandler(
             new ChangePlanRequest(
                 GatewaySubscriptionId: currentSubscription.StripeSubscriptionId,
                 NewGatewayPriceId:     newPlanPrice.StripePriceId,
-                ProrationImmediate:    request.ProrationImmediate),
+                ProrationImmediate:    request.ProrationImmediate,
+                ProrationDate:         request.ProrationDate),
             ct: cancellationToken);
 
         // 11. Update local TenantSubscription to reflect the new plan
