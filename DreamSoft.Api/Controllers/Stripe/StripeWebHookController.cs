@@ -1,5 +1,5 @@
 using DreamSoft.Application.Common.Interfaces;
-using DreamSoft.Application.Features.Subscription.HandleWebhook;
+using DreamSoft.Application.Features.Apps.LandingApp.Subscription.HandleWebhook;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

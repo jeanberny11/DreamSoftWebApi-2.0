@@ -24,4 +24,20 @@ public class SubscriptionPlanRepository(ApplicationDbContext context)
             .Include(p => p.PlanLimits)
             .Include(p => p.PlanMenuOptions)
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+
+    public async Task<SubscriptionPlan?> GetWithSolutionPricesAndLimitsAsync(int id, CancellationToken cancellationToken = default)
+        => await _dbSet
+            .Include(p => p.Solution)
+            .Include(p => p.PlanPrices)
+                .ThenInclude(pp => pp.BillingCycle)
+            .Include(p => p.PlanLimits)
+            .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+
+    public async Task<SubscriptionPlan?> GetByIdWithSolutionAndPricesAsync(
+        int id, CancellationToken cancellationToken = default)
+        => await _dbSet
+            .Include(p => p.Solution)
+            .Include(p => p.Translations)
+            .Include(p => p.PlanPrices).ThenInclude(pp => pp.BillingCycle).ThenInclude(bc => bc.Translations)
+            .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 }

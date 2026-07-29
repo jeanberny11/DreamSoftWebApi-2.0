@@ -23,6 +23,7 @@ public class StripePaymentGateway(
     private readonly CustomerService _customerService = new();
     private readonly SessionService _sessionService = new();
     private readonly SubscriptionService _subscriptionService = new();
+    private readonly InvoiceService _invoiceService = new();
 
     // ── CreateOrGetCustomerAsync ──────────────────────────────────────────
 
@@ -164,6 +165,11 @@ public class StripePaymentGateway(
                     : "none"
             };
 
+            // Pin the actual proration calculation to match a previously
+            // shown preview exactly (Stripe's recommendation).
+            if (request.ProrationDate.HasValue)
+                updateOptions.ProrationDate = request.ProrationDate.Value;
+
             await _subscriptionService.UpdateAsync(
                 request.GatewaySubscriptionId, updateOptions, cancellationToken: ct);
 
@@ -176,6 +182,71 @@ public class StripePaymentGateway(
             _logger.LogError(ex,
                 "Stripe error changing plan for subscription {SubscriptionId}",
                 request.GatewaySubscriptionId);
+            throw;
+        }
+    }
+
+    // ── PreviewPlanChangeAsync ───────────────────────────────────────────
+
+    /// <inheritdoc />
+    public async Task<PlanChangePreviewResult> PreviewPlanChangeAsync(
+        string gatewaySubscriptionId,
+        string newGatewayPriceId,
+        bool prorationImmediate,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var subscription = await _subscriptionService.GetAsync(
+                gatewaySubscriptionId, cancellationToken: ct);
+
+            var subscriptionItemId = subscription.Items.Data[0].Id;
+
+            // Captured once, returned to the caller, and reused verbatim on
+            // the real ChangePlanAsync call so the actual charge matches
+            // this preview to the cent.
+            var prorationDate = DateTime.UtcNow;
+
+            var previewOptions = new InvoiceCreatePreviewOptions
+            {
+                Subscription = gatewaySubscriptionId,
+                SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
+                {
+                    Items =
+                    [
+                        new InvoiceSubscriptionDetailsItemOptions
+                        {
+                            Id    = subscriptionItemId,
+                            Price = newGatewayPriceId
+                        }
+                    ],
+                    ProrationBehavior = prorationImmediate ? "always_invoice" : "none",
+                    ProrationDate     = prorationDate
+                    // No TrialEnd set — remaining trial days (if any) carry
+                    // over untouched.
+                }
+            };
+
+            var preview = await _invoiceService.CreatePreviewAsync(previewOptions, cancellationToken: ct);
+
+            var creditAmount = preview.Lines.Data.Where(l => l.Amount < 0).Sum(l => l.Amount) / 100m;
+            var chargeAmount = preview.Lines.Data.Where(l => l.Amount > 0).Sum(l => l.Amount) / 100m;
+
+            _logger.LogInformation(
+                "Previewed plan change for subscription {SubscriptionId}: due now {AmountDue} {Currency}",
+                gatewaySubscriptionId, preview.Total / 100m, preview.Currency);
+
+            return new PlanChangePreviewResult(
+                CreditAmount: creditAmount,
+                ChargeAmount: chargeAmount,
+                AmountDueNow: preview.Total / 100m,
+                Currency:     preview.Currency?.ToUpper() ?? "USD",
+                ProrationDate: prorationDate);
+        }
+        catch (StripeException ex)
+        {
+            _logger.LogError(ex,
+                "Stripe error previewing plan change for subscription {SubscriptionId}", gatewaySubscriptionId);
             throw;
         }
     }
@@ -218,6 +289,35 @@ public class StripePaymentGateway(
         {
             _logger.LogError(ex,
                 "Stripe error cancelling subscription {SubscriptionId}", gatewaySubscriptionId);
+            throw;
+        }
+    }
+
+    // ── ResumeSubscriptionAsync ─────────────────────────────────────────
+
+    /// <inheritdoc />
+    public async Task ResumeSubscriptionAsync(
+        string gatewaySubscriptionId,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var options = new SubscriptionUpdateOptions
+            {
+                CancelAtPeriodEnd = false
+            };
+
+            await _subscriptionService.UpdateAsync(
+                gatewaySubscriptionId, options, cancellationToken: ct);
+
+            _logger.LogInformation(
+                "Resumed Stripe subscription {SubscriptionId} — period-end cancellation reverted",
+                gatewaySubscriptionId);
+        }
+        catch (StripeException ex)
+        {
+            _logger.LogError(ex,
+                "Stripe error resuming subscription {SubscriptionId}", gatewaySubscriptionId);
             throw;
         }
     }
@@ -268,7 +368,7 @@ public class StripePaymentGateway(
                 EventTypes.CheckoutSessionCompleted  => HandleCheckoutCompleted(stripeEvent),
                 EventTypes.CheckoutSessionExpired    => HandleCheckoutExpired(stripeEvent),
                 EventTypes.InvoicePaid               => HandleInvoicePaid(stripeEvent, payload),
-                EventTypes.InvoicePaymentFailed      => HandleInvoicePaymentFailed(stripeEvent),
+                EventTypes.InvoicePaymentFailed      => HandleInvoicePaymentFailed(stripeEvent, payload),
                 EventTypes.CustomerSubscriptionDeleted => HandleSubscriptionDeleted(stripeEvent),
                 _ => new PaymentWebhookEvent(
                     EventType:             WebhookEventType.Unknown,
@@ -381,13 +481,16 @@ public class StripePaymentGateway(
             HostedInvoiceUrl:      meta.HostedInvoiceUrl,
             InvoicePdfUrl:         meta.InvoicePdfUrl,
             InvoiceNumber:         meta.InvoiceNumber,
-            BillingReason:         meta.BillingReason);
+            BillingReason:         meta.BillingReason,
+            GatewayPaymentIntentId: meta.PaymentIntentId,
+            AmountDue:              meta.AmountDue);
     }
 
-    private static PaymentWebhookEvent HandleInvoicePaymentFailed(Event stripeEvent)
+    private static PaymentWebhookEvent HandleInvoicePaymentFailed(Event stripeEvent, string payload)
     {
         var invoice = stripeEvent.Data.Object as Invoice;
         var failedSubscriptionId = invoice?.SubscriptionId ?? invoice?.Subscription?.Id;
+        var meta = ExtractInvoiceMetadata(payload);
 
         return new PaymentWebhookEvent(
             EventType:             WebhookEventType.InvoicePaymentFailed,
@@ -402,8 +505,10 @@ public class StripePaymentGateway(
             FailureReason:         invoice?.LastFinalizationError?.Message,
             HostedInvoiceUrl:      null,
             InvoicePdfUrl:         null,
-            InvoiceNumber:         null,
-            BillingReason:         null);
+            InvoiceNumber:         meta.InvoiceNumber,
+            BillingReason:         meta.BillingReason,
+            GatewayPaymentIntentId: meta.PaymentIntentId,
+            AmountDue:              meta.AmountDue);
     }
 
     /// <summary>
@@ -453,9 +558,11 @@ public class StripePaymentGateway(
 
     /// <summary>
     /// Extracts invoice metadata fields from the raw Stripe JSON payload:
-    /// hosted_invoice_url, invoice_pdf, number, billing_reason.
+    /// hosted_invoice_url, invoice_pdf, number, billing_reason, amounts,
+    /// and the payment_intent ID (string or expanded object).
     /// </summary>
-    private static (string? HostedInvoiceUrl, string? InvoicePdfUrl, string? InvoiceNumber, string? BillingReason, decimal? AmountPaid)
+    private static (string? HostedInvoiceUrl, string? InvoicePdfUrl, string? InvoiceNumber,
+                    string? BillingReason, decimal? AmountPaid, decimal? AmountDue, string? PaymentIntentId)
         ExtractInvoiceMetadata(string payload)
     {
         try
@@ -470,12 +577,23 @@ public class StripePaymentGateway(
                     ? el.GetString()
                     : null;
 
-            decimal? amountPaid = null;
-            if (obj.TryGetProperty("amount_paid", out var amountEl) &&
-                amountEl.ValueKind == JsonValueKind.Number &&
-                amountEl.TryGetInt64(out var amountCents))
+            decimal? GetAmount(string field) =>
+                obj.TryGetProperty(field, out var el) &&
+                el.ValueKind == JsonValueKind.Number &&
+                el.TryGetInt64(out var cents)
+                    ? cents / 100m
+                    : null;
+
+            // payment_intent may be a plain ID string or an expanded object
+            string? paymentIntentId = null;
+            if (obj.TryGetProperty("payment_intent", out var piEl))
             {
-                amountPaid = amountCents / 100m;
+                paymentIntentId = piEl.ValueKind == JsonValueKind.String
+                    ? piEl.GetString()
+                    : piEl.ValueKind == JsonValueKind.Object &&
+                      piEl.TryGetProperty("id", out var piIdEl)
+                        ? piIdEl.GetString()
+                        : null;
             }
 
             return (
@@ -483,12 +601,14 @@ public class StripePaymentGateway(
                 InvoicePdfUrl:    Get("invoice_pdf"),
                 InvoiceNumber:    Get("number"),
                 BillingReason:    Get("billing_reason"),
-                AmountPaid:       amountPaid
+                AmountPaid:       GetAmount("amount_paid"),
+                AmountDue:        GetAmount("amount_due"),
+                PaymentIntentId:  paymentIntentId
             );
         }
         catch
         {
-            return (null, null, null, null, null);
+            return (null, null, null, null, null, null, null);
         }
     }
 

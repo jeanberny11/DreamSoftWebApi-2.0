@@ -7,9 +7,10 @@ namespace DreamSoft.Application.Common.Interfaces;
 /// </summary>
 public interface IPaymentSettings
 {
-    /// <summary>Frontend URL redirected to after a successful payment.</summary>
-    string SuccessUrl { get; }
-
-    /// <summary>Frontend URL redirected to when the user cancels checkout.</summary>
-    string CancelUrl { get; }
+    /// <summary>
+    /// Base URL of the frontend app, no trailing slash
+    /// (e.g. http://localhost:5173, https://app.dreamsoft.com).
+    /// Handlers compose per-request success/cancel URLs from it.
+    /// </summary>
+    string FrontendBaseUrl { get; }
 }

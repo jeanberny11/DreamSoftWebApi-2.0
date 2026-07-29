@@ -2,6 +2,7 @@ using System.Text.Json;
 using DreamSoft.Api;
 using DreamSoft.Api.Contracts.Responses;
 using DreamSoft.Api.Middleware;
+using DreamSoft.Api.Resources;
 using DreamSoft.Application.Common.Exceptions;
 using FluentValidation.Results;
 using Microsoft.AspNetCore.Hosting;

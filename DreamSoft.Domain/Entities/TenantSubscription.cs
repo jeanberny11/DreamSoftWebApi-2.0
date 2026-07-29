@@ -86,6 +86,21 @@ public class TenantSubscription : AuditableEntity
         MarkAsUpdated();
     }
 
+    /// <summary>
+    /// Aligns the subscription clock with the actual activation moment
+    /// (checkout completion). Stripe starts the billing/trial clock when
+    /// checkout completes — not when the local record was created — and the
+    /// two can differ by minutes, or up to 24h+ in abandoned/retried
+    /// checkouts. Resets StartDate and recomputes TrialEndDate from the
+    /// plan's trial days.
+    /// </summary>
+    public void SyncActivationDates(DateTime activatedAt, int trialDays)
+    {
+        StartDate = activatedAt;
+        TrialEndDate = trialDays > 0 ? activatedAt.AddDays(trialDays) : null;
+        MarkAsUpdated();
+    }
+
     public void UpdatePlan(int subscriptionPlanId, int planPriceId)
     {
         if (subscriptionPlanId <= 0)
@@ -120,6 +135,17 @@ public class TenantSubscription : AuditableEntity
     public void ScheduleCancellation(DateTime scheduledAt)
     {
         CancellationScheduledAt = scheduledAt;
+        MarkAsUpdated();
+    }
+
+    /// <summary>
+    /// Clears a pending period-end cancellation — the tenant chose to keep
+    /// their subscription. Counterpart of ScheduleCancellation; the Stripe
+    /// side is un-scheduled by the caller via the payment gateway.
+    /// </summary>
+    public void ClearScheduledCancellation()
+    {
+        CancellationScheduledAt = null;
         MarkAsUpdated();
     }
 

@@ -19,6 +19,9 @@ public class TenantRepository(ApplicationDbContext context)
     public async Task<Tenant?> GetByIdWithStatusAsync(int id, CancellationToken cancellationToken = default)
         => await _dbSet
             .Include(t => t.Status)
+            .Include(t => t.Country)
+            .Include(t => t.Province)
+            .Include(t => t.Municipality)
             .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
 
     public async Task<Tenant?> GetByIdWithSubscriptionsAsync(int id, CancellationToken cancellationToken = default)

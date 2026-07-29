@@ -139,6 +139,9 @@
   <data name="SubscriptionNotActive" xml:space="preserve">
     <value>No active subscription found for your account</value>
   </data>
+  <data name="InvoiceNotFound" xml:space="preserve">
+    <value>Invoice '{0}' was not found</value>
+  </data>
   <data name="SubscriptionNotOwnedByTenant" xml:space="preserve">
     <value>This subscription does not belong to your account</value>
   </data>
@@ -172,6 +175,9 @@
   <data name="StripePriceIdNotConfigured" xml:space="preserve">
     <value>Payment configuration error. Please contact support</value>
   </data>
+  <data name="PaymentGatewayNotConfigured" xml:space="preserve">
+    <value>Payment configuration error. Please contact support</value>
+  </data>
   <data name="NoStripeSubscriptionFound" xml:space="preserve">
     <value>No active payment subscription found. Please contact support</value>
   </data>
@@ -189,5 +195,41 @@
   </data>
   <data name="TenantSubscriptionNotFound" xml:space="preserve">
     <value>No subscription found for tenant '{0}' and solution '{1}'</value>
+  </data>
+  <data name="BillingCycleCodeAlreadyExists" xml:space="preserve">
+    <value>A billing cycle with code '{0}' already exists</value>
+  </data>
+  <data name="CurrencyCodeAlreadyExists" xml:space="preserve">
+    <value>A currency with code '{0}' already exists</value>
+  </data>
+  <data name="GenderCodeAlreadyExists" xml:space="preserve">
+    <value>A gender with code '{0}' already exists</value>
+  </data>
+  <data name="LanguageCodeAlreadyExists" xml:space="preserve">
+    <value>A language with code '{0}' already exists</value>
+  </data>
+  <data name="MenuGroupCodeAlreadyExists" xml:space="preserve">
+    <value>A menu group with code '{0}' already exists</value>
+  </data>
+  <data name="MenuOptionCodeAlreadyExists" xml:space="preserve">
+    <value>A menu option with code '{0}' already exists</value>
+  </data>
+  <data name="ModuleCodeAlreadyExists" xml:space="preserve">
+    <value>A module with code '{0}' already exists</value>
+  </data>
+  <data name="PlanLimitKeyAlreadyExists" xml:space="preserve">
+    <value>A limit with key '{0}' already exists for this plan</value>
+  </data>
+  <data name="PlanMenuOptionAlreadyExists" xml:space="preserve">
+    <value>This menu option is already assigned to the plan</value>
+  </data>
+  <data name="PlanPriceAlreadyExists" xml:space="preserve">
+    <value>A price for this billing cycle already exists on the plan</value>
+  </data>
+  <data name="SolutionCodeAlreadyExists" xml:space="preserve">
+    <value>A solution with code '{0}' already exists</value>
+  </data>
+  <data name="SubscriptionPlanCodeAlreadyExists" xml:space="preserve">
+    <value>A subscription plan with code '{0}' already exists</value>
   </data>
 </root>

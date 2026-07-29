@@ -98,6 +98,8 @@ public static class DependencyInjection
         // ── Common Services ───────────────────────────────────────────────────
         services.AddTransient<IDateTime, DateTimeService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<ICurrentTenantService, CurrentTenantService>();
+        services.AddScoped<ICurrentAdminService, CurrentAdminService>();
         services.AddScoped<IRequestLanguageService, RequestLanguageService>();
         services.AddScoped<ITenantService, TenantService>();
         services.AddScoped<ITokenService, TokenService>();
