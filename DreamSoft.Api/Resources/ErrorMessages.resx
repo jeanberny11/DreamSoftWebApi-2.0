@@ -175,6 +175,9 @@
   <data name="StripePriceIdNotConfigured" xml:space="preserve">
     <value>Payment configuration error. Please contact support</value>
   </data>
+  <data name="PaymentGatewayNotConfigured" xml:space="preserve">
+    <value>Payment configuration error. Please contact support</value>
+  </data>
   <data name="NoStripeSubscriptionFound" xml:space="preserve">
     <value>No active payment subscription found. Please contact support</value>
   </data>

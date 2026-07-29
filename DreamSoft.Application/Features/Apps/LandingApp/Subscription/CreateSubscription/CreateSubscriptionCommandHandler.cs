@@ -67,6 +67,14 @@ public partial class CreateSubscriptionCommandHandler(
         if (string.IsNullOrWhiteSpace(planPrice.StripePriceId))
             throw new ConflictException("StripePriceIdNotConfigured");
 
+        // 5b. The frontend base URL must be configured before we start creating
+        // records — Stripe Checkout session creation (step 14) needs it to build
+        // valid success/cancel URLs. Checking this now, before any writes happen,
+        // avoids leaving an orphaned subscription/subdomain/admin user behind if
+        // checkout session creation fails later.
+        if (string.IsNullOrWhiteSpace(paymentSettings.FrontendBaseUrl))
+            throw new ConflictException("PaymentGatewayNotConfigured");
+
         // 6. Resolve PROCESSING_PAYMENT status
         var status = await subscriptionStatusRepository
             .GetByCodeAsync(SubscriptionStatusCodes.ProcessingPayment, cancellationToken)

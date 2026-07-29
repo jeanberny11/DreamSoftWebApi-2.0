@@ -226,7 +226,7 @@ builder.Services.AddSwaggerGen(options =>
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 // Development: explicit localhost origins from appsettings.Development.json
-// Production:  subdomain wildcard for *.dreamsoft.com
+// Production:  subdomain wildcard for the configured production domain
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("SubdomainPolicy", policy =>
@@ -236,6 +236,21 @@ builder.Services.AddCors(options =>
             .GetSection("Cors:AllowedOrigins")
             .Get<string[]>();
 
+        // Extra explicit origins for production — a single comma-separated
+        // value so it's easy to add/remove entries via one Railway env var
+        // (Cors__AllowedOriginsExtra) without touching code or redeploying.
+        // Useful for origins that don't match the wildcard below (e.g. a
+        // Railway preview URL, or a custom domain before DNS cutover).
+        var extraOrigins = builder.Configuration["Cors:AllowedOriginsExtra"]
+            ?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            ?? [];
+
+        // Production apex domain — tenants are served from subdomains of this
+        // (e.g. acme.dreamsoft.com). Configurable via Cors:ProductionDomainSuffix
+        // (or the Cors__ProductionDomainSuffix env var on Railway) so it can be
+        // changed without a code change or redeploy.
+        var productionDomainSuffix = builder.Configuration["Cors:ProductionDomainSuffix"] ?? "dreamsoft.com";
+
         policy
             .SetIsOriginAllowed(origin =>
             {
@@ -243,9 +258,13 @@ builder.Services.AddCors(options =>
                 if (allowedOrigins != null && allowedOrigins.Contains(origin))
                     return true;
 
-                // 2. Allow any *.dreamsoft.com subdomain (production)
+                // 2. Check extra explicit production origins
+                if (extraOrigins.Contains(origin))
+                    return true;
+
+                // 3. Allow any subdomain of the configured production domain
                 var uri = new Uri(origin);
-                return uri.Host.EndsWith(".dreamsoft.com") || uri.Host == "dreamsoft.com";
+                return uri.Host.EndsWith("." + productionDomainSuffix) || uri.Host == productionDomainSuffix;
             })
             .AllowAnyMethod()
             .AllowAnyHeader()

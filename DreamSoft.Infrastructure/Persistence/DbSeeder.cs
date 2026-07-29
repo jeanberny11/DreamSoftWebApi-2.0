@@ -675,6 +675,261 @@ public static class DbSeeder
             await context.SaveChangesAsync(ct);
         }
 
+        // ── Currencies ────────────────────────────────────────────────────────────
+        if (!await context.Currencies.AnyAsync(ct))
+        {
+            var currencies = new List<Currency>
+            {
+                Currency.Create("$DOP", "Dominican Pesos", "Pesos Dominicanos", isDefault: true),
+                Currency.Create("$USD", "US Dollar", "US Dollar"),
+            };
+
+            await context.Currencies.AddRangeAsync(currencies, ct);
+            await context.SaveChangesAsync(ct);
+        }
+
+        // ── Modules ───────────────────────────────────────────────────────────────
+        if (!await context.Modules.AnyAsync(ct))
+        {
+            var modules = new List<Module>
+            {
+                Module.Create("SALES", "Sales",
+                    TranslatedString.Create(
+                        BaseTranslatedProperties.Create("Ventas", "Terminal POS, pedidos, clientes, caja y promociones"),
+                        BaseTranslatedProperties.Create("Sales", "POS terminal, orders, customers, cash management and promotions")),
+                    description: "POS terminal, orders, customers, cash management and promotions", icon: "shopping-cart", sortOrder: 2),
+
+                Module.Create("INVENTORY", "Inventory & Products",
+                    TranslatedString.Create(
+                        BaseTranslatedProperties.Create("Inventario y Productos", "Catálogo de productos, control de stock y almacenes"),
+                        BaseTranslatedProperties.Create("Inventory & Products", "Product catalog, stock control and warehousing")),
+                    description: "Product catalog, stock control and warehousing", icon: "archive-box", sortOrder: 1),
+
+                Module.Create("PURCHASING", "Purchasing",
+                    TranslatedString.Create(
+                        BaseTranslatedProperties.Create("Compras", "Proveedores, órdenes de compra y recepción de mercancía"),
+                        BaseTranslatedProperties.Create("Purchasing", "Suppliers, purchase orders and goods receipt")),
+                    description: "Suppliers, purchase orders and goods receipt", icon: "truck", sortOrder: 3),
+            };
+
+            await context.Modules.AddRangeAsync(modules, ct);
+            await context.SaveChangesAsync(ct);
+        }
+
+        // ── Menu Groups ───────────────────────────────────────────────────────────
+        if (!await context.MenuGroups.AnyAsync(ct))
+        {
+            var menuGroups = new List<MenuGroup>
+            {
+                MenuGroup.Create("REGISTERS", "Registers",
+                    TranslatedString.Create(
+                        BaseTranslatedProperties.Create("Registros", "Ingreso y gestión de datos de catálogo y referencia"),
+                        BaseTranslatedProperties.Create("Registers", "Entry and management of catalog and reference data")),
+                    description: "Entry and management of catalog and reference data", icon: "database", sortOrder: 1),
+
+                MenuGroup.Create("PROCESS", "Process",
+                    TranslatedString.Create(
+                        BaseTranslatedProperties.Create("Procesos", "Flujos de trabajo operativos y ejecución de procesos de negocio"),
+                        BaseTranslatedProperties.Create("Process", "Operational workflows and business process execution")),
+                    description: "Operational workflows and business process execution", icon: "cog", sortOrder: 2),
+
+                MenuGroup.Create("REPORTS", "Reports",
+                    TranslatedString.Create(
+                        BaseTranslatedProperties.Create("Reportes", "Análisis, resúmenes e informes exportables"),
+                        BaseTranslatedProperties.Create("Reports", "Analytics, summaries and exportable reports")),
+                    description: "Analytics, summaries and exportable reports", icon: "chart-bar", sortOrder: 3),
+            };
+
+            await context.MenuGroups.AddRangeAsync(menuGroups, ct);
+            await context.SaveChangesAsync(ct);
+        }
+
+        // ── Menu Options ──────────────────────────────────────────────────────────
+        if (!await context.MenuOptions.AnyAsync(ct))
+        {
+            var modules = await context.Modules.ToDictionaryAsync(m => m.Code, ct);
+            var groups = await context.MenuGroups.ToDictionaryAsync(g => g.Code, ct);
+
+            MenuOption Opt(string code, string nameEn, string descEn, string nameEs, string descEs,
+                string moduleCode, string groupCode, string route, string icon, int sortOrder) =>
+                MenuOption.Create(code, nameEn,
+                    TranslatedString.Create(
+                        BaseTranslatedProperties.Create(nameEs, descEs),
+                        BaseTranslatedProperties.Create(nameEn, descEn)),
+                    modules[moduleCode].Id, groups[groupCode].Id,
+                    description: descEn, route: route, icon: icon, sortOrder: sortOrder);
+
+            var menuOptions = new List<MenuOption>
+            {
+                Opt("REG_PRODUCTS", "Products", "Product master list", "Productos", "Listado maestro de productos", "INVENTORY", "REGISTERS", "/inventory/products", "tag", 1),
+                Opt("REG_CATEGORIES", "Categories", "Product categories", "Categorías", "Categorías de productos", "INVENTORY", "REGISTERS", "/inventory/categories", "folder", 2),
+                Opt("REG_BRANDS", "Brands", "Product brands and manufacturers", "Marcas", "Marcas y fabricantes de productos", "INVENTORY", "REGISTERS", "/inventory/brands", "building-storefront", 3),
+                Opt("REG_UNITS", "Units of Measure", "Units used for product quantities", "Unidades de Medida", "Unidades utilizadas para cantidades de productos", "INVENTORY", "REGISTERS", "/inventory/units", "scale", 4),
+                Opt("REG_TAXES", "Tax Rates", "Tax rates applied to products and sales", "Tasas de Impuesto", "Tasas de impuesto aplicadas a productos y ventas", "INVENTORY", "REGISTERS", "/inventory/taxes", "receipt-percent", 5),
+                Opt("REG_WAREHOUSES", "Warehouses", "Storage locations and warehouse configuration", "Almacenes", "Ubicaciones de almacenamiento y configuración", "INVENTORY", "REGISTERS", "/inventory/warehouses", "building-office-2", 6),
+                Opt("REG_PRICE_LISTS", "Price Lists", "Customer price lists and special pricing", "Listas de Precios", "Listas de precios y tarifas especiales", "INVENTORY", "REGISTERS", "/inventory/price-lists", "currency-dollar", 7),
+                Opt("REG_CUSTOMERS", "Customers", "Customer profiles and contact information", "Clientes", "Perfiles de clientes e información de contacto", "SALES", "REGISTERS", "/sales/customers", "users", 8),
+                Opt("REG_PROMOTIONS", "Promotions", "Discount rules, coupons and promotional offers", "Promociones", "Reglas de descuento, cupones y ofertas promocionales", "SALES", "REGISTERS", "/sales/promotions", "ticket", 9),
+                Opt("REG_SUPPLIERS", "Suppliers", "Supplier and vendor master data", "Proveedores", "Datos maestros de proveedores y vendedores", "PURCHASING", "REGISTERS", "/purchasing/suppliers", "truck", 10),
+
+                Opt("PROC_INVENTORY_ADJ", "Inventory Adjustment", "Manual stock level corrections and write-offs", "Ajuste de Inventario", "Correcciones manuales de niveles de stock y bajas", "INVENTORY", "PROCESS", "/inventory/adjustments", "adjustments-horizontal", 1),
+                Opt("PROC_STOCK_TRANSFER", "Stock Transfer", "Move stock between warehouses", "Transferencia de Stock", "Mover stock entre almacenes", "INVENTORY", "PROCESS", "/inventory/transfers", "arrows-right-left", 2),
+                Opt("PROC_STOCK_COUNT", "Stock Count", "Physical inventory count and reconciliation", "Conteo Físico", "Conteo físico de inventario y conciliación", "INVENTORY", "PROCESS", "/inventory/stock-count", "clipboard-document-check", 3),
+                Opt("PROC_POS", "Point of Sale", "POS terminal for processing sales transactions", "Punto de Venta", "Terminal POS para procesar transacciones de venta", "SALES", "PROCESS", "/sales/pos", "computer-desktop", 4),
+                Opt("PROC_ORDERS", "Orders", "View and manage sales orders and invoices", "Pedidos", "Ver y gestionar pedidos y facturas de venta", "SALES", "PROCESS", "/sales/orders", "document-text", 5),
+                Opt("PROC_CASH_OPEN", "Cash Register Open", "Open a cash register session with initial amount", "Apertura de Caja", "Abrir sesión de caja con monto inicial", "SALES", "PROCESS", "/sales/cash/open", "lock-open", 6),
+                Opt("PROC_CASH_CLOSE", "Cash Closing", "Close a cash register session and reconcile totals", "Cierre de Caja", "Cerrar sesión de caja y conciliar totales", "SALES", "PROCESS", "/sales/cash/close", "lock-closed", 7),
+                Opt("PROC_PURCHASE_ORDERS", "Purchase Orders", "Create and manage purchase orders to suppliers", "Órdenes de Compra", "Crear y gestionar órdenes de compra a proveedores", "PURCHASING", "PROCESS", "/purchasing/orders", "shopping-bag", 8),
+                Opt("PROC_GOODS_RECEIPT", "Goods Receipt", "Receive and verify incoming stock from suppliers", "Recepción de Mercancía", "Recibir y verificar stock entrante de proveedores", "PURCHASING", "PROCESS", "/purchasing/receipts", "inbox-arrow-down", 9),
+
+                Opt("RPT_INVENTORY", "Inventory Report", "Current stock levels by product and warehouse", "Reporte de Inventario", "Niveles de stock actuales por producto y almacén", "INVENTORY", "REPORTS", "/reports/inventory", "chart-bar", 1),
+                Opt("RPT_STOCK_ALERTS", "Stock Alerts", "Products below minimum stock threshold", "Alertas de Stock", "Productos por debajo del umbral mínimo de stock", "INVENTORY", "REPORTS", "/reports/stock-alerts", "bell-alert", 2),
+                Opt("RPT_SALES", "Sales Summary", "Sales totals by period, payment method and cashier", "Resumen de Ventas", "Totales de ventas por período, método de pago y cajero", "SALES", "REPORTS", "/reports/sales", "presentation-chart-line", 3),
+                Opt("RPT_SALES_BY_PRODUCT", "Sales by Product", "Revenue and quantity sold per product", "Ventas por Producto", "Ingresos y cantidad vendida por producto", "SALES", "REPORTS", "/reports/sales-by-product", "chart-pie", 4),
+                Opt("RPT_CUSTOMERS", "Customer Report", "Customer purchase history and loyalty metrics", "Reporte de Clientes", "Historial de compras y métricas de fidelidad", "SALES", "REPORTS", "/reports/customers", "user-group", 5),
+                Opt("RPT_CASH_FLOW", "Cash Flow", "Daily cash register openings, movements and closings", "Flujo de Caja", "Aperturas, movimientos y cierres de caja diarios", "SALES", "REPORTS", "/reports/cash-flow", "banknotes", 6),
+                Opt("RPT_PURCHASES", "Purchase Report", "Purchase orders and goods receipt summary by supplier", "Reporte de Compras", "Órdenes de compra y recepción de mercancía por proveedor", "PURCHASING", "REPORTS", "/reports/purchases", "clipboard-document-list", 7),
+                Opt("RPT_SUPPLIERS", "Supplier Performance", "Supplier delivery times, volumes and reliability", "Rendimiento de Proveedores", "Tiempos de entrega, volúmenes y confiabilidad", "PURCHASING", "REPORTS", "/reports/suppliers", "star", 8),
+            };
+
+            await context.MenuOptions.AddRangeAsync(menuOptions, ct);
+            await context.SaveChangesAsync(ct);
+        }
+
+        // ── Solutions ─────────────────────────────────────────────────────────────
+        if (!await context.Solutions.AnyAsync(ct))
+        {
+            var solutions = new List<Solution>
+            {
+                Solution.Create("POS", "Point Of Sales",
+                    TranslatedString.Create(
+                        BaseTranslatedProperties.Create("Punto de venta", "Sistema de punto de ventas par manajar la facturacion de su negocio"),
+                        BaseTranslatedProperties.Create("Point Of Sales", "Point of sales services to manage your business")),
+                    description: "Point of sales product", icon: "cash-register", sortOrder: 0),
+            };
+
+            await context.Solutions.AddRangeAsync(solutions, ct);
+            await context.SaveChangesAsync(ct);
+        }
+
+        // ── Subscription Plans ────────────────────────────────────────────────────
+        if (!await context.SubscriptionPlans.AnyAsync(ct))
+        {
+            var solution = await context.Solutions.FirstAsync(s => s.Code == "POS", ct);
+
+            var subscriptionPlans = new List<SubscriptionPlan>
+            {
+                SubscriptionPlan.Create("BASIC", "Basic Plan",
+                    TranslatedString.Create(
+                        BaseTranslatedProperties.Create("Plan Basico", "Pla basico para el sistema de punto de venta"),
+                        BaseTranslatedProperties.Create("Basic Plan", "Basic plan for the point of sales services")),
+                    solutionId: solution.Id, tierLevel: 1,
+                    description: "Basic plan for the point of sales services", trialDays: 7),
+
+                SubscriptionPlan.Create("PROFESSIONAL", "Professional",
+                    TranslatedString.Create(
+                        BaseTranslatedProperties.Create("Professional", "POS completo con inventario avanzado, reportes y multiples cajeros"),
+                        BaseTranslatedProperties.Create("Professional", "Full POS with advanced inventory, reports and multiple cashiers")),
+                    solutionId: solution.Id, tierLevel: 2,
+                    description: "Full POS with advanced inventory, reports and multiple cashiers", trialDays: 14),
+
+                SubscriptionPlan.Create("ENTERPRISE", "Enterprise",
+                    TranslatedString.Create(
+                        BaseTranslatedProperties.Create("Enterprise", "Plan ilimitado con todas las funciones, compras y soporte prioritario"),
+                        BaseTranslatedProperties.Create("Enterprise", "Unlimited plan with all features, purchasing module and priority support")),
+                    solutionId: solution.Id, tierLevel: 3,
+                    description: "Plan ilimitado con todas las funciones, compras y soporte prioritario", trialDays: 30),
+            };
+
+            await context.SubscriptionPlans.AddRangeAsync(subscriptionPlans, ct);
+            await context.SaveChangesAsync(ct);
+        }
+
+        // ── Plan Prices ───────────────────────────────────────────────────────────
+        if (!await context.PlanPrices.AnyAsync(ct))
+        {
+            var plans = await context.SubscriptionPlans.ToDictionaryAsync(p => p.Code, ct);
+            var cycles = await context.BillingCycles.ToDictionaryAsync(b => b.Code, ct);
+
+            // Only Basic/Monthly has a real Stripe Price ID today — the rest are
+            // seeded price-only and will fail at checkout until Stripe Prices are
+            // created for them and SetStripePriceId(...) is applied (manually or
+            // via a follow-up migration).
+            var basicMonthly = PlanPrice.Create(plans["BASIC"].Id, cycles["MONTHLY"].Id, 1000.00m);
+            basicMonthly.SetStripePriceId("price_1TFNLOI4HoyWk30KyLmt7i5Z");
+
+            var planPrices = new List<PlanPrice>
+            {
+                basicMonthly,
+                PlanPrice.Create(plans["BASIC"].Id, cycles["QUARTERLY"].Id, 2699.00m),
+                PlanPrice.Create(plans["BASIC"].Id, cycles["ANNUAL"].Id, 9599.00m),
+
+                PlanPrice.Create(plans["PROFESSIONAL"].Id, cycles["MONTHLY"].Id, 2499.00m),
+                PlanPrice.Create(plans["PROFESSIONAL"].Id, cycles["QUARTERLY"].Id, 6749.00m),
+                PlanPrice.Create(plans["PROFESSIONAL"].Id, cycles["ANNUAL"].Id, 23999.00m),
+
+                PlanPrice.Create(plans["ENTERPRISE"].Id, cycles["MONTHLY"].Id, 4999.00m),
+                PlanPrice.Create(plans["ENTERPRISE"].Id, cycles["QUARTERLY"].Id, 13499.00m),
+                PlanPrice.Create(plans["ENTERPRISE"].Id, cycles["ANNUAL"].Id, 47999.00m),
+            };
+
+            await context.PlanPrices.AddRangeAsync(planPrices, ct);
+            await context.SaveChangesAsync(ct);
+        }
+
+        // ── Plan Limits ───────────────────────────────────────────────────────────
+        if (!await context.PlanLimits.AnyAsync(ct))
+        {
+            var plans = await context.SubscriptionPlans.ToDictionaryAsync(p => p.Code, ct);
+
+            var planLimits = new List<PlanLimit>
+            {
+                PlanLimit.Create(plans["BASIC"].Id, "max_users", 3, "Maximum number of users"),
+                PlanLimit.Create(plans["BASIC"].Id, "max_products", 500, "Maximum number of products"),
+                PlanLimit.Create(plans["BASIC"].Id, "max_invoices_per_month", 300, "Maximum invoices per month"),
+                PlanLimit.Create(plans["BASIC"].Id, "max_warehouses", 1, "Maximum number of warehouses"),
+
+                PlanLimit.Create(plans["PROFESSIONAL"].Id, "max_users", 10, "Maximum number of users"),
+                PlanLimit.Create(plans["PROFESSIONAL"].Id, "max_products", 5000, "Maximum number of products"),
+                PlanLimit.Create(plans["PROFESSIONAL"].Id, "max_invoices_per_month", 2000, "Maximum invoices per month"),
+                PlanLimit.Create(plans["PROFESSIONAL"].Id, "max_warehouses", 3, "Maximum number of warehouses"),
+
+                PlanLimit.Create(plans["ENTERPRISE"].Id, "max_users", 0, "Unlimited users (0 = unlimited)"),
+                PlanLimit.Create(plans["ENTERPRISE"].Id, "max_products", 0, "Unlimited products (0 = unlimited)"),
+                PlanLimit.Create(plans["ENTERPRISE"].Id, "max_invoices_per_month", 0, "Unlimited invoices (0 = unlimited)"),
+                PlanLimit.Create(plans["ENTERPRISE"].Id, "max_warehouses", 0, "Unlimited warehouses (0 = unlimited)"),
+            };
+
+            await context.PlanLimits.AddRangeAsync(planLimits, ct);
+            await context.SaveChangesAsync(ct);
+        }
+
+        // ── Plan → Menu Option Grants ─────────────────────────────────────────────
+        if (!await context.PlanMenuOptions.AnyAsync(ct))
+        {
+            var plans = await context.SubscriptionPlans.ToDictionaryAsync(p => p.Code, ct);
+            var options = await context.MenuOptions.ToDictionaryAsync(o => o.Code, ct);
+
+            var grants = new Dictionary<string, string[]>
+            {
+                ["BASIC"] = ["REG_PRODUCTS", "REG_CATEGORIES", "REG_CUSTOMERS", "PROC_POS", "PROC_ORDERS", "PROC_CASH_OPEN", "PROC_CASH_CLOSE", "RPT_SALES"],
+                ["PROFESSIONAL"] = ["REG_PRODUCTS", "REG_CATEGORIES", "REG_BRANDS", "REG_UNITS", "REG_TAXES", "REG_WAREHOUSES", "REG_PRICE_LISTS", "REG_CUSTOMERS", "REG_PROMOTIONS",
+                                     "PROC_INVENTORY_ADJ", "PROC_STOCK_TRANSFER", "PROC_STOCK_COUNT", "PROC_POS", "PROC_ORDERS", "PROC_CASH_OPEN", "PROC_CASH_CLOSE",
+                                     "RPT_INVENTORY", "RPT_STOCK_ALERTS", "RPT_SALES", "RPT_SALES_BY_PRODUCT", "RPT_CUSTOMERS", "RPT_CASH_FLOW"],
+                ["ENTERPRISE"] = [.. options.Keys], // Enterprise includes every menu option
+            };
+
+            var planMenuOptions = new List<PlanMenuOption>();
+            foreach (var (planCode, optionCodes) in grants)
+            {
+                foreach (var optionCode in optionCodes)
+                    planMenuOptions.Add(PlanMenuOption.Create(plans[planCode].Id, options[optionCode].Id));
+            }
+
+            await context.PlanMenuOptions.AddRangeAsync(planMenuOptions, ct);
+            await context.SaveChangesAsync(ct);
+        }
+
         // ── Super Admin User ──────────────────────────────────────────────────────────
         // Creates the initial platform administrator if none exists.
         // Credentials are read from configuration — never hardcoded.
