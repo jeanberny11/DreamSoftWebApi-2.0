@@ -126,8 +126,31 @@ public static class DependencyInjection
             configuration["REDIS_URL"].NullIfEmpty() ??
             configuration.GetConnectionString("Redis").NullIfEmpty() ??
             "localhost:6379";
-        var redisOptions = ConfigurationOptions.Parse(redisConnection);
+
+        // StackExchange.Redis's ConfigurationOptions.Parse() doesn't understand the
+        // redis:// URI scheme Railway uses for REDIS_URL (host:port,password=... only) —
+        // parse the URI form explicitly so the password actually gets applied.
+        ConfigurationOptions redisOptions;
+        if (redisConnection.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) ||
+            redisConnection.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
+        {
+            var redisUri = new Uri(redisConnection);
+            redisOptions = new ConfigurationOptions { Ssl = redisUri.Scheme == "rediss" };
+            redisOptions.EndPoints.Add(redisUri.Host, redisUri.Port);
+
+            if (!string.IsNullOrEmpty(redisUri.UserInfo))
+            {
+                var redisUserInfoParts = redisUri.UserInfo.Split(':', 2);
+                redisOptions.User = redisUserInfoParts[0].NullIfEmpty();
+                redisOptions.Password = redisUserInfoParts.Length > 1 ? redisUserInfoParts[1] : null;
+            }
+        }
+        else
+        {
+            redisOptions = ConfigurationOptions.Parse(redisConnection);
+        }
         redisOptions.AbortOnConnectFail = false;
+
         services.AddSingleton<IConnectionMultiplexer>(
             ConnectionMultiplexer.Connect(redisOptions));
         services.AddScoped<IWebhookEventStore, RedisWebhookEventStore>();
